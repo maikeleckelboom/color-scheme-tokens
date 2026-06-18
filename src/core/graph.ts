@@ -1,4 +1,4 @@
-import type { ColorValue } from "./colorValue";
+import type { ColorIntent } from "./colorIntent";
 import type { TokenKey } from "./keys";
 import type { ModeKey } from "./modes";
 import type { TokenProvenance } from "./provenance";
@@ -21,7 +21,7 @@ export type ModeValues<Value> = readonly ModeValue<Value>[];
 export interface ColorTokenNode {
   readonly kind: "color";
   readonly key: TokenKey;
-  readonly value: ColorValue | ModeValues<ColorValue>;
+  readonly values: ModeValues<ColorIntent>;
   readonly provenance?: TokenProvenance;
 }
 

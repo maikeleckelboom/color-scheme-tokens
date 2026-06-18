@@ -3,8 +3,8 @@
 Stable color scheme tokens for TypeScript apps.
 
 color-scheme-tokens is a graph-first package for stable, typed, inspectable color tokens. Dynamic color is the first
-intended scheme source, but it is not the package identity: scheme sources produce token graphs, profiles can add app
-aliases, and implemented exporters project compiled token sets.
+scheme source, but it is not the package identity: scheme sources produce token graphs, profiles add app aliases, and
+exporters project compiled token sets.
 
 The intended pipeline is:
 
@@ -30,6 +30,7 @@ import {
   hex,
   lightMode,
   serializeTokenSet,
+  solidColorIntent,
   tokenKey,
 } from "color-scheme-tokens";
 
@@ -39,9 +40,9 @@ const graph = createSchemeGraph({
     {
       kind: "color",
       key: tokenKey("scheme.primary"),
-      value: [
-        { mode: lightMode, value: hex("#6750a4") },
-        { mode: darkMode, value: hex("#d0bcff") },
+      values: [
+        { mode: lightMode, value: solidColorIntent(hex("#6750a4")) },
+        { mode: darkMode, value: solidColorIntent(hex("#d0bcff")) },
       ],
     },
     {
@@ -60,14 +61,46 @@ if (compiled.ok) {
 }
 ```
 
+## Dynamic Source Recipe
+
+```ts
+import {
+  appSurfaceProfile,
+  createSchemeTokens,
+  dynamicSchemeSource,
+  hex,
+} from "color-scheme-tokens";
+
+const result = createSchemeTokens({
+  source: dynamicSchemeSource({
+    sourceColor: hex("#6750A4"),
+    variant: "tonal",
+  }),
+  profile: appSurfaceProfile,
+  css: { prefix: "theme" },
+});
+
+if (result.ok) {
+  result.value.cssVariables.includes("--theme-chrome-background:");
+}
+```
+
+The dynamic source accepts opaque sRGB source colors in this tranche. `hex("#6750A4")` and `srgb255(103, 80, 164)` are
+valid inputs. The public variants are `tonal`, `vibrant`, `expressive`, and `neutral`. Defaults are spec version
+`2021`, platform `phone`, contrast level `0`, and variant `tonal`.
+
+The dynamic source is backed internally by `@material/material-color-utilities`, but public token keys use `scheme.*`
+and the package API does not expose Material-branded wrapper types.
+
 ## Current Scope
 
 - Public token keys use `scheme.*` for scheme roles.
-- Color token nodes store concrete `ColorValue` objects directly.
-- `validateGraph`, `compileGraph`, `serializeTokenSet`, and `exportCssVariables` are implemented.
+- Color token nodes store mode-specific `ColorIntent` payloads; v0 supports only `solidColorIntent(value)`.
+- `validateGraph`, `compileGraph`, `serializeTokenSet`, `exportCssVariables`, `dynamicSchemeSource`,
+  `applyProfile`, `appSurfaceProfile`, and `createSchemeTokens` are implemented.
 - A dedicated JSON token exporter is deferred; `serializeTokenSet()` is the deterministic JSON snapshot primitive.
-- Color intent, lab proof tooling, CLI integrations, framework bindings, contrast repair, and editor tooling are out of
-  scope for this package shape.
+- Lab proof tooling, CLI integrations, framework bindings, DTCG export, broad source color support, image extraction,
+  automatic contrast repair, and editor tooling are out of scope for this package shape.
 
 ## Development
 
@@ -79,5 +112,6 @@ pnpm release:check
 
 Tooling is Oxc-first: Oxlint is the lint gate and Oxfmt is the formatter.
 
-`pnpm release:check` currently runs type checking, linting, tests, build, formatting, and a dry-run package pack. The
-package is marked `private: true`; do not publish it from this repository state.
+`pnpm release:check` currently runs type checking, linting, tests, build, formatting, a dry-run package pack, and a
+packed consumer smoke test for ESM, CommonJS, and strict TypeScript declarations. The package is marked `private: true`;
+do not publish it from this repository state.

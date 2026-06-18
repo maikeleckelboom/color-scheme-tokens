@@ -4,35 +4,49 @@ import {
   type CompileProblem,
   type CompiledTokenSet,
 } from "../core/compileGraph";
+import { createSchemeGraph } from "../core/createSchemeGraph";
 import type { ColorSchemeTokenGraph, Result } from "../core/graph";
+import type { GraphBuildProblem, SchemeSource, SchemeSourceProblem } from "../core/schemeSource";
 import { serializeTokenSet } from "../core/serializeTokenSet";
 import { exportCssVariables, type CssVariableOptions } from "../exporters/exportCssVariables";
+import { applyProfile } from "../profiles/applyProfile";
+import type { ColorSchemeProfile } from "../profiles/profile";
 
 export interface SchemeTokensRecipeOptions {
-  readonly graph: ColorSchemeTokenGraph;
+  readonly source: SchemeSource;
+  readonly profile?: ColorSchemeProfile;
   readonly compile?: CompileOptions;
   readonly css?: CssVariableOptions;
 }
 
 export interface SchemeTokensRecipeResult {
   readonly graph: ColorSchemeTokenGraph;
-  readonly compiled: CompiledTokenSet;
-  readonly css: string;
+  readonly tokenSet: CompiledTokenSet;
+  readonly cssVariables: string;
   readonly snapshot: string;
 }
 
-export type SchemeTokensRecipeRun = Result<SchemeTokensRecipeResult, CompileProblem>;
+export type SchemeTokensRecipeProblem = GraphBuildProblem<SchemeSourceProblem> | CompileProblem;
+
+export type SchemeTokensRecipeRun = Result<SchemeTokensRecipeResult, SchemeTokensRecipeProblem>;
 
 export function createSchemeTokens(options: SchemeTokensRecipeOptions): SchemeTokensRecipeRun {
-  const compiled = compileGraph(options.graph, options.compile);
+  const graphResult = createSchemeGraph(options.source);
+  if (!graphResult.ok) return graphResult;
+
+  const graph =
+    options.profile === undefined
+      ? graphResult.value
+      : applyProfile(graphResult.value, options.profile);
+  const compiled = compileGraph(graph, options.compile);
   if (!compiled.ok) return compiled;
 
   return {
     ok: true,
     value: {
-      graph: options.graph,
-      compiled: compiled.value,
-      css: exportCssVariables(compiled.value, options.css),
+      graph,
+      tokenSet: compiled.value,
+      cssVariables: exportCssVariables(compiled.value, options.css),
       snapshot: serializeTokenSet(compiled.value),
     },
   };

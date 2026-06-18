@@ -41,8 +41,12 @@
     "format:fix": "oxfmt --write .",
     "validate": "pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm format",
     "check": "pnpm validate",
-    "release:check": "pnpm validate && pnpm pack --dry-run",
+    "smoke:consumer": "node scripts/smokeConsumer.ts",
+    "release:check": "pnpm validate && pnpm pack --dry-run && pnpm smoke:consumer",
     "prepack": "pnpm build"
+  },
+  "dependencies": {
+    "@material/material-color-utilities": "^0.4.0"
   },
   "devDependencies": {
     "@types/node": "^25.9.3",

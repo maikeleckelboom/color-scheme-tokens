@@ -13,23 +13,30 @@ scheme source input
   -> exporter projection
 ```
 
-Scheme sources create graph nodes with stable token keys, modes, concrete color values, aliases, and provenance.
-Profiles add aliases that map scheme roles into app-facing tokens. The compiler validates the graph and resolves aliases
-into a compiled token set. Exporters consume compiled token sets only.
+Scheme sources create graph nodes with stable token keys, modes, authored color intents, aliases, and provenance.
+Profiles map scheme roles into app-facing tokens and may add authored color tokens. The compiler validates the graph,
+resolves aliases, and unwraps color intents into concrete color values. Exporters consume compiled token sets only.
 
 ## Boundaries
 
 - Dynamic color is the first intended source, but dynamic color does not define the package identity.
 - Scheme role keys use `scheme.*`.
-- Profiles may add generic app aliases such as `app.surface`; they must not introduce project-specific semantics.
-- Color token nodes store concrete `ColorValue` objects. `ColorIntent` is deferred from v0.
+- The dynamic source is backed by `@material/material-color-utilities` internally; upstream types and Material-branded
+  wrappers are not public runtime API.
+- Profiles may add generic app aliases such as `chrome.background` and `semantic.action.background`; they must not
+  introduce project-specific semantics.
+- Color token nodes store `ModeValues<ColorIntent>`. v0 supports only solid color intents, and compiled color values
+  remain concrete `ColorValue` objects.
 - `serializeTokenSet()` is the deterministic JSON/snapshot primitive. A dedicated JSON token exporter is deferred.
 - Exporters do not validate graphs, resolve aliases, or mutate token sets.
 - Lab proof tooling remains external future work and is not package doctrine.
 
-## Current Initial Slice
+## Current Slice
 
-The initial repository exposes only implemented root behavior: key parsing, mode parsing, color constructors, graph
-creation, graph validation, compilation, deterministic serialization, and CSS variable export. The dynamic-color source
-adapter is scaffolded internally and deliberately not root-exported until it can be wired without exposing legacy
-wrapper APIs.
+The repository exposes only implemented root behavior: key parsing, mode parsing, color constructors, solid color
+intents, source-backed graph creation, graph validation, profile application, compilation, deterministic serialization,
+CSS variable export, the dynamic scheme source, the app surface profile, and the `createSchemeTokens()` recipe.
+
+Dynamic source defaults are spec version `2021`, platform `phone`, contrast level `0`, and variant `tonal`. The source
+emits the reconciled role inventory as `scheme.*` keys: 55 required roles and four optional dim roles when the upstream
+adapter provides them symmetrically.

@@ -7,6 +7,7 @@ import {
   hex,
   lightMode,
   serializeTokenSet,
+  solidColorIntent,
   tokenKey,
   validateGraph,
 } from "../src/index";
@@ -19,9 +20,9 @@ describe("graph core", () => {
         {
           kind: "color",
           key: tokenKey("scheme.primary"),
-          value: [
-            { mode: lightMode, value: hex("#6750a4") },
-            { mode: darkMode, value: hex("#d0bcff") },
+          values: [
+            { mode: lightMode, value: solidColorIntent(hex("#6750a4")) },
+            { mode: darkMode, value: solidColorIntent(hex("#d0bcff")) },
           ],
         },
         {
@@ -41,6 +42,27 @@ describe("graph core", () => {
     expect(serializeTokenSet(compiled.value)).toContain('"key": "app.action"');
     expect(exportCssVariables(compiled.value)).toContain("--app-action: #6750a4;");
     expect(exportCssVariables(compiled.value)).toContain("--scheme-primary: #d0bcff;");
+  });
+
+  it("keeps ColorIntent at the authored graph boundary and compiles concrete colors", () => {
+    const graph = createSchemeGraph({
+      tokens: [
+        {
+          kind: "color",
+          key: tokenKey("scheme.primary"),
+          values: [
+            { mode: lightMode, value: solidColorIntent(hex("#6750a4")) },
+            { mode: darkMode, value: solidColorIntent(hex("#d0bcff")) },
+          ],
+        },
+      ],
+    });
+
+    const compiled = compileGraph(graph);
+
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok) return;
+    expect(compiled.value.tokens[0]?.values[0]?.value).toEqual(hex("#6750a4"));
   });
 
   it("returns validation problems for mode-specific alias cycles", () => {

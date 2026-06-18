@@ -7,4 +7,5 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   treeshake: true,
+  noExternal: ["@material/material-color-utilities"],
 });

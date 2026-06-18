@@ -1,15 +1,5 @@
-import { tokenKey, type TokenKey } from "../../core/keys";
-
-export interface SchemeRoleDefinition {
-  readonly key: TokenKey;
-  readonly upstreamRole: string;
-  readonly required: boolean;
-}
-
-export interface SchemeRoleSet {
-  readonly source: "dynamic-color";
-  readonly roles: readonly SchemeRoleDefinition[];
-}
+import type { SchemeRoleDefinition, SchemeRoleSet } from "../../core/schemeSource";
+import { tokenKey } from "../../core/keys";
 
 const REQUIRED_DYNAMIC_ROLE_NAMES = [
   "primaryPaletteKeyColor",
@@ -77,7 +67,7 @@ const OPTIONAL_DYNAMIC_ROLE_NAMES = [
 ] as const;
 
 export const dynamicColorRoleSet: SchemeRoleSet = {
-  source: "dynamic-color",
+  sourceId: "dynamic-scheme",
   roles: [
     ...REQUIRED_DYNAMIC_ROLE_NAMES.map((role) => dynamicRole(role, true)),
     ...OPTIONAL_DYNAMIC_ROLE_NAMES.map((role) => dynamicRole(role, false)),
@@ -87,7 +77,7 @@ export const dynamicColorRoleSet: SchemeRoleSet = {
 function dynamicRole(role: string, required: boolean): SchemeRoleDefinition {
   return {
     key: tokenKey(`scheme.${role}`),
-    upstreamRole: role,
+    sourceRole: role,
     required,
   };
 }

@@ -5,9 +5,13 @@ describe("public API", () => {
   it("exports only the implemented initial runtime surface", () => {
     expect(Object.keys(api).sort()).toEqual(
       [
+        "appSurfaceProfile",
+        "applyProfile",
         "compileGraph",
         "createSchemeGraph",
+        "createSchemeTokens",
         "darkMode",
+        "dynamicSchemeSource",
         "exportCssVariables",
         "hex",
         "lightMode",
@@ -16,6 +20,7 @@ describe("public API", () => {
         "parseModeKey",
         "parseTokenKey",
         "serializeTokenSet",
+        "solidColorIntent",
         "srgb255",
         "tokenKey",
         "validateGraph",
@@ -28,9 +33,13 @@ describe("public API", () => {
       "createTheme",
       "createColorScheme",
       "createCssVariables",
+      "createCssVarMap",
       "createMaterialSchemeTokens",
+      "createScheme",
       "MaterialTheme",
       "DynamicColorScheme",
+      "PaletteStyle",
+      "exportJsonTokens",
     ];
 
     for (const name of forbidden) {
