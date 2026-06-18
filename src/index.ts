@@ -21,7 +21,7 @@ export type {
   Result,
   TokenNode,
 } from "./core/graph";
-export type { ColorIntent, ColorIntentProblem, SolidColorIntent } from "./core/colorIntent";
+export type { ColorIntent, SolidColorIntent } from "./core/colorIntent";
 export type {
   CompileOptions,
   CompileProblem,
@@ -62,14 +62,9 @@ export type {
   SchemeTokensRecipeOptions,
   SchemeTokensRecipeProblem,
   SchemeTokensRecipeResult,
-  SchemeTokensRecipeRun,
 } from "./recipes/createSchemeTokens";
 export type {
-  DynamicSchemePlatform,
-  DynamicSchemeResolvedOptions,
-  DynamicSchemeSource,
   DynamicSchemeSourceOptions,
   DynamicSchemeSourceProblem,
-  DynamicSchemeSpecVersion,
   DynamicSchemeVariant,
 } from "./sources/dynamicScheme/dynamicSchemeSource";

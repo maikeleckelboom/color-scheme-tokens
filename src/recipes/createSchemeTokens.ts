@@ -28,10 +28,10 @@ export interface SchemeTokensRecipeResult {
 
 export type SchemeTokensRecipeProblem = GraphBuildProblem<SchemeSourceProblem> | CompileProblem;
 
-export type SchemeTokensRecipeRun = Result<SchemeTokensRecipeResult, SchemeTokensRecipeProblem>;
-
-export function createSchemeTokens(options: SchemeTokensRecipeOptions): SchemeTokensRecipeRun {
-  const graphResult = createSchemeGraph(options.source);
+export function createSchemeTokens(
+  options: SchemeTokensRecipeOptions,
+): Result<SchemeTokensRecipeResult, SchemeTokensRecipeProblem> {
+  const graphResult = createSchemeGraph({ source: options.source });
   if (!graphResult.ok) return graphResult;
 
   const graph =

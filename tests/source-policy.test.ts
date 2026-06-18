@@ -23,6 +23,45 @@ describe("source policy", () => {
     }
   });
 
+  it("keeps internal dynamic source mechanics out of the root type surface", async () => {
+    const index = await readFile("src/index.ts", "utf8");
+    const internalTypes = [
+      "ColorIntentProblem",
+      "DynamicSchemePlatform",
+      "DynamicSchemeResolvedOptions",
+      "DynamicSchemeSource",
+      "DynamicSchemeSpecVersion",
+      "SchemeTokensRecipeRun",
+    ];
+
+    for (const name of internalTypes) {
+      expect(index).not.toMatch(new RegExp(`\\b${name}\\b`));
+    }
+  });
+
+  it("keeps the package ESM-only and pins deterministic upstream color generation", async () => {
+    const packageJson = JSON.parse(await readFile("package.json", "utf8")) as {
+      readonly type?: string;
+      readonly main?: string;
+      readonly module?: string;
+      readonly exports?: Record<string, unknown>;
+      readonly dependencies?: Record<string, string>;
+    };
+    const rootExport = packageJson.exports?.["."] as Record<string, unknown> | undefined;
+    const tsupConfig = await readFile("tsup.config.ts", "utf8");
+
+    expect(packageJson.type).toBe("module");
+    expect(packageJson.main).toBe("./dist/index.js");
+    expect(packageJson.module).toBeUndefined();
+    expect(rootExport).toEqual({
+      types: "./dist/index.d.ts",
+      import: "./dist/index.js",
+    });
+    expect(JSON.stringify(packageJson.exports)).not.toContain('"require"');
+    expect(tsupConfig).not.toContain('"cjs"');
+    expect(packageJson.dependencies?.["@material/material-color-utilities"]).toBe("0.4.0");
+  });
+
   it("does not use deprecated upstream dynamic-color APIs", async () => {
     const source = await readSourceFiles("src");
 

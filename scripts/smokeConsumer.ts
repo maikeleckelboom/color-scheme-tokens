@@ -1,7 +1,14 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -61,43 +68,59 @@ if (!result.value.cssVariables.includes("--theme-chrome-background:")) {
 `,
 );
 writeFileSync(
-  join(consumerDirectory, "cjs.cjs"),
-  `
-const { appSurfaceProfile, createSchemeTokens, dynamicSchemeSource, hex } = require(${JSON.stringify(packageName)});
-
-const result = createSchemeTokens({
-  source: dynamicSchemeSource({ sourceColor: hex("#6750A4") }),
-  profile: appSurfaceProfile,
-  css: { prefix: "theme" },
-});
-
-if (!result.ok) throw new Error(JSON.stringify(result.problems));
-if (!result.value.cssVariables.includes("--theme-chrome-background:")) {
-  throw new Error("Missing profiled CSS variable from CJS require.");
-}
-`,
-);
-writeFileSync(
   join(consumerDirectory, "types.ts"),
   `
 import {
   appSurfaceProfile,
+  createSchemeGraph,
   createSchemeTokens,
   dynamicSchemeSource,
   hex,
+  type CreateSchemeGraphOptions,
+  type DynamicSchemeSourceOptions,
+  type DynamicSchemeSourceProblem,
+  type DynamicSchemeVariant,
+  type Result,
+  type SchemeTokensRecipeProblem,
   type SchemeTokensRecipeResult,
 } from ${JSON.stringify(packageName)};
 
+const variant: DynamicSchemeVariant = "tonal";
+const sourceOptions: DynamicSchemeSourceOptions = {
+  sourceColor: hex("#6750A4"),
+  variant,
+  contrastLevel: 0,
+};
+const graphOptions = {
+  source: dynamicSchemeSource(sourceOptions),
+} satisfies CreateSchemeGraphOptions;
+const graphResult = createSchemeGraph(graphOptions);
 const result = createSchemeTokens({
   source: dynamicSchemeSource({ sourceColor: hex("#6750A4") }),
   profile: appSurfaceProfile,
   css: { prefix: "theme" },
 });
 
+const typedResult: Result<SchemeTokensRecipeResult, SchemeTokensRecipeProblem> = result;
+const readProblemKind = (problem: DynamicSchemeSourceProblem) => problem.kind;
+readProblemKind({ kind: "invalid-contrast-level", message: "example" });
+variant.toUpperCase();
+if (graphResult.ok) {
+  graphResult.value.tokens.length;
+}
 if (result.ok) {
   const value: SchemeTokensRecipeResult = result.value;
   value.cssVariables.includes("--theme-chrome-background:");
 }
+if (!typedResult.ok) {
+  typedResult.problems.map((problem) => problem.kind);
+}
+
+// @ts-expect-error source-only createSchemeGraph calls are not public.
+createSchemeGraph(dynamicSchemeSource({ sourceColor: hex("#6750A4") }));
+
+// @ts-expect-error specVersion is an internal fixed default, not public configuration.
+dynamicSchemeSource({ sourceColor: hex("#6750A4"), specVersion: "2025" });
 `,
 );
 writeFileSync(
@@ -121,8 +144,8 @@ writeFileSync(
 );
 
 runPnpm(["install", "--ignore-scripts"], consumerDirectory);
+assertPackedPackageBoundary(join(consumerDirectory, "node_modules", ...packageName.split("/")));
 run("node", ["esm.mjs"], consumerDirectory);
-run("node", ["cjs.cjs"], consumerDirectory);
 run(
   "node",
   [join(repoRoot, "node_modules", "typescript", "bin", "tsc"), "-p", "tsconfig.json"],
@@ -139,5 +162,47 @@ function run(command, args, cwd) {
     cwd,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "inherit"],
+  });
+}
+
+function assertPackedPackageBoundary(packageDirectory) {
+  const manifest = JSON.parse(readFileSync(join(packageDirectory, "package.json"), "utf8"));
+  const cjsArtifacts = listFiles(packageDirectory).filter((filePath) =>
+    /\.(?:cjs|cts)(?:\.map)?$/.test(filePath),
+  );
+
+  assertNoRequireExportCondition(manifest.exports, "exports");
+
+  if (manifest.main?.endsWith(".cjs")) {
+    throw new Error(`Packed package main points to a CJS artifact: ${manifest.main}`);
+  }
+
+  if (cjsArtifacts.length > 0) {
+    throw new Error(
+      `Packed package contains CJS artifacts:\n${cjsArtifacts
+        .map((filePath) => `- ${relative(packageDirectory, filePath)}`)
+        .join("\n")}`,
+    );
+  }
+}
+
+function assertNoRequireExportCondition(value, path) {
+  if (value === null || typeof value !== "object") return;
+
+  for (const [key, child] of Object.entries(value)) {
+    const childPath = `${path}.${key}`;
+    if (key === "require") {
+      throw new Error(`Packed package exposes a require export condition at ${childPath}.`);
+    }
+
+    assertNoRequireExportCondition(child, childPath);
+  }
+}
+
+function listFiles(directory) {
+  return readdirSync(directory).flatMap((entry) => {
+    const path = join(directory, entry);
+    if (statSync(path).isDirectory()) return listFiles(path);
+    return [path];
   });
 }

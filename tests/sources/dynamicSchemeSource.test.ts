@@ -12,16 +12,11 @@ describe("dynamicSchemeSource", () => {
     const source = dynamicSchemeSource({ sourceColor: hex("#6750A4") });
     const requiredRoles = source.roleSet.roles.filter((role) => role.required);
     const optionalRoles = source.roleSet.roles.filter((role) => !role.required);
-    const graph = expectOk(createSchemeGraph(source));
+    const graph = expectOk(createSchemeGraph({ source }));
 
     expect(requiredRoles).toHaveLength(55);
     expect(optionalRoles).toHaveLength(4);
-    expect(source.defaults).toEqual({
-      specVersion: "2021",
-      platform: "phone",
-      contrastLevel: 0,
-      variant: "tonal",
-    });
+    expect(Object.prototype.hasOwnProperty.call(source, "defaults")).toBe(false);
     expect(graph.tokens).toHaveLength(59);
     expect(graph.tokens.every((token) => String(token.key).startsWith("scheme."))).toBe(true);
     expect(graph.tokens.some((token) => String(token.key).startsWith("material."))).toBe(false);
@@ -34,12 +29,11 @@ describe("dynamicSchemeSource", () => {
 
   it("includes optional dim roles symmetrically when the upstream source provides them", () => {
     const graph = expectOk(
-      createSchemeGraph(
-        dynamicSchemeSource({
+      createSchemeGraph({
+        source: dynamicSchemeSource({
           sourceColor: hex("#6750A4"),
-          specVersion: "2025",
         }),
-      ),
+      }),
     );
 
     for (const key of [

@@ -1,6 +1,6 @@
 import type { SrgbColor } from "../../core/colorValue";
 import { createTokenGraph } from "../../core/createSchemeGraph";
-import type { ColorSchemeTokenGraph, Result } from "../../core/graph";
+import type { Result } from "../../core/graph";
 import type { SchemeSource } from "../../core/schemeSource";
 import {
   createDynamicSchemeValues,
@@ -16,8 +16,6 @@ export interface DynamicSchemeSourceOptions {
   readonly sourceColor: SrgbColor;
   readonly variant?: DynamicSchemeVariant;
   readonly contrastLevel?: number;
-  readonly specVersion?: DynamicSchemeSpecVersion;
-  readonly platform?: DynamicSchemePlatform;
 }
 
 export interface DynamicSchemeResolvedOptions {
@@ -28,11 +26,7 @@ export interface DynamicSchemeResolvedOptions {
 }
 
 export interface DynamicSchemeOptionProblem {
-  readonly kind:
-    | "unsupported-variant"
-    | "invalid-contrast-level"
-    | "unsupported-spec-version"
-    | "unsupported-platform";
+  readonly kind: "unsupported-variant" | "invalid-contrast-level";
   readonly message: string;
   readonly sourceId?: string;
   readonly path?: string;
@@ -40,19 +34,14 @@ export interface DynamicSchemeOptionProblem {
 
 export type DynamicSchemeSourceProblem = DynamicSchemeValueProblem | DynamicSchemeOptionProblem;
 
-export interface DynamicSchemeSource extends SchemeSource<DynamicSchemeSourceProblem> {
-  readonly id: "dynamic-scheme";
-  readonly defaults: DynamicSchemeResolvedOptions;
-  createGraph(): Result<ColorSchemeTokenGraph, DynamicSchemeSourceProblem>;
-}
-
-export function dynamicSchemeSource(options: DynamicSchemeSourceOptions): DynamicSchemeSource {
+export function dynamicSchemeSource(
+  options: DynamicSchemeSourceOptions,
+): SchemeSource<DynamicSchemeSourceProblem> {
   const resolved = resolveOptions(options);
 
   return {
     id: "dynamic-scheme",
     roleSet: dynamicColorRoleSet,
-    defaults: dynamicSchemeSourceDefaults,
     createGraph() {
       if (!resolved.ok) return resolved;
       const values = createDynamicSchemeValues({
@@ -72,7 +61,7 @@ export function dynamicSchemeSource(options: DynamicSchemeSourceOptions): Dynami
   };
 }
 
-export const dynamicSchemeSourceDefaults: DynamicSchemeResolvedOptions = {
+const dynamicSchemeSourceDefaults: DynamicSchemeResolvedOptions = {
   specVersion: "2021",
   platform: "phone",
   contrastLevel: 0,
@@ -84,8 +73,8 @@ function resolveOptions(
 ): Result<DynamicSchemeResolvedOptions, DynamicSchemeOptionProblem> {
   const problems: DynamicSchemeOptionProblem[] = [];
   const variant = options.variant ?? dynamicSchemeSourceDefaults.variant;
-  const specVersion = options.specVersion ?? dynamicSchemeSourceDefaults.specVersion;
-  const platform = options.platform ?? dynamicSchemeSourceDefaults.platform;
+  const specVersion = dynamicSchemeSourceDefaults.specVersion;
+  const platform = dynamicSchemeSourceDefaults.platform;
   const contrastLevel = options.contrastLevel ?? dynamicSchemeSourceDefaults.contrastLevel;
 
   if (!["tonal", "vibrant", "expressive", "neutral"].includes(variant)) {
@@ -94,24 +83,6 @@ function resolveOptions(
       message: `Unsupported dynamic scheme variant: ${String(variant)}.`,
       sourceId: dynamicColorRoleSet.sourceId,
       path: "variant",
-    });
-  }
-
-  if (!["2021", "2025"].includes(specVersion)) {
-    problems.push({
-      kind: "unsupported-spec-version",
-      message: `Unsupported dynamic scheme specVersion: ${String(specVersion)}.`,
-      sourceId: dynamicColorRoleSet.sourceId,
-      path: "specVersion",
-    });
-  }
-
-  if (!["phone", "watch"].includes(platform)) {
-    problems.push({
-      kind: "unsupported-platform",
-      message: `Unsupported dynamic scheme platform: ${String(platform)}.`,
-      sourceId: dynamicColorRoleSet.sourceId,
-      path: "platform",
     });
   }
 

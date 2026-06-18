@@ -1,5 +1,5 @@
 export { createDynamicSchemeValues } from "./createDynamicSchemeValues";
-export { dynamicSchemeSource, dynamicSchemeSourceDefaults } from "./dynamicSchemeSource";
+export { dynamicSchemeSource } from "./dynamicSchemeSource";
 export type {
   DynamicSchemeValueOptions,
   DynamicSchemeValueProblem,
@@ -8,7 +8,6 @@ export type {
 export type {
   DynamicSchemePlatform,
   DynamicSchemeResolvedOptions,
-  DynamicSchemeSource,
   DynamicSchemeSourceOptions,
   DynamicSchemeSourceProblem,
   DynamicSchemeSpecVersion,

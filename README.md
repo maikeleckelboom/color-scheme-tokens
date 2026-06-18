@@ -17,14 +17,14 @@ scheme source input
 ```
 
 This repository is private at version `0.0.0` while the public contract is being formed. It does not publish the old
-wrapper-shaped API.
+wrapper-shaped API. The package is ESM-only.
 
 ## Minimal Core
 
 ```ts
 import {
+  type ColorSchemeTokenGraph,
   compileGraph,
-  createSchemeGraph,
   darkMode,
   exportCssVariables,
   hex,
@@ -34,7 +34,8 @@ import {
   tokenKey,
 } from "color-scheme-tokens";
 
-const graph = createSchemeGraph({
+const graph: ColorSchemeTokenGraph = {
+  schemaVersion: "color-scheme-token-graph/v0",
   modes: [lightMode, darkMode],
   tokens: [
     {
@@ -51,13 +52,29 @@ const graph = createSchemeGraph({
       target: tokenKey("scheme.primary"),
     },
   ],
-});
+};
 
 const compiled = compileGraph(graph);
 
 if (compiled.ok) {
   const css = exportCssVariables(compiled.value);
   const snapshot = serializeTokenSet(compiled.value);
+}
+```
+
+## Dynamic Source Graph
+
+```ts
+import { createSchemeGraph, dynamicSchemeSource, hex } from "color-scheme-tokens";
+
+const graphResult = createSchemeGraph({
+  source: dynamicSchemeSource({
+    sourceColor: hex("#6750A4"),
+  }),
+});
+
+if (graphResult.ok) {
+  graphResult.value.tokens.length;
 }
 ```
 
@@ -92,6 +109,9 @@ valid inputs. The public variants are `tonal`, `vibrant`, `expressive`, and `neu
 The dynamic source is backed internally by `@material/material-color-utilities`, but public token keys use `scheme.*`
 and the package API does not expose Material-branded wrapper types.
 
+Dynamic color algorithm changes are package-level events because upstream generation changes can alter compiled token
+output. The upstream package is pinned exactly, and deterministic snapshot fixtures are expected to catch output drift.
+
 ## Current Scope
 
 - Public token keys use `scheme.*` for scheme roles.
@@ -113,5 +133,5 @@ pnpm release:check
 Tooling is Oxc-first: Oxlint is the lint gate and Oxfmt is the formatter.
 
 `pnpm release:check` currently runs type checking, linting, tests, build, formatting, a dry-run package pack, and a
-packed consumer smoke test for ESM, CommonJS, and strict TypeScript declarations. The package is marked `private: true`;
-do not publish it from this repository state.
+packed consumer smoke test for ESM, strict TypeScript declarations, and packed-output package boundaries. The package is
+marked `private: true`; do not publish it from this repository state.

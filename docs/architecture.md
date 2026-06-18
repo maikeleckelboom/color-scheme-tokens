@@ -28,6 +28,10 @@ resolves aliases, and unwraps color intents into concrete color values. Exporter
 - Color token nodes store `ModeValues<ColorIntent>`. v0 supports only solid color intents, and compiled color values
   remain concrete `ColorValue` objects.
 - `serializeTokenSet()` is the deterministic JSON/snapshot primitive. A dedicated JSON token exporter is deferred.
+- Dynamic color algorithm changes are package-level events because upstream generation changes can alter compiled token
+  output; the upstream package is pinned exactly and fixtures are expected to catch drift.
+- `tests/fixtures/dynamic-purple.token-set.snapshot.json` is byte-for-byte serialized output and is intentionally not
+  formatter-owned.
 - Exporters do not validate graphs, resolve aliases, or mutate token sets.
 - Lab proof tooling remains external future work and is not package doctrine.
 

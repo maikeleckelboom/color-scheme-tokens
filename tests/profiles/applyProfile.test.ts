@@ -3,14 +3,15 @@ import {
   applyProfile,
   appSurfaceProfile,
   compileGraph,
-  createSchemeGraph,
   darkMode,
   hex,
   lightMode,
   solidColorIntent,
   tokenKey,
   validateGraph,
+  type ColorSchemeTokenGraph,
   type ColorSchemeProfile,
+  type TokenNode,
 } from "../../src/index";
 
 describe("applyProfile", () => {
@@ -119,7 +120,7 @@ describe("applyProfile", () => {
 });
 
 function baseGraph() {
-  return createSchemeGraph({
+  return testGraph({
     tokens: [
       colorToken("scheme.surface", "#ffffff", "#141218"),
       colorToken("scheme.onSurface", "#1d1b20", "#e6e0e9"),
@@ -130,6 +131,14 @@ function baseGraph() {
       colorToken("scheme.onError", "#ffffff", "#690005"),
     ],
   });
+}
+
+function testGraph(options: { readonly tokens?: readonly TokenNode[] }): ColorSchemeTokenGraph {
+  return {
+    schemaVersion: "color-scheme-token-graph/v0",
+    modes: [lightMode, darkMode],
+    tokens: [...(options.tokens ?? [])],
+  };
 }
 
 function expectProblems<Value, Problem>(

@@ -31,7 +31,9 @@ it does not copy old Git history.
 ## Current Implementation Notes
 
 - The package remains `private: true` at version `0.0.0`.
+- The package is ESM-only; CommonJS build output and `require` export conditions are not part of the public contract.
 - `ColorIntent` is implemented only as a solid authored color payload.
 - `dynamicSchemeSource()` accepts opaque sRGB source colors and keeps Material color utilities internal.
 - `appSurfaceProfile` maps scheme roles to `chrome.*` and `semantic.*` aliases.
 - `serializeTokenSet()` remains the deterministic snapshot path; there is no public JSON exporter.
+- The upstream dynamic color utility version is pinned exactly because algorithm changes can alter generated token output.

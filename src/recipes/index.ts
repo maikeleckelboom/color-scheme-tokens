@@ -3,5 +3,4 @@ export type {
   SchemeTokensRecipeOptions,
   SchemeTokensRecipeProblem,
   SchemeTokensRecipeResult,
-  SchemeTokensRecipeRun,
 } from "./createSchemeTokens";

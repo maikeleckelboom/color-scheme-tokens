@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   compileGraph,
-  createSchemeGraph,
   darkMode,
   exportCssVariables,
   hex,
@@ -10,11 +9,14 @@ import {
   solidColorIntent,
   tokenKey,
   validateGraph,
+  type ColorSchemeTokenGraph,
+  type ModeKey,
+  type TokenNode,
 } from "../src/index";
 
 describe("graph core", () => {
   it("validates, compiles, serializes, and exports a small graph", () => {
-    const graph = createSchemeGraph({
+    const graph = testGraph({
       modes: [lightMode, darkMode],
       tokens: [
         {
@@ -45,7 +47,7 @@ describe("graph core", () => {
   });
 
   it("keeps ColorIntent at the authored graph boundary and compiles concrete colors", () => {
-    const graph = createSchemeGraph({
+    const graph = testGraph({
       tokens: [
         {
           kind: "color",
@@ -66,7 +68,7 @@ describe("graph core", () => {
   });
 
   it("returns validation problems for mode-specific alias cycles", () => {
-    const graph = createSchemeGraph({
+    const graph = testGraph({
       modes: [lightMode, darkMode],
       tokens: [
         {
@@ -89,3 +91,14 @@ describe("graph core", () => {
     expect(result.problems.some((problem) => problem.kind === "alias-cycle")).toBe(true);
   });
 });
+
+function testGraph(options: {
+  readonly modes?: readonly ModeKey[];
+  readonly tokens?: readonly TokenNode[];
+}): ColorSchemeTokenGraph {
+  return {
+    schemaVersion: "color-scheme-token-graph/v0",
+    modes: [...(options.modes ?? [lightMode, darkMode])],
+    tokens: [...(options.tokens ?? [])],
+  };
+}
