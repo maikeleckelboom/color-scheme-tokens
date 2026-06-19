@@ -244,8 +244,8 @@ value: byMode({
 
 // Literal values by mode
 value: byMode({
-  light: literal(hex("#ffffff")),
-  dark: literal(hex("#121212")),
+  light: { kind: "literal", value: "#ffffff" },
+  dark: { kind: "literal", value: "#121212" },
 });
 ```
 
@@ -436,10 +436,10 @@ After the Material boundary repair, the root exports are honest and color-specif
 createSchemeTokens        createSourceGraph
 compileGraph              validateGraph
 serializeTokenSet         exportCssVariables
-material3Source
-tokenKey  parseTokenKey   lightMode  darkMode  modeKey  parseModeKey
-parseColorInput  hex  parseHexColor  srgb255
-literalColor
+parseTokenKey             parseModeKey
+parseColorInput           parseHexColor
+isTokenKey                isModeKey
+srgb255
 ```
 
 ## Decision
@@ -572,8 +572,8 @@ exportCssVariables(compiled, {
   prefix: "theme",
   modeStrategy: {
     kind: "light-dark",
-    light: lightMode,
-    dark: darkMode,
+    light: "light",
+    dark: "dark",
     declareColorScheme: true,
   },
 });
@@ -636,7 +636,7 @@ Keep the internal canonical serializer independent. It is valuable for determini
 
 ```ts
 exportDtcg(compiled, {
-  mode: lightMode,
+  mode: "light",
   include: "public",
 });
 ```

@@ -1,9 +1,8 @@
-export { literalColor } from "./core/colorTokenValue";
-export { hex, parseColorInput, parseHexColor, srgb255 } from "./core/colorValue";
+export { parseColorInput, parseHexColor, srgb255 } from "./core/colorValue";
 export { compileGraph, compileValidatedGraph } from "./core/compileGraph";
 export { createSourceGraph } from "./core/createSourceGraph";
-export { isTokenKey, tokenKey, parseTokenKey } from "./core/keys";
-export { darkMode, isModeKey, lightMode, modeKey, parseModeKey } from "./core/modes";
+export { isTokenKey, parseTokenKey } from "./core/keys";
+export { isModeKey, parseModeKey } from "./core/modes";
 export { serializeTokenSet } from "./core/serializeTokenSet";
 export { validateGraph } from "./core/validateGraph";
 export { exportCssVariables } from "./exporters/exportCssVariables";

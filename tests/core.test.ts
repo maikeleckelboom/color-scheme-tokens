@@ -3,7 +3,7 @@ import {
   compileGraph,
   compileValidatedGraph,
   exportCssVariables,
-  hex,
+  parseHexColor,
   serializeTokenSet,
   validateGraph,
   type ColorSchemeTokenGraphInput,
@@ -97,7 +97,7 @@ describe("graph core", () => {
 
     expect(compiled.ok).toBe(true);
     if (!compiled.ok) return;
-    expect(compiled.value.tokens[0]?.values[0]?.value).toEqual(hex("#6750a4"));
+    expect(compiled.value.tokens[0]?.values[0]?.value).toEqual(expectHex("#6750a4"));
   });
 
   it("returns validation problems for mode-specific alias cycles", () => {
@@ -189,4 +189,11 @@ function testGraph(options: {
     modes: [...(options.modes ?? ["light", "dark"])],
     tokens: [...(options.tokens ?? [])],
   };
+}
+
+function expectHex(input: string) {
+  const result = parseHexColor(input);
+  expect(result.ok).toBe(true);
+  if (!result.ok) throw new Error(result.problem.message);
+  return result.value;
 }

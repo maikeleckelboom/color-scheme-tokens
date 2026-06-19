@@ -79,16 +79,13 @@ writeFileSync(
 import {
   createSchemeTokens,
   createSourceGraph,
-  hex,
-  literalColor,
   parseColorInput,
   type ColorInput,
   type ColorSchemeTokenGraph,
-  type ColorTokenValue,
+  type ColorSchemeTokenGraphInput,
   type ColorSchemeTokenSource,
   type ColorSchemeTokenSourceProblem,
   type CreateSourceGraphOptions,
-  type LiteralColorValue,
   type Result,
   type SchemeTokensRecipeProblem,
   type SchemeTokensRecipeResult,
@@ -114,13 +111,25 @@ const sourceOptions: Material3SourceOptions = {
     platform: "phone",
   },
 };
-const authoredColor = literalColor(hex("#6750A4"));
-const typedAuthoredColor: LiteralColorValue = authoredColor;
-const graphValue: ColorTokenValue = typedAuthoredColor;
 const graphOptions = {
   source: material3Source(sourceOptions),
 } satisfies CreateSourceGraphOptions;
 const source: ColorSchemeTokenSource<Material3SourceProblem> = graphOptions.source;
+const manualGraph: ColorSchemeTokenGraphInput = {
+  schemaVersion: "color-scheme-token-graph/v0",
+  modes: ["light", "dark"],
+  tokens: [
+    {
+      kind: "color",
+      key: "brand.primary",
+      values: [
+        { mode: "light", value: "#6750a4" },
+        { mode: "dark", value: "#d0bcff" },
+      ],
+    },
+    { kind: "alias", key: "app.action", target: "brand.primary" },
+  ],
+};
 const graphResult = createSourceGraph(graphOptions);
 const result = createSchemeTokens({
   source: material3Source({ color: "#6750A4" }),
@@ -153,8 +162,7 @@ if (result.ok) {
   value.cssVariables.includes("--theme-app-action:");
 }
 parseColorInput(colorInput).ok.valueOf();
-authoredColor.value.colorSpace.toUpperCase();
-graphValue.kind.toUpperCase();
+manualGraph.tokens.length.toFixed();
 legacyTransformOptions.source.id.toUpperCase();
 if (!typedResult.ok) {
   typedResult.problems.map((problem) => problem.kind);
@@ -162,6 +170,18 @@ if (!typedResult.ok) {
 
 // @ts-expect-error Material 3 source factory is intentionally not exported from root.
 import(${JSON.stringify(packageName)}).then((module) => module.material3Source);
+
+// @ts-expect-error low-level key assertion helper is intentionally not exported from root.
+import(${JSON.stringify(packageName)}).then((module) => module.tokenKey);
+
+// @ts-expect-error low-level mode assertion helper is intentionally not exported from root.
+import(${JSON.stringify(packageName)}).then((module) => module.modeKey);
+
+// @ts-expect-error low-level throwing hex helper is intentionally not exported from root.
+import(${JSON.stringify(packageName)}).then((module) => module.hex);
+
+// @ts-expect-error low-level literal color helper is intentionally not exported from root.
+import(${JSON.stringify(packageName)}).then((module) => module.literalColor);
 
 // @ts-expect-error Material 3 option types are intentionally not exported from root.
 type RootMaterial3SourceOptions = import(${JSON.stringify(packageName)}).Material3SourceOptions;

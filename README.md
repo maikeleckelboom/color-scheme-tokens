@@ -201,9 +201,8 @@ graphResult.value.tokens.find((token) => token.key === "m3.primary");
 ```
 
 The Material 3 source adapter accepts opaque sRGB source colors in this tranche. Hex strings are the normal authoring
-input. Low-level helpers such as `hex("#6750A4")`, `srgb255(103, 80, 164)`, and `literalColor(...)` remain available
-for advanced programmatic code, but validation and source adapters do not require them in authored config. The adapter
-converts parsed color values to Material ARGB values internally.
+input. Validation and source adapters parse and normalize authored color data; the adapter converts parsed color values
+to Material ARGB values internally.
 
 The Material 3 source adapter emits `m3.*` tokens such as `m3.primary`, `m3.onPrimary`, `m3.surface`, `m3.onSurface`,
 and `m3.error`. That namespace is adapter-emitted token data, not mandatory graph structure. Dynamic color algorithm

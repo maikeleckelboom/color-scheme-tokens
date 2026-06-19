@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   compileGraph,
-  hex,
+  parseHexColor,
   validateGraph,
   type ColorSchemeTokenGraphInput,
   type ColorSchemeTokenLayerInput,
@@ -84,8 +84,8 @@ describe("token layers", () => {
     if (!compiled.ok) return;
     expect(compiled.value.tokens).toHaveLength(1);
     expect(compiled.value.tokens[0]?.values.map((entry) => entry.value)).toEqual([
-      hex("#ffffff"),
-      hex("#d0bcff"),
+      expectHex("#ffffff"),
+      expectHex("#d0bcff"),
     ]);
   });
 
@@ -109,7 +109,7 @@ describe("token layers", () => {
 
     expect(compiled.ok).toBe(true);
     if (!compiled.ok) return;
-    expect(compiled.value.tokens[0]?.values[0]?.value).toEqual(hex("#fff8e1"));
+    expect(compiled.value.tokens[0]?.values[0]?.value).toEqual(expectHex("#fff8e1"));
   });
 });
 
@@ -164,4 +164,11 @@ function colorToken(key: string, light: string, dark: string) {
       { mode: "dark", value: dark },
     ],
   };
+}
+
+function expectHex(input: string) {
+  const result = parseHexColor(input);
+  expect(result.ok).toBe(true);
+  if (!result.ok) throw new Error(result.problem.message);
+  return result.value;
 }

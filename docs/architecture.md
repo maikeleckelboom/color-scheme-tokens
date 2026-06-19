@@ -40,8 +40,9 @@ color values. Exporters consume compiled token sets only.
 - Material 3 `keyColors` and `algorithm` options are adapter concerns. `specVersion`, `platform`, `variant`, and
   `contrastLevel` do not belong to generic recipe options.
 - ARGB is an adapter implementation detail for Material 3 generation or an explicit low-level interop concern. Public
-  authoring uses plain color inputs such as hex strings; constructors such as `hex()` and `srgb255()` are low-level
-  helpers.
+  authoring uses plain color inputs such as hex strings. Authored graph inputs use plain token keys, mode keys, and
+  color literals. Branded keys, branded modes, and parsed color values are produced by validation and normalization, not
+  required as authoring syntax.
 - The Material 3 adapter is backed by `@material/material-color-utilities` internally. Upstream types and Material
   utility wrappers are not public root API.
 - Graph types, validation, compilation, layers, serialization, and CSS export remain generic.
@@ -59,9 +60,9 @@ color values. Exporters consume compiled token sets only.
 
 ## Current Slice
 
-The root package exposes generic behavior: key parsing, mode parsing, color constructors, literal color values,
-`createSourceGraph()` source materialization, graph validation, compilation, deterministic serialization, CSS variable
-export, generic layer types, and the `createSchemeTokens()` recipe.
+The root package exposes generic behavior: key parsing, mode parsing, color input parsing, `createSourceGraph()` source
+materialization, graph validation, compilation, deterministic serialization, CSS variable export, generic layer types,
+and the `createSchemeTokens()` recipe.
 
 The Material 3 subpath exposes `material3Source()` and Material 3 source option/problem types. The adapter defaults are
 spec version `2021`, platform `phone`, contrast level `0`, and variant `tonalSpot`. It emits the reconciled role

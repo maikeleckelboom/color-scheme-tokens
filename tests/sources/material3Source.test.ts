@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compileValidatedGraph, createSourceGraph, hex } from "../../src/index";
+import { compileValidatedGraph, createSourceGraph, parseHexColor } from "../../src/index";
 import { material3Source } from "../../src/sources/material3";
 
 describe("material3Source", () => {
@@ -38,7 +38,7 @@ describe("material3Source", () => {
 
   it("rejects non-opaque and non-srgb source colors with structured source problems", () => {
     const alphaResult = material3Source({
-      color: { ...hex("#6750A4"), alpha: 0.5 },
+      color: { ...expectHex("#6750A4"), alpha: 0.5 },
     }).createGraph();
     const wideColorResult = material3Source({
       color: {
@@ -177,4 +177,11 @@ function expectProblems<Value, Problem>(
   expect(result.ok).toBe(false);
   if (result.ok) throw new Error("Expected result to fail.");
   return result.problems;
+}
+
+function expectHex(input: string) {
+  const result = parseHexColor(input);
+  expect(result.ok).toBe(true);
+  if (!result.ok) throw new Error(result.problem.message);
+  return result.value;
 }

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { createSchemeTokens, hex, type ColorSchemeTokenLayerInput } from "../../src/index";
+import {
+  createSchemeTokens,
+  parseHexColor,
+  type ColorSchemeTokenLayerInput,
+} from "../../src/index";
 import { material3Source } from "../../src/sources/material3";
 
 describe("createSchemeTokens", () => {
@@ -106,7 +110,7 @@ describe("createSchemeTokens", () => {
   it("returns structured problems from source failures", () => {
     const result = createSchemeTokens({
       source: material3Source({
-        color: { ...hex("#6750A4"), alpha: 0.2 },
+        color: { ...expectHex("#6750A4"), alpha: 0.2 },
       }),
     });
 
@@ -147,4 +151,11 @@ function expectProblems<Value, Problem>(
   expect(result.ok).toBe(false);
   if (result.ok) throw new Error("Expected result to fail.");
   return result.problems;
+}
+
+function expectHex(input: string) {
+  const result = parseHexColor(input);
+  expect(result.ok).toBe(true);
+  if (!result.ok) throw new Error(result.problem.message);
+  return result.value;
 }
