@@ -80,27 +80,27 @@ These are the only items that must land before the first public release. They ar
 
 The full decision set, including deferrals, is consolidated here so the boundary between “now” and “later” is unambiguous. Sections 3 and 4 narrate the two halves.
 
-| Item                                        | Decision                                                                       |
-| ------------------------------------------- | ------------------------------------------------------------------------------ |
-| Expression model replacing alias nodes      | **Blocker**                                                                    |
-| Explicit `defaultMode`                      | **Blocker**                                                                    |
-| Public/internal visibility                  | **Blocker**                                                                    |
-| Selection defaults                          | **Blocker**                                                                    |
-| Unsafe transform contract                   | **Blocker if the transform stays public**                                      |
-| DTCG as exporter/importer only              | **Blocker as ADR / doc contract**                                              |
-| Material source boundary enforced           | **Already repaired; maintain as invariant**                                    |
-| Canonical deterministic serializer          | **Already independent; maintain as invariant**                                 |
-| Mounted plural sources                      | **Blocker only if multi-source v1 is intended** (see section 6)                |
-| Literal-preserving `TokenKey<Name>`         | Strongly preferred, but not blocker unless compile-time key safety is promised |
-| Typed recipe builder                        | Not blocker — public ergonomics layer on top of the runtime-safe graph         |
-| Full per-mode resolution trace              | Not blocker — preserve origin/dependency metadata now, expose `explainToken` later |
-| DTCG export                                 | Not blocker                                                                    |
-| `light-dark()` CSS                          | Not blocker                                                                    |
-| Contrast utilities                          | Not blocker                                                                    |
-| `diffTokenSets`                             | Not blocker                                                                    |
-| Color algebra (`mix`, `withAlpha`, …)       | Not blocker                                                                    |
-| TypeScript binding exporter                 | Not blocker                                                                    |
-| Tonal ramps / scales                        | Not blocker                                                                    |
+| Item                                   | Decision                                                                           |
+| -------------------------------------- | ---------------------------------------------------------------------------------- |
+| Expression model replacing alias nodes | **Blocker**                                                                        |
+| Explicit `defaultMode`                 | **Blocker**                                                                        |
+| Public/internal visibility             | **Blocker**                                                                        |
+| Selection defaults                     | **Blocker**                                                                        |
+| Raw graph transform hook               | Not part of v1; typed plugins deferred                                             |
+| DTCG as exporter/importer only         | **Blocker as ADR / doc contract**                                                  |
+| Material source boundary enforced      | **Already repaired; maintain as invariant**                                        |
+| Canonical deterministic serializer     | **Already independent; maintain as invariant**                                     |
+| Mounted plural sources                 | **Blocker only if multi-source v1 is intended** (see section 6)                    |
+| Literal-preserving `TokenKey<Name>`    | Strongly preferred, but not blocker unless compile-time key safety is promised     |
+| Typed recipe builder                   | Not blocker — public ergonomics layer on top of the runtime-safe graph             |
+| Full per-mode resolution trace         | Not blocker — preserve origin/dependency metadata now, expose `explainToken` later |
+| DTCG export                            | Not blocker                                                                        |
+| `light-dark()` CSS                     | Not blocker                                                                        |
+| Contrast utilities                     | Not blocker                                                                        |
+| `diffTokenSets`                        | Not blocker                                                                        |
+| Color algebra (`mix`, `withAlpha`, …)  | Not blocker                                                                        |
+| TypeScript binding exporter            | Not blocker                                                                        |
+| Tonal ramps / scales                   | Not blocker                                                                        |
 
 ## Blocker rationale
 
@@ -124,9 +124,9 @@ Source-generated primitives should default to `internal`; application semantic t
 
 Compilation should default to `selection: "public"` and offer `"all"` and an explicit `include` override. This is the operational counterpart to visibility and should ship with it.
 
-### Unsafe transform contract
+### Raw graph transform hook
 
-The current `ColorSchemeTokenGraphTransform` accepts and returns the broad graph type, which destroys any future exact-key inference and makes provenance attribution ambiguous. If a public transform escape hatch survives into v1, it must be explicitly named (for example `unsafeTransform`) so the consequence — widened key types and mandatory revalidation — is visible at the call site. Alternatively, remove the public transform entirely from v1 and expose only typed plugins later. The decision is: **name it `unsafeTransform`, or do not expose it.**
+A raw transform accepts and returns the whole graph. That is too broad for the v1 public contract because it bypasses source/layer ownership, weakens provenance, and makes future typed key inference unclear. V1 should not expose such a hook. Customization stays declarative through aliases and layers. A later typed plugin model can be designed if real use cases justify it.
 
 ### DTCG as exporter/importer only
 
@@ -271,7 +271,7 @@ composite(ref("app.overlay"), ref("app.canvas"));
 - `ColorTokenValue` becomes a real discriminated union because `literal` and `reference` are both implemented; no unimplemented placeholder variant is needed.
 - The compiler still resolves every expression to a concrete `ColorValue`, preserving deterministic output.
 
-A key-indexed token record is preferable to an array for the public authoring model: it retains literal keys, prevents duplicate keys within a fragment, and gives direct lookup. An internal normalized array or index may still be used for compiler efficiency.
+A key-indexed token record is preferable to an array for the public authoring model: it retains literal keys, prevents duplicate keys within a fragment, and gives direct lookup. Layers are intended to be declarative token fragments, not arbitrary graph mutations; they may later carry metadata such as visibility, description, deprecation, and extensions as Graph v1 evolves. An internal normalized array or index may still be used for compiler efficiency.
 
 ## Modes
 
@@ -308,7 +308,7 @@ Real compile-time key safety would require **all** of the following:
 3. Layers accumulate key unions.
 4. References are constrained to keys available at that pipeline stage.
 5. Compiled token sets retain their emitted key union.
-6. Arbitrary transforms either declare output keys or explicitly widen back to dynamic `TokenKey`.
+6. Typed plugins declare output keys or explicitly widen back to dynamic `TokenKey`.
 
 That is a deep, pipeline-wide inference design. It is the right eventual design, but it is the typed builder from section 4, not a Phase 0 deliverable. The split is:
 
@@ -687,18 +687,18 @@ WCAG 2.2 specifies 4.5:1 for normal text and 3:1 for large text at level AA; enh
 
 Only true public-contract blockers. This is intentionally much smaller than the earlier draft’s Phase 0.
 
-| Workstream     | Deliverable                                                                          |
-| -------------- | ------------------------------------------------------------------------------------ |
-| Scope          | ADR declaring the package color-specific and DTCG an interchange boundary            |
-| Expressions    | Implemented `literal` and `reference` variants; remove separate alias-node semantics |
-| Modes          | Explicit `defaultMode` in the graph                                                  |
-| Visibility     | Required `public` / `internal` metadata                                              |
-| Selection      | Compilation defaults to `selection: "public"`                                        |
-| Escape hatches | Public transform either named `unsafeTransform` or removed from v1                  |
+| Workstream      | Deliverable                                                                                                                                         |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Scope           | ADR declaring the package color-specific and DTCG an interchange boundary                                                                           |
+| Expressions     | Implemented `literal` and `reference` variants; remove separate alias-node semantics                                                                |
+| Modes           | Explicit `defaultMode` in the graph                                                                                                                 |
+| Visibility      | Required `public` / `internal` metadata                                                                                                             |
+| Selection       | Compilation defaults to `selection: "public"`                                                                                                       |
+| Escape hatches  | Raw transform excluded from v1; typed plugins deferred                                                                                              |
 | Source mounting | **Decision recorded**: Model A (singular `source`, `m3.*` direct) or Model B (plural mounted fragments). Implement only what the decision requires. |
-| Naming         | **Decision recorded**: Option A (keep current names) or Option B (color* rename)     |
-| CSS            | Consistent alpha formatting; honor explicit default mode                             |
-| Tests          | Visibility, selection, expression cycles, deterministic insertion-order independence |
+| Naming          | **Decision recorded**: Option A (keep current names) or Option B (color\* rename)                                                                   |
+| CSS             | Consistent alpha formatting; honor explicit default mode                                                                                            |
+| Tests           | Visibility, selection, expression cycles, deterministic insertion-order independence                                                                |
 
 **Exit criterion:** there are no unresolved public-contract questions around identity, visibility, modes, source composition, references, or naming. Items marked “Decision recorded” require a written decision, not necessarily full implementation, before exit.
 
@@ -766,7 +766,7 @@ The risk is trying to build **all** of that before the first public release. The
 1. Replace alias nodes with reference expressions.
 2. Add explicit `defaultMode`.
 3. Add explicit visibility and selection defaults.
-4. Name or remove the unsafe transform escape hatch.
+4. Exclude raw graph transforms from v1 and defer typed plugins.
 5. Record the DTCG-as-interop and Material-boundary invariants as ADRs.
 6. Record the source-mounting decision (Model A vs Model B).
 7. Record the naming decision (Option A vs Option B).
