@@ -1,36 +1,33 @@
 import { describe, expect, it } from "vitest";
 import {
   compileGraph,
-  darkMode,
+  compileValidatedGraph,
   exportCssVariables,
   hex,
-  lightMode,
   literalColor,
   serializeTokenSet,
-  tokenKey,
   validateGraph,
-  type ColorSchemeTokenGraph,
-  type ModeKey,
-  type TokenNode,
+  type ColorSchemeTokenGraphInput,
+  type TokenNodeInput,
 } from "../src/index";
 
 describe("graph core", () => {
-  it("validates, compiles, serializes, and exports a small graph", () => {
+  it("accepts plain string keys and modes at the authored graph boundary", () => {
     const graph = testGraph({
-      modes: [lightMode, darkMode],
+      modes: ["light", "dark"],
       tokens: [
         {
           kind: "color",
-          key: tokenKey("brand.primary"),
+          key: "brand.primary",
           values: [
-            { mode: lightMode, value: literalColor(hex("#6750a4")) },
-            { mode: darkMode, value: literalColor(hex("#d0bcff")) },
+            { mode: "light", value: literalColor(hex("#6750a4")) },
+            { mode: "dark", value: literalColor(hex("#d0bcff")) },
           ],
         },
         {
           kind: "alias",
-          key: tokenKey("app.action"),
-          target: tokenKey("brand.primary"),
+          key: "app.action",
+          target: "brand.primary",
         },
       ],
     });
@@ -46,15 +43,52 @@ describe("graph core", () => {
     expect(exportCssVariables(compiled.value)).toContain("--brand-primary: #d0bcff;");
   });
 
+  it("returns structured problems for invalid token keys without throwing", () => {
+    const result = validateGraph(
+      testGraph({
+        tokens: [
+          {
+            kind: "color",
+            key: "brand",
+            values: [
+              { mode: "light", value: literalColor(hex("#6750a4")) },
+              { mode: "dark", value: literalColor(hex("#d0bcff")) },
+            ],
+          },
+        ],
+      }),
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.problems).toContainEqual(
+      expect.objectContaining({ kind: "invalid-token-key", key: "brand" }),
+    );
+  });
+
+  it("returns structured problems for invalid mode keys without throwing", () => {
+    const result = validateGraph(
+      testGraph({
+        modes: ["light", "dark-mode"],
+      }),
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.problems).toContainEqual(
+      expect.objectContaining({ kind: "invalid-mode-key", mode: "dark-mode" }),
+    );
+  });
+
   it("keeps color token values at the authored graph boundary and compiles concrete colors", () => {
     const graph = testGraph({
       tokens: [
         {
           kind: "color",
-          key: tokenKey("brand.primary"),
+          key: "brand.primary",
           values: [
-            { mode: lightMode, value: literalColor(hex("#6750a4")) },
-            { mode: darkMode, value: literalColor(hex("#d0bcff")) },
+            { mode: "light", value: literalColor(hex("#6750a4")) },
+            { mode: "dark", value: literalColor(hex("#d0bcff")) },
           ],
         },
       ],
@@ -69,17 +103,17 @@ describe("graph core", () => {
 
   it("returns validation problems for mode-specific alias cycles", () => {
     const graph = testGraph({
-      modes: [lightMode, darkMode],
+      modes: ["light", "dark"],
       tokens: [
         {
           kind: "alias",
-          key: tokenKey("app.one"),
-          target: tokenKey("app.two"),
+          key: "app.one",
+          target: "app.two",
         },
         {
           kind: "alias",
-          key: tokenKey("app.two"),
-          target: tokenKey("app.one"),
+          key: "app.two",
+          target: "app.one",
         },
       ],
     });
@@ -90,15 +124,43 @@ describe("graph core", () => {
     if (result.ok) return;
     expect(result.problems.some((problem) => problem.kind === "alias-cycle")).toBe(true);
   });
+
+  it("compiles already validated graphs without validating schema again", () => {
+    const validation = validateGraph(
+      testGraph({
+        tokens: [
+          {
+            kind: "color",
+            key: "brand.primary",
+            values: [
+              { mode: "light", value: literalColor(hex("#6750a4")) },
+              { mode: "dark", value: literalColor(hex("#d0bcff")) },
+            ],
+          },
+        ],
+      }),
+    );
+
+    expect(validation.ok).toBe(true);
+    if (!validation.ok) return;
+
+    const alreadyValidated = {
+      ...validation.value,
+      schemaVersion: "not-the-input-schema",
+    } as unknown as typeof validation.value;
+    const compiled = compileValidatedGraph(alreadyValidated);
+
+    expect(compiled.ok).toBe(true);
+  });
 });
 
 function testGraph(options: {
-  readonly modes?: readonly ModeKey[];
-  readonly tokens?: readonly TokenNode[];
-}): ColorSchemeTokenGraph {
+  readonly modes?: readonly string[];
+  readonly tokens?: readonly TokenNodeInput[];
+}): ColorSchemeTokenGraphInput {
   return {
     schemaVersion: "color-scheme-token-graph/v0",
-    modes: [...(options.modes ?? [lightMode, darkMode])],
+    modes: [...(options.modes ?? ["light", "dark"])],
     tokens: [...(options.tokens ?? [])],
   };
 }

@@ -7,11 +7,14 @@ describe("public API", () => {
     expect(Object.keys(api).sort()).toEqual(
       [
         "compileGraph",
+        "compileValidatedGraph",
         "createSchemeTokens",
         "createSourceGraph",
         "darkMode",
         "exportCssVariables",
         "hex",
+        "isModeKey",
+        "isTokenKey",
         "lightMode",
         "literalColor",
         "modeKey",

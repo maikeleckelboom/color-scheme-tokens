@@ -110,14 +110,14 @@ options and they are not part of the graph model.
 ## Layers
 
 ```ts
-import { createSchemeTokens, hex, tokenKey, type ColorSchemeTokenLayer } from "color-scheme-tokens";
+import { createSchemeTokens, hex, type ColorSchemeTokenLayerInput } from "color-scheme-tokens";
 import { material3Source } from "color-scheme-tokens/sources/material3";
 
-const applicationLayer: ColorSchemeTokenLayer = {
+const applicationLayer: ColorSchemeTokenLayerInput = {
   name: "application",
   tokens: [
-    { kind: "alias", key: tokenKey("app.canvas"), target: tokenKey("m3.surface") },
-    { kind: "alias", key: tokenKey("app.text"), target: tokenKey("m3.onSurface") },
+    { kind: "alias", key: "app.canvas", target: "m3.surface" },
+    { kind: "alias", key: "app.text", target: "m3.onSurface" },
   ],
 };
 
@@ -147,31 +147,28 @@ source
 
 ```ts
 import {
-  type ColorSchemeTokenGraph,
+  type ColorSchemeTokenGraphInput,
   compileGraph,
-  darkMode,
   hex,
-  lightMode,
   literalColor,
-  tokenKey,
 } from "color-scheme-tokens";
 
-const graph: ColorSchemeTokenGraph = {
+const graph: ColorSchemeTokenGraphInput = {
   schemaVersion: "color-scheme-token-graph/v0",
-  modes: [lightMode, darkMode],
+  modes: ["light", "dark"],
   tokens: [
     {
       kind: "color",
-      key: tokenKey("brand.primary"),
+      key: "brand.primary",
       values: [
-        { mode: lightMode, value: literalColor(hex("#6750a4")) },
-        { mode: darkMode, value: literalColor(hex("#d0bcff")) },
+        { mode: "light", value: literalColor(hex("#6750a4")) },
+        { mode: "dark", value: literalColor(hex("#d0bcff")) },
       ],
     },
     {
       kind: "alias",
-      key: tokenKey("app.action"),
-      target: tokenKey("brand.primary"),
+      key: "app.action",
+      target: "brand.primary",
     },
   ],
 };
@@ -186,7 +183,8 @@ compiled.value;
 ```
 
 The manual API is useful when an application already owns its token graph or when tests need exact graph fixtures.
-Manual graphs can use any valid token namespace, such as `brand.*` or `app.*`.
+Manual graphs can use any valid token namespace, such as `brand.*` or `app.*`. Authored graph and layer data uses
+plain strings; validation parses those strings and returns branded keys and modes only after the data is checked.
 
 ## Source Graph Inspection
 

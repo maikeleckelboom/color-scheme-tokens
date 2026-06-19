@@ -1,5 +1,4 @@
-import type { ColorSchemeTokenGraph, TokenNode } from "./graph";
-import type { ModeKey } from "./modes";
+import type { ColorSchemeTokenGraphInput, TokenNodeInput } from "./graph";
 import { darkMode, lightMode } from "./modes";
 import type {
   ColorSchemeTokenSource,
@@ -11,8 +10,8 @@ import { validateGraph } from "./validateGraph";
 export const GRAPH_SCHEMA_VERSION = "color-scheme-token-graph/v0";
 
 export interface CreateTokenGraphOptions {
-  readonly modes?: readonly ModeKey[];
-  readonly tokens?: readonly TokenNode[];
+  readonly modes?: readonly string[];
+  readonly tokens?: readonly TokenNodeInput[];
 }
 
 export interface CreateSourceGraphOptions<
@@ -31,10 +30,12 @@ export function createSourceGraph<Problem extends ColorSchemeTokenSourceProblem>
   if (!graph.ok) return graph;
 
   const validation = validateGraph(graph.value);
-  return validation.ok ? { ok: true, value: graph.value } : validation;
+  return validation;
 }
 
-export function createTokenGraph(options: CreateTokenGraphOptions = {}): ColorSchemeTokenGraph {
+export function createTokenGraph(
+  options: CreateTokenGraphOptions = {},
+): ColorSchemeTokenGraphInput {
   return {
     schemaVersion: GRAPH_SCHEMA_VERSION,
     modes: [...(options.modes ?? [lightMode, darkMode])],

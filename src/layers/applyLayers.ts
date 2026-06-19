@@ -1,11 +1,11 @@
-import type { ColorSchemeTokenGraph, TokenNode } from "../core/graph";
-import type { ColorSchemeTokenLayer } from "./layer";
+import type { ColorSchemeTokenGraphInput, TokenNodeInput } from "../core/graph";
+import type { ColorSchemeTokenLayerInput } from "./layer";
 
 export function applyLayers(
-  graph: ColorSchemeTokenGraph,
-  layers: readonly ColorSchemeTokenLayer[],
-): ColorSchemeTokenGraph {
-  const layerTokens: TokenNode[] = layers.flatMap((layer) =>
+  graph: ColorSchemeTokenGraphInput,
+  layers: readonly ColorSchemeTokenLayerInput[],
+): ColorSchemeTokenGraphInput {
+  const layerTokens: TokenNodeInput[] = layers.flatMap((layer) =>
     layer.tokens.map((token) =>
       token.kind === "alias"
         ? {

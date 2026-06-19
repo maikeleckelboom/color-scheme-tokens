@@ -472,6 +472,11 @@ This section is **internal implementation**, not public contract. It belongs in 
 
 ## Validate once
 
+The current graph authoring surface shows **validation-brand inversion**: public graph and layer literals require branded
+`TokenKey` / `ModeKey` values before validation has had a chance to parse user input and return structured problems.
+That imposes a **branded input tax** on manual graph and layer authors. Brands should be post-validation evidence, not
+syntax consumers manufacture inside object literals.
+
 Provide two internal levels:
 
 ```ts

@@ -1,4 +1,4 @@
-import type { ColorSchemeTokenGraph, Result } from "./graph";
+import type { ColorSchemeTokenGraphInput, Result, ValidatedColorSchemeTokenGraph } from "./graph";
 import type { TokenKey } from "./keys";
 import type { TokenGraphProblem } from "./validateGraph";
 
@@ -28,7 +28,7 @@ export interface ColorSchemeTokenSource<
 > {
   readonly id: string;
   readonly roleSet: ColorSchemeTokenSourceRoleSet;
-  createGraph(): Result<ColorSchemeTokenGraph, Problem>;
+  createGraph(): Result<ColorSchemeTokenGraphInput, Problem>;
 }
 
 export type GraphBuildProblem<
@@ -37,4 +37,4 @@ export type GraphBuildProblem<
 
 export type GraphBuildResult<
   Problem extends ColorSchemeTokenSourceProblem = ColorSchemeTokenSourceProblem,
-> = Result<ColorSchemeTokenGraph, GraphBuildProblem<Problem>>;
+> = Result<ValidatedColorSchemeTokenGraph, GraphBuildProblem<Problem>>;

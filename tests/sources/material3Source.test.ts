@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compileGraph, createSourceGraph, hex, tokenKey } from "../../src/index";
+import { compileValidatedGraph, createSourceGraph, hex } from "../../src/index";
 import { material3Source } from "../../src/sources/material3";
 
 describe("material3Source", () => {
@@ -16,10 +16,8 @@ describe("material3Source", () => {
     expect(graph.tokens.every((token) => String(token.key).startsWith("m3."))).toBe(true);
     expect(graph.tokens.some((token) => String(token.key).startsWith("material."))).toBe(false);
 
-    const compiled = expectOk(compileGraph(graph));
-    expect(compiled.tokens.find((token) => token.key === tokenKey("m3.primary"))).toEqual(
-      definedToken(),
-    );
+    const compiled = expectOk(compileValidatedGraph(graph));
+    expect(compiled.tokens.find((token) => token.key === "m3.primary")).toEqual(definedToken());
   });
 
   it("includes optional dim roles symmetrically when the upstream source provides them", () => {
@@ -33,9 +31,7 @@ describe("material3Source", () => {
     );
 
     for (const key of ["m3.primaryDim", "m3.secondaryDim", "m3.tertiaryDim", "m3.errorDim"]) {
-      const token = expectColorToken(
-        graph.tokens.find((candidate) => candidate.key === tokenKey(key)),
-      );
+      const token = expectColorToken(graph.tokens.find((candidate) => candidate.key === key));
       expect(token.values.map((entry) => String(entry.mode))).toEqual(["light", "dark"]);
     }
   });
@@ -112,10 +108,10 @@ describe("material3Source", () => {
     );
 
     const defaultPrimary = expectColorToken(
-      defaultGraph.tokens.find((candidate) => candidate.key === tokenKey("m3.primary")),
+      defaultGraph.tokens.find((candidate) => candidate.key === "m3.primary"),
     );
     const keyedPrimary = expectColorToken(
-      keyedGraph.tokens.find((candidate) => candidate.key === tokenKey("m3.primary")),
+      keyedGraph.tokens.find((candidate) => candidate.key === "m3.primary"),
     );
 
     expect(keyedPrimary.values).not.toEqual(defaultPrimary.values);
@@ -124,7 +120,7 @@ describe("material3Source", () => {
 
 function definedToken(): unknown {
   return expect.objectContaining({
-    key: tokenKey("m3.primary"),
+    key: "m3.primary",
     values: expect.any(Array),
   });
 }

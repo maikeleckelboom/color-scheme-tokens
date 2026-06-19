@@ -1,18 +1,25 @@
 import type { ColorValue } from "./colorValue";
 import { resolveColorTokenValue } from "./colorTokenValue";
-import type { ColorSchemeTokenGraph, ModeValues, Result, TokenNode } from "./graph";
+import type {
+  ColorSchemeTokenGraphInput,
+  ModeValues,
+  Result,
+  TokenNode,
+  ValidatedColorSchemeTokenGraph,
+} from "./graph";
 import type { TokenKey } from "./keys";
+import { parseTokenKey } from "./keys";
 import type { ModeKey } from "./modes";
 import type { TokenProvenance } from "./provenance";
-import { validateGraph } from "./validateGraph";
+import { validateGraph, type TokenGraphProblem } from "./validateGraph";
 
 export interface CompileOptions {
-  readonly include?: readonly TokenKey[];
+  readonly include?: readonly string[];
 }
 
 export interface CompileProblem {
   readonly kind:
-    | "invalid-graph"
+    | "invalid-include-token"
     | "unknown-include-token"
     | "duplicate-include-token"
     | "unknown-token"
@@ -40,25 +47,26 @@ export interface CompiledTokenSet {
   readonly tokens: readonly CompiledColorToken[];
 }
 
-export type CompileResult = Result<CompiledTokenSet, CompileProblem>;
+export type CompileValidatedGraphResult = Result<CompiledTokenSet, CompileProblem>;
+
+export type CompileGraphResult = Result<CompiledTokenSet, TokenGraphProblem | CompileProblem>;
+
+export type CompileResult = CompileGraphResult;
 
 export function compileGraph(
-  graph: ColorSchemeTokenGraph,
+  graph: ColorSchemeTokenGraphInput,
   options: CompileOptions = {},
-): CompileResult {
+): CompileGraphResult {
   const validation = validateGraph(graph);
-  if (!validation.ok) {
-    return {
-      ok: false,
-      problems: validation.problems.map((problem) => ({
-        kind: "invalid-graph",
-        message: problem.message,
-        ...(problem.key === undefined ? {} : { key: problem.key }),
-        ...(problem.mode === undefined ? {} : { mode: problem.mode }),
-      })),
-    };
-  }
+  if (!validation.ok) return validation;
 
+  return compileValidatedGraph(validation.value, options);
+}
+
+export function compileValidatedGraph(
+  graph: ValidatedColorSchemeTokenGraph,
+  options: CompileOptions = {},
+): CompileValidatedGraphResult {
   const tokenMap = new Map(graph.tokens.map((token) => [String(token.key), token]));
   const problems: CompileProblem[] = [];
   const requestedTokens = resolveRequestedTokens(graph, options, tokenMap, problems);
@@ -96,7 +104,7 @@ export function compileGraph(
 }
 
 function resolveRequestedTokens(
-  graph: ColorSchemeTokenGraph,
+  graph: ValidatedColorSchemeTokenGraph,
   options: CompileOptions,
   tokenMap: ReadonlyMap<string, TokenNode>,
   problems: CompileProblem[],
@@ -108,6 +116,16 @@ function resolveRequestedTokens(
 
   for (const key of options.include) {
     const keyName = String(key);
+    const parsedKey = parseTokenKey(keyName);
+
+    if (!parsedKey.ok) {
+      problems.push({
+        kind: "invalid-include-token",
+        message: parsedKey.problems[0]?.message ?? "Invalid include token.",
+        key: keyName,
+      });
+      continue;
+    }
 
     if (seen.has(keyName)) {
       problems.push({

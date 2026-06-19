@@ -1,1 +1,5 @@
-export type { ColorSchemeTokenLayer } from "./layer";
+export type {
+  ColorSchemeTokenLayer,
+  ColorSchemeTokenLayerInput,
+  ValidatedColorSchemeTokenLayer,
+} from "./layer";

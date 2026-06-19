@@ -1,15 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   compileGraph,
-  darkMode,
   hex,
-  lightMode,
   literalColor,
-  tokenKey,
   validateGraph,
-  type ColorSchemeTokenLayer,
-  type ColorSchemeTokenGraph,
-  type TokenNode,
+  type ColorSchemeTokenGraphInput,
+  type ColorSchemeTokenLayerInput,
+  type TokenNodeInput,
 } from "../../src/index";
 import { applyLayers } from "../../src/layers/applyLayers";
 
@@ -31,13 +28,13 @@ describe("token layers", () => {
 
   it("is chainable and leaves duplicate token keys for graph validation to reject", () => {
     const graph = baseGraph();
-    const firstLayer: ColorSchemeTokenLayer = {
+    const firstLayer: ColorSchemeTokenLayerInput = {
       name: "first",
-      tokens: [{ kind: "alias", key: tokenKey("app.action"), target: tokenKey("brand.primary") }],
+      tokens: [{ kind: "alias", key: "app.action", target: "brand.primary" }],
     };
-    const secondLayer: ColorSchemeTokenLayer = {
+    const secondLayer: ColorSchemeTokenLayerInput = {
       name: "second",
-      tokens: [{ kind: "alias", key: tokenKey("app.action"), target: tokenKey("app.canvas") }],
+      tokens: [{ kind: "alias", key: "app.action", target: "app.canvas" }],
     };
 
     const problems = expectProblems(
@@ -54,8 +51,8 @@ describe("token layers", () => {
         tokens: [
           {
             kind: "alias",
-            key: tokenKey("app.action"),
-            target: tokenKey("app.missing"),
+            key: "app.action",
+            target: "app.missing",
           },
         ],
       },
@@ -73,16 +70,16 @@ describe("token layers", () => {
         tokens: [
           {
             kind: "alias",
-            key: tokenKey("app.activeSurface"),
+            key: "app.activeSurface",
             target: [
-              { mode: lightMode, value: tokenKey("app.canvas") },
-              { mode: darkMode, value: tokenKey("brand.primary") },
+              { mode: "light", value: "app.canvas" },
+              { mode: "dark", value: "brand.primary" },
             ],
           },
         ],
       },
     ]);
-    const compiled = compileGraph(graph, { include: [tokenKey("app.activeSurface")] });
+    const compiled = compileGraph(graph, { include: ["app.activeSurface"] });
 
     expect(compiled.ok).toBe(true);
     if (!compiled.ok) return;
@@ -100,16 +97,16 @@ describe("token layers", () => {
         tokens: [
           {
             kind: "color",
-            key: tokenKey("app.noticeBackground"),
+            key: "app.noticeBackground",
             values: [
-              { mode: lightMode, value: literalColor(hex("#fff8e1")) },
-              { mode: darkMode, value: literalColor(hex("#332600")) },
+              { mode: "light", value: literalColor(hex("#fff8e1")) },
+              { mode: "dark", value: literalColor(hex("#332600")) },
             ],
           },
         ],
       },
     ]);
-    const compiled = compileGraph(graph, { include: [tokenKey("app.noticeBackground")] });
+    const compiled = compileGraph(graph, { include: ["app.noticeBackground"] });
 
     expect(compiled.ok).toBe(true);
     if (!compiled.ok) return;
@@ -117,13 +114,13 @@ describe("token layers", () => {
   });
 });
 
-const applicationLayer: ColorSchemeTokenLayer = {
+const applicationLayer: ColorSchemeTokenLayerInput = {
   name: "application",
   tokens: [
-    { kind: "alias", key: tokenKey("app.action"), target: tokenKey("brand.primary") },
-    { kind: "alias", key: tokenKey("app.actionText"), target: tokenKey("brand.onPrimary") },
-    { kind: "alias", key: tokenKey("app.border"), target: tokenKey("brand.outline") },
-    { kind: "alias", key: tokenKey("app.notice"), target: tokenKey("brand.tertiary") },
+    { kind: "alias", key: "app.action", target: "brand.primary" },
+    { kind: "alias", key: "app.actionText", target: "brand.onPrimary" },
+    { kind: "alias", key: "app.border", target: "brand.outline" },
+    { kind: "alias", key: "app.notice", target: "brand.tertiary" },
   ],
 };
 
@@ -139,10 +136,12 @@ function baseGraph() {
   });
 }
 
-function testGraph(options: { readonly tokens?: readonly TokenNode[] }): ColorSchemeTokenGraph {
+function testGraph(options: {
+  readonly tokens?: readonly TokenNodeInput[];
+}): ColorSchemeTokenGraphInput {
   return {
     schemaVersion: "color-scheme-token-graph/v0",
-    modes: [lightMode, darkMode],
+    modes: ["light", "dark"],
     tokens: [...(options.tokens ?? [])],
   };
 }
@@ -160,10 +159,10 @@ function expectProblems<Value, Problem>(
 function colorToken(key: string, light: string, dark: string) {
   return {
     kind: "color" as const,
-    key: tokenKey(key),
+    key,
     values: [
-      { mode: lightMode, value: literalColor(hex(light)) },
-      { mode: darkMode, value: literalColor(hex(dark)) },
+      { mode: "light", value: literalColor(hex(light)) },
+      { mode: "dark", value: literalColor(hex(dark)) },
     ],
   };
 }

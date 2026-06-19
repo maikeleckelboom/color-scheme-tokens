@@ -1,7 +1,7 @@
 import type { SrgbColor } from "../../core/colorValue";
 import { validateColorValue } from "../../core/colorValue";
 import { literalColor } from "../../core/colorTokenValue";
-import type { ModeValue, Result, TokenNode } from "../../core/graph";
+import type { ModeValueInput, Result, TokenNodeInput } from "../../core/graph";
 import { darkMode, lightMode } from "../../core/modes";
 import type { Material3KeyColors, Material3ResolvedAlgorithmOptions } from "./material3Source";
 import { material3RoleSet } from "./material3RoleSet";
@@ -30,7 +30,7 @@ export interface Material3ValueProblem {
   readonly path?: string;
 }
 
-export type Material3ValueResult = Result<readonly TokenNode[], Material3ValueProblem>;
+export type Material3ValueResult = Result<readonly TokenNodeInput[], Material3ValueProblem>;
 
 export function createMaterial3Values(options: Material3ValueOptions): Material3ValueResult {
   const inputProblems = validateSourceInput(options.sourceColor);
@@ -54,7 +54,7 @@ export function createMaterial3Values(options: Material3ValueOptions): Material3
     ...materialOptions,
     isDark: true,
   });
-  const tokens: TokenNode[] = [];
+  const tokens: TokenNodeInput[] = [];
   const problems: Material3ValueProblem[] = [];
 
   for (const role of material3RoleSet.roles) {
@@ -85,7 +85,7 @@ export function createMaterial3Values(options: Material3ValueOptions): Material3
       continue;
     }
 
-    const values: ModeValue<ReturnType<typeof literalColor>>[] = [
+    const values: ModeValueInput<ReturnType<typeof literalColor>>[] = [
       { mode: lightMode, value: literalColor(argbToSrgb(lightValue)) },
       { mode: darkMode, value: literalColor(argbToSrgb(darkValue)) },
     ];

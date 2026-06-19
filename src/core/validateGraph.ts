@@ -1,5 +1,13 @@
 import { validateColorTokenValue } from "./colorTokenValue";
-import type { ColorSchemeTokenGraph, ModeValues, TokenNode } from "./graph";
+import type {
+  ColorSchemeTokenGraphInput,
+  ModeValues,
+  ModeValuesInput,
+  Result,
+  TokenNode,
+  TokenNodeInput,
+  ValidatedColorSchemeTokenGraph,
+} from "./graph";
 import type { TokenKey } from "./keys";
 import { parseTokenKey } from "./keys";
 import type { ModeKey } from "./modes";
@@ -28,11 +36,9 @@ export interface TokenGraphProblem {
   readonly path?: string;
 }
 
-export type GraphValidationResult =
-  | { readonly ok: true; readonly graph: ColorSchemeTokenGraph }
-  | { readonly ok: false; readonly problems: readonly TokenGraphProblem[] };
+export type GraphValidationResult = Result<ValidatedColorSchemeTokenGraph, TokenGraphProblem>;
 
-export function validateGraph(graph: ColorSchemeTokenGraph): GraphValidationResult {
+export function validateGraph(graph: ColorSchemeTokenGraphInput): GraphValidationResult {
   const problems: TokenGraphProblem[] = [];
 
   if (graph.schemaVersion !== "color-scheme-token-graph/v0") {
@@ -44,21 +50,30 @@ export function validateGraph(graph: ColorSchemeTokenGraph): GraphValidationResu
   }
 
   const modes = validateModes(graph, problems);
-  const tokenMap = validateTokenKeys(graph, problems);
+  const tokenKeys = validateTokenKeys(graph, problems);
 
   for (const [index, token] of graph.tokens.entries()) {
-    validateToken(token, index, modes, tokenMap, problems);
+    validateToken(token, index, modes, tokenKeys, problems);
   }
 
-  validateAliasTargets(graph, modes, tokenMap, problems);
+  if (problems.length > 0) return { ok: false, problems };
 
-  return problems.length === 0 ? { ok: true, graph } : { ok: false, problems };
+  const normalizedGraph: ValidatedColorSchemeTokenGraph = {
+    schemaVersion: graph.schemaVersion,
+    modes: [...modes.values()],
+    tokens: normalizeTokens(graph.tokens, modes, tokenKeys),
+  };
+  const cycleProblems = validateAliasTargets(normalizedGraph);
+
+  return cycleProblems.length === 0
+    ? { ok: true, value: normalizedGraph }
+    : { ok: false, problems: cycleProblems };
 }
 
 function validateModes(
-  graph: ColorSchemeTokenGraph,
+  graph: ColorSchemeTokenGraphInput,
   problems: TokenGraphProblem[],
-): readonly ModeKey[] {
+): ReadonlyMap<string, ModeKey> {
   if (graph.modes.length === 0) {
     problems.push({
       kind: "empty-modes",
@@ -67,8 +82,7 @@ function validateModes(
     });
   }
 
-  const seen = new Set<string>();
-  const validModes: ModeKey[] = [];
+  const modes = new Map<string, ModeKey>();
 
   for (const [index, mode] of graph.modes.entries()) {
     const modeName = String(mode);
@@ -77,14 +91,14 @@ function validateModes(
     if (!result.ok) {
       problems.push({
         kind: "invalid-mode-key",
-        message: result.problem.message,
+        message: result.problems[0]?.message ?? "Invalid mode key.",
         mode: modeName,
         path: `modes.${index}`,
       });
       continue;
     }
 
-    if (seen.has(modeName)) {
+    if (modes.has(modeName)) {
       problems.push({
         kind: "duplicate-mode-key",
         message: `Duplicate mode key: ${modeName}.`,
@@ -94,18 +108,17 @@ function validateModes(
       continue;
     }
 
-    seen.add(modeName);
-    validModes.push(result.value);
+    modes.set(modeName, result.value);
   }
 
-  return validModes;
+  return modes;
 }
 
 function validateTokenKeys(
-  graph: ColorSchemeTokenGraph,
+  graph: ColorSchemeTokenGraphInput,
   problems: TokenGraphProblem[],
-): ReadonlyMap<string, TokenNode> {
-  const tokenMap = new Map<string, TokenNode>();
+): ReadonlyMap<string, TokenKey> {
+  const tokenKeys = new Map<string, TokenKey>();
 
   for (const [index, token] of graph.tokens.entries()) {
     const key = String(token.key);
@@ -114,14 +127,14 @@ function validateTokenKeys(
     if (!result.ok) {
       problems.push({
         kind: "invalid-token-key",
-        message: result.problem.message,
+        message: result.problems[0]?.message ?? "Invalid token key.",
         key,
         path: `tokens.${index}.key`,
       });
       continue;
     }
 
-    if (tokenMap.has(key)) {
+    if (tokenKeys.has(key)) {
       problems.push({
         kind: "duplicate-token-key",
         message: `Duplicate token key: ${key}.`,
@@ -131,23 +144,23 @@ function validateTokenKeys(
       continue;
     }
 
-    tokenMap.set(key, token);
+    tokenKeys.set(key, result.value);
   }
 
-  return tokenMap;
+  return tokenKeys;
 }
 
 function validateToken(
-  token: TokenNode,
+  token: TokenNodeInput,
   index: number,
-  modes: readonly ModeKey[],
-  tokenMap: ReadonlyMap<string, TokenNode>,
+  modes: ReadonlyMap<string, ModeKey>,
+  tokenKeys: ReadonlyMap<string, TokenKey>,
   problems: TokenGraphProblem[],
 ): void {
   if (token.kind === "color") {
     validateResolvedValues(
       token.values,
-      token.key,
+      String(token.key),
       `tokens.${index}.values`,
       modes,
       problems,
@@ -168,16 +181,17 @@ function validateToken(
   if (token.kind === "alias") {
     validateResolvedValues(
       token.target,
-      token.key,
+      String(token.key),
       `tokens.${index}.target`,
       modes,
       problems,
       (value, path, mode) => {
-        const result = parseTokenKey(String(value));
+        const target = String(value);
+        const result = parseTokenKey(target);
         if (!result.ok) {
           problems.push({
             kind: "invalid-token-key",
-            message: result.problem.message,
+            message: result.problems[0]?.message ?? "Invalid token key.",
             key: String(token.key),
             ...(mode === undefined ? {} : { mode: String(mode) }),
             path,
@@ -185,10 +199,10 @@ function validateToken(
           return;
         }
 
-        if (!tokenMap.has(String(value))) {
+        if (!tokenKeys.has(target)) {
           problems.push({
             kind: "unknown-alias-target",
-            message: `Alias target does not exist: ${String(value)}.`,
+            message: `Alias target does not exist: ${target}.`,
             key: String(token.key),
             ...(mode === undefined ? {} : { mode: String(mode) }),
             path,
@@ -207,10 +221,10 @@ function validateToken(
 }
 
 function validateResolvedValues<Value>(
-  value: Value | ModeValues<Value>,
-  key: TokenKey,
+  value: Value | ModeValuesInput<Value>,
+  key: string,
   path: string,
-  modes: readonly ModeKey[],
+  modes: ReadonlyMap<string, ModeKey>,
   problems: TokenGraphProblem[],
   validateValue: (value: Value, path: string, mode?: ModeKey) => void,
 ): void {
@@ -219,7 +233,6 @@ function validateResolvedValues<Value>(
     return;
   }
 
-  const graphModes = new Set(modes.map(String));
   const seenModes = new Set<string>();
 
   for (const [index, entry] of value.entries()) {
@@ -230,8 +243,8 @@ function validateResolvedValues<Value>(
     if (!result.ok) {
       problems.push({
         kind: "invalid-mode-value",
-        message: result.problem.message,
-        key: String(key),
+        message: result.problems[0]?.message ?? "Invalid mode key.",
+        key,
         mode,
         path: `${entryPath}.mode`,
       });
@@ -242,7 +255,7 @@ function validateResolvedValues<Value>(
       problems.push({
         kind: "duplicate-mode-value",
         message: `Duplicate mode value for ${mode}.`,
-        key: String(key),
+        key,
         mode,
         path: `${entryPath}.mode`,
       });
@@ -251,44 +264,95 @@ function validateResolvedValues<Value>(
 
     seenModes.add(mode);
 
-    if (!graphModes.has(mode)) {
+    const normalizedMode = modes.get(mode);
+    if (normalizedMode === undefined) {
       problems.push({
         kind: "unknown-mode-value",
         message: `Mode value references unknown mode: ${mode}.`,
-        key: String(key),
+        key,
         mode,
         path: `${entryPath}.mode`,
       });
       continue;
     }
 
-    validateValue(entry.value, `${entryPath}.value`, result.value);
+    validateValue(entry.value, `${entryPath}.value`, normalizedMode);
   }
 
-  for (const mode of modes) {
-    if (!seenModes.has(String(mode))) {
+  for (const mode of modes.keys()) {
+    if (!seenModes.has(mode)) {
       problems.push({
         kind: "missing-mode-value",
-        message: `Mode-specific token value is missing mode: ${String(mode)}.`,
-        key: String(key),
-        mode: String(mode),
+        message: `Mode-specific token value is missing mode: ${mode}.`,
+        key,
+        mode,
         path,
       });
     }
   }
 }
 
-function validateAliasTargets(
-  graph: ColorSchemeTokenGraph,
-  modes: readonly ModeKey[],
-  tokenMap: ReadonlyMap<string, TokenNode>,
-  problems: TokenGraphProblem[],
-): void {
+function normalizeTokens(
+  tokens: readonly TokenNodeInput[],
+  modes: ReadonlyMap<string, ModeKey>,
+  tokenKeys: ReadonlyMap<string, TokenKey>,
+): readonly TokenNode[] {
+  return tokens.map((token) => {
+    const key = tokenKeys.get(String(token.key)) as TokenKey;
+
+    if (token.kind === "color") {
+      return {
+        kind: "color",
+        key,
+        values: normalizeModeValues(token.values, modes, (value) => value),
+        ...(token.provenance === undefined ? {} : { provenance: token.provenance }),
+      };
+    }
+
+    return {
+      kind: "alias",
+      key,
+      target: normalizeMaybeModeValues(
+        token.target,
+        modes,
+        (value) => tokenKeys.get(String(value)) as TokenKey,
+      ),
+      ...(token.provenance === undefined ? {} : { provenance: token.provenance }),
+    };
+  });
+}
+
+function normalizeMaybeModeValues<Input, Output>(
+  value: Input | ModeValuesInput<Input>,
+  modes: ReadonlyMap<string, ModeKey>,
+  normalizeValue: (value: Input) => Output,
+): Output | ModeValues<Output> {
+  if (!Array.isArray(value)) return normalizeValue(value as Input);
+  return normalizeModeValues(value, modes, normalizeValue);
+}
+
+function normalizeModeValues<Input, Output>(
+  values: ModeValuesInput<Input>,
+  modes: ReadonlyMap<string, ModeKey>,
+  normalizeValue: (value: Input) => Output,
+): ModeValues<Output> {
+  return values.map((entry) => ({
+    mode: modes.get(String(entry.mode)) as ModeKey,
+    value: normalizeValue(entry.value),
+  }));
+}
+
+function validateAliasTargets(graph: ValidatedColorSchemeTokenGraph): readonly TokenGraphProblem[] {
+  const problems: TokenGraphProblem[] = [];
+  const tokenMap = new Map(graph.tokens.map((token) => [String(token.key), token]));
+
   for (const token of graph.tokens) {
-    for (const mode of modes) {
+    for (const mode of graph.modes) {
       detectAliasCycle(token, mode, tokenMap, problems);
     }
   }
+
+  return problems;
 }
 
 function detectAliasCycle(

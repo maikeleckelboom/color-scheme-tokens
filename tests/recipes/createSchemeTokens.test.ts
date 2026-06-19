@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createSchemeTokens, hex, tokenKey, type ColorSchemeTokenLayer } from "../../src/index";
+import { createSchemeTokens, hex, type ColorSchemeTokenLayerInput } from "../../src/index";
 import { material3Source } from "../../src/sources/material3";
 
 describe("createSchemeTokens", () => {
@@ -7,7 +7,7 @@ describe("createSchemeTokens", () => {
     const result = createSchemeTokens({
       source: material3Source({ sourceColor: hex("#6750A4") }),
       compile: {
-        include: [tokenKey("m3.primary")],
+        include: ["m3.primary"],
       },
       css: { prefix: "theme" },
     });
@@ -26,7 +26,7 @@ describe("createSchemeTokens", () => {
         "app.canvas": "m3.surface",
       },
       compile: {
-        include: [tokenKey("app.action"), tokenKey("app.canvas")],
+        include: ["app.action", "app.canvas"],
       },
       css: { prefix: "theme" },
     });
@@ -36,13 +36,13 @@ describe("createSchemeTokens", () => {
     expect(result.value.graph.tokens.slice(-2)).toEqual([
       {
         kind: "alias",
-        key: tokenKey("app.action"),
-        target: tokenKey("m3.primary"),
+        key: "app.action",
+        target: "m3.primary",
       },
       {
         kind: "alias",
-        key: tokenKey("app.canvas"),
-        target: tokenKey("m3.surface"),
+        key: "app.canvas",
+        target: "m3.surface",
       },
     ]);
     expect(result.value.tokenSet.tokens.map((token) => String(token.key))).toEqual([
@@ -58,16 +58,14 @@ describe("createSchemeTokens", () => {
       source: material3Source({ sourceColor: hex("#6750A4") }),
       layers: [applicationLayer],
       compile: {
-        include: [tokenKey("app.canvas"), tokenKey("app.action")],
+        include: ["app.canvas", "app.action"],
       },
       css: { prefix: "theme" },
     });
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.graph.tokens.some((token) => token.key === tokenKey("app.canvas"))).toBe(
-      true,
-    );
+    expect(result.value.graph.tokens.some((token) => token.key === "app.canvas")).toBe(true);
     expect(result.value.tokenSet.tokens.map((token) => String(token.key))).toEqual([
       "app.canvas",
       "app.action",
@@ -88,19 +86,17 @@ describe("createSchemeTokens", () => {
         "app.chromeBackground": "app.canvas",
       },
       compile: {
-        include: [tokenKey("app.chromeBackground")],
+        include: ["app.chromeBackground"],
       },
       css: { prefix: "theme" },
     });
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.graph.tokens.some((token) => token.key === tokenKey("app.canvas"))).toBe(
+    expect(result.value.graph.tokens.some((token) => token.key === "app.canvas")).toBe(true);
+    expect(result.value.graph.tokens.some((token) => token.key === "app.chromeBackground")).toBe(
       true,
     );
-    expect(
-      result.value.graph.tokens.some((token) => token.key === tokenKey("app.chromeBackground")),
-    ).toBe(true);
     expect(result.value.tokenSet.tokens.map((token) => String(token.key))).toEqual([
       "app.chromeBackground",
     ]);
@@ -118,15 +114,28 @@ describe("createSchemeTokens", () => {
       true,
     );
   });
+
+  it("returns structured graph problems for invalid recipe aliases", () => {
+    const result = createSchemeTokens({
+      source: material3Source({ sourceColor: hex("#6750A4") }),
+      aliases: {
+        app: "m3.primary",
+      },
+    });
+
+    expect(expectProblems(result).some((problem) => problem.kind === "invalid-token-key")).toBe(
+      true,
+    );
+  });
 });
 
-const applicationLayer: ColorSchemeTokenLayer = {
+const applicationLayer: ColorSchemeTokenLayerInput = {
   name: "application",
   tokens: [
-    { kind: "alias", key: tokenKey("app.canvas"), target: tokenKey("m3.surface") },
-    { kind: "alias", key: tokenKey("app.text"), target: tokenKey("m3.onSurface") },
-    { kind: "alias", key: tokenKey("app.action"), target: tokenKey("m3.primary") },
-    { kind: "alias", key: tokenKey("app.actionText"), target: tokenKey("m3.onPrimary") },
+    { kind: "alias", key: "app.canvas", target: "m3.surface" },
+    { kind: "alias", key: "app.text", target: "m3.onSurface" },
+    { kind: "alias", key: "app.action", target: "m3.primary" },
+    { kind: "alias", key: "app.actionText", target: "m3.onPrimary" },
   ],
 };
 
