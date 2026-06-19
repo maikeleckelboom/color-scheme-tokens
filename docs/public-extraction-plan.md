@@ -1,7 +1,7 @@
 # Public Extraction Plan
 
 This repository is the canonical public package for `color-scheme-tokens`. It is not a rename of `material-schemes`, and
-it does not copy old Git history.
+it does not copy prior Git history.
 
 ## Source Mines
 
@@ -11,8 +11,7 @@ it does not copy old Git history.
 
 ## Public Shape Rules
 
-- Do not expose wrapper-shaped API names such as `createTheme`, `createColorScheme`, `createCssVariables`,
-  `MaterialTheme`, or `createMaterialSchemeTokens`.
+- Keep the package root focused on generic token graph, recipe, compiler, serializer, CSS export, and color value APIs.
 - Do not expose `material.*` token keys.
 - Do not expose Material 3 source adapter exports from the package root.
 - Do not make upstream dynamic-color vocabulary the public package model.

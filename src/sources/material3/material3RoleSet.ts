@@ -1,4 +1,7 @@
-import type { SchemeRoleDefinition, SchemeRoleSet } from "../../core/schemeSource";
+import type {
+  ColorSchemeTokenSourceRoleDefinition,
+  ColorSchemeTokenSourceRoleSet,
+} from "../../core/colorSchemeTokenSource";
 import { tokenKey } from "../../core/keys";
 
 const REQUIRED_MATERIAL3_ROLE_NAMES = [
@@ -66,7 +69,7 @@ const OPTIONAL_MATERIAL3_ROLE_NAMES = [
   "errorDim",
 ] as const;
 
-export const material3RoleSet: SchemeRoleSet = {
+export const material3RoleSet: ColorSchemeTokenSourceRoleSet = {
   sourceId: "material3",
   roles: [
     ...REQUIRED_MATERIAL3_ROLE_NAMES.map((role) => material3Role(role, true)),
@@ -74,7 +77,7 @@ export const material3RoleSet: SchemeRoleSet = {
   ],
 };
 
-function material3Role(role: string, required: boolean): SchemeRoleDefinition {
+function material3Role(role: string, required: boolean): ColorSchemeTokenSourceRoleDefinition {
   return {
     key: tokenKey(`m3.${role}`),
     sourceRole: role,

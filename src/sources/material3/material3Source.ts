@@ -1,7 +1,7 @@
 import type { SrgbColor } from "../../core/colorValue";
 import { createTokenGraph } from "../../core/createSourceGraph";
 import type { Result } from "../../core/graph";
-import type { SchemeSource } from "../../core/schemeSource";
+import type { ColorSchemeTokenSource } from "../../core/colorSchemeTokenSource";
 import { createMaterial3Values, type Material3ValueProblem } from "./createMaterial3Values";
 import { material3RoleSet } from "./material3RoleSet";
 
@@ -52,7 +52,7 @@ export type Material3SourceProblem = Material3ValueProblem | Material3OptionProb
 
 export function material3Source(
   options: Material3SourceOptions,
-): SchemeSource<Material3SourceProblem> {
+): ColorSchemeTokenSource<Material3SourceProblem> {
   const resolvedAlgorithm = resolveAlgorithmOptions(options.algorithm);
 
   return {

@@ -39,11 +39,13 @@ export type { TokenKey, TokenKeyProblem, TokenKeyResult } from "./core/keys";
 export type { ModeKey, ModeKeyProblem, ModeKeyResult } from "./core/modes";
 export type { TokenProvenance } from "./core/provenance";
 export type {
+  ColorSchemeTokenSource,
+  ColorSchemeTokenSourceProblem,
+  ColorSchemeTokenSourceRoleDefinition,
+  ColorSchemeTokenSourceRoleSet,
   GraphBuildProblem,
   GraphBuildResult,
-  SchemeSource,
-  SchemeSourceProblem,
-} from "./core/schemeSource";
+} from "./core/colorSchemeTokenSource";
 export type { SerializeTokenSetOptions } from "./core/serializeTokenSet";
 export type { GraphValidationResult, TokenGraphProblem } from "./core/validateGraph";
 export type { CssVariableModeSelectors, CssVariableOptions } from "./exporters/exportCssVariables";

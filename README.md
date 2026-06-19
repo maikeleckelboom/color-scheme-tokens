@@ -24,7 +24,9 @@ const result = createSchemeTokens({
   css: { prefix: "theme" },
 });
 
-if (!result.ok) throw new Error(JSON.stringify(result.problems));
+if (!result.ok) {
+  throw new Error(JSON.stringify(result.problems));
+}
 
 result.value.cssVariables;
 ```
@@ -102,7 +104,7 @@ const result = createSchemeTokens({
 });
 ```
 
-`algorithm` contains Material Dynamic Color knobs. These options belong to the Material 3 adapter; they are not recipe
+`algorithm` contains Material Dynamic Color knobs. These options belong to the Material 3 adapter, they are not recipe
 options and they are not part of the graph model.
 
 ## Layers And Transform
@@ -188,7 +190,9 @@ const graph: ColorSchemeTokenGraph = {
 
 const compiled = compileGraph(graph);
 
-if (!compiled.ok) throw new Error(JSON.stringify(compiled.problems));
+if (!compiled.ok) {
+  throw new Error(JSON.stringify(compiled.problems));
+}
 
 compiled.value;
 ```
@@ -208,7 +212,9 @@ const graphResult = createSourceGraph({
   }),
 });
 
-if (!graphResult.ok) throw new Error(JSON.stringify(graphResult.problems));
+if (!graphResult.ok) {
+  throw new Error(JSON.stringify(graphResult.problems));
+}
 
 graphResult.value.tokens.find((token) => token.key === "m3.primary");
 ```

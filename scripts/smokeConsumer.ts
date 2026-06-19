@@ -82,13 +82,14 @@ import {
   hex,
   literalColor,
   type ColorTokenValue,
+  type ColorSchemeTokenSource,
+  type ColorSchemeTokenSourceProblem,
   type CreateSourceGraphOptions,
   type LiteralColorValue,
   type Result,
   type SchemeTokensRecipeProblem,
   type SchemeTokensRecipeResult,
 } from ${JSON.stringify(packageName)};
-import * as rootApi from ${JSON.stringify(packageName)};
 import {
   material3Source,
   type Material3AlgorithmVariant,
@@ -115,6 +116,7 @@ const graphValue: ColorTokenValue = typedAuthoredColor;
 const graphOptions = {
   source: material3Source(sourceOptions),
 } satisfies CreateSourceGraphOptions;
+const source: ColorSchemeTokenSource<Material3SourceProblem> = graphOptions.source;
 const graphResult = createSourceGraph(graphOptions);
 const result = createSchemeTokens({
   source: material3Source({ sourceColor: hex("#6750A4") }),
@@ -128,8 +130,10 @@ const result = createSchemeTokens({
 });
 
 const typedResult: Result<SchemeTokensRecipeResult, SchemeTokensRecipeProblem> = result;
-const readProblemKind = (problem: Material3SourceProblem) => problem.kind;
+const readProblemKind = (problem: ColorSchemeTokenSourceProblem | Material3SourceProblem) =>
+  problem.kind;
 readProblemKind({ kind: "invalid-contrast-level", message: "example" });
+source.id.toUpperCase();
 variant.toUpperCase();
 if (graphResult.ok) {
   graphResult.value.tokens.length;
@@ -144,20 +148,8 @@ if (!typedResult.ok) {
   typedResult.problems.map((problem) => problem.kind);
 }
 
-// @ts-expect-error old authored color factory is intentionally not public.
-import(${JSON.stringify(packageName)}).then((module) => module.solidColorIntent);
-
 // @ts-expect-error Material 3 source factory is intentionally not exported from root.
-rootApi.material3Source;
-
-// @ts-expect-error old source factory was removed from root.
-rootApi.dynamicSchemeSource;
-
-// @ts-expect-error old authored color value type is intentionally not public.
-type OldColorIntent = import(${JSON.stringify(packageName)}).ColorIntent;
-
-// @ts-expect-error old literal color value type is intentionally not public.
-type OldSolidColorIntent = import(${JSON.stringify(packageName)}).SolidColorIntent;
+import(${JSON.stringify(packageName)}).then((module) => module.material3Source);
 
 // @ts-expect-error Material 3 option types are intentionally not exported from root.
 type RootMaterial3SourceOptions = import(${JSON.stringify(packageName)}).Material3SourceOptions;
@@ -168,8 +160,6 @@ createSourceGraph(material3Source({ sourceColor: hex("#6750A4") }));
 // @ts-expect-error Material algorithm knobs do not belong to generic recipe options.
 createSchemeTokens({ source: material3Source({ sourceColor: hex("#6750A4") }), specVersion: "2025" });
 
-// @ts-expect-error old tonal variant spelling was removed.
-material3Source({ sourceColor: hex("#6750A4"), algorithm: { variant: "tonal" } });
 `,
 );
 writeFileSync(

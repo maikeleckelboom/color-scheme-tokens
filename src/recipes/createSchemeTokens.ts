@@ -7,7 +7,11 @@ import {
 import { createSourceGraph } from "../core/createSourceGraph";
 import type { AliasTokenNode, ColorSchemeTokenGraph, Result } from "../core/graph";
 import type { TokenKey } from "../core/keys";
-import type { GraphBuildProblem, SchemeSource, SchemeSourceProblem } from "../core/schemeSource";
+import type {
+  ColorSchemeTokenSource,
+  ColorSchemeTokenSourceProblem,
+  GraphBuildProblem,
+} from "../core/colorSchemeTokenSource";
 import { serializeTokenSet } from "../core/serializeTokenSet";
 import { exportCssVariables, type CssVariableOptions } from "../exporters/exportCssVariables";
 import { applyLayers } from "../layers/applyLayers";
@@ -20,7 +24,7 @@ export type ColorSchemeTokenGraphTransform = (
 export type ColorSchemeTokenAliases = Readonly<Record<string, string>>;
 
 export interface SchemeTokensRecipeOptions {
-  readonly source: SchemeSource;
+  readonly source: ColorSchemeTokenSource;
   readonly layers?: readonly ColorSchemeTokenLayer[];
   readonly aliases?: ColorSchemeTokenAliases;
   readonly transform?: ColorSchemeTokenGraphTransform;
@@ -35,7 +39,9 @@ export interface SchemeTokensRecipeResult {
   readonly snapshot: string;
 }
 
-export type SchemeTokensRecipeProblem = GraphBuildProblem<SchemeSourceProblem> | CompileProblem;
+export type SchemeTokensRecipeProblem =
+  | GraphBuildProblem<ColorSchemeTokenSourceProblem>
+  | CompileProblem;
 
 export function createSchemeTokens(
   options: SchemeTokensRecipeOptions,

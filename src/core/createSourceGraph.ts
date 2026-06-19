@@ -1,7 +1,11 @@
 import type { ColorSchemeTokenGraph, TokenNode } from "./graph";
 import type { ModeKey } from "./modes";
 import { darkMode, lightMode } from "./modes";
-import type { GraphBuildResult, SchemeSource, SchemeSourceProblem } from "./schemeSource";
+import type {
+  ColorSchemeTokenSource,
+  ColorSchemeTokenSourceProblem,
+  GraphBuildResult,
+} from "./colorSchemeTokenSource";
 import { validateGraph } from "./validateGraph";
 
 export const GRAPH_SCHEMA_VERSION = "color-scheme-token-graph/v0";
@@ -12,15 +16,15 @@ export interface CreateTokenGraphOptions {
 }
 
 export interface CreateSourceGraphOptions<
-  Problem extends SchemeSourceProblem = SchemeSourceProblem,
+  Problem extends ColorSchemeTokenSourceProblem = ColorSchemeTokenSourceProblem,
 > {
-  readonly source: SchemeSource<Problem>;
+  readonly source: ColorSchemeTokenSource<Problem>;
 }
 
-export function createSourceGraph<Problem extends SchemeSourceProblem>(
+export function createSourceGraph<Problem extends ColorSchemeTokenSourceProblem>(
   options: CreateSourceGraphOptions<Problem>,
 ): GraphBuildResult<Problem>;
-export function createSourceGraph<Problem extends SchemeSourceProblem>(
+export function createSourceGraph<Problem extends ColorSchemeTokenSourceProblem>(
   options: CreateSourceGraphOptions<Problem>,
 ): GraphBuildResult<Problem> {
   const graph = options.source.createGraph();

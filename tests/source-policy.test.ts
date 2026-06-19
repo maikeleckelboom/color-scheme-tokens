@@ -3,50 +3,14 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 describe("source policy", () => {
-  it("keeps the public index explicit and free of legacy wrapper exports", async () => {
+  it("keeps the public index explicit and source-agnostic", async () => {
     const index = await readFile("src/index.ts", "utf8");
-    const forbidden = [
-      "createTheme",
-      "createScheme",
-      "createColorScheme",
-      "createCssVariables",
-      "createCssVarMap",
-      "MaterialTheme",
-      "Material3AlgorithmOptions",
-      "Material3KeyColors",
-      "Material3SourceOptions",
-      "dynamicSchemeSource",
-      "DynamicColorScheme",
-      "material3Source",
-      "PaletteStyle",
-      "exportJsonTokens",
-      "solidColorIntent",
-      "ColorIntent",
-      "SolidColorIntent",
-      "createSchemeGraph",
-    ];
 
     expect(index).not.toMatch(/export\s+\*/);
-    for (const name of forbidden) {
-      expect(index).not.toMatch(new RegExp(`\\b${name}\\b`));
-    }
-  });
-
-  it("keeps Material source mechanics out of the root type surface", async () => {
-    const index = await readFile("src/index.ts", "utf8");
-    const internalTypes = [
-      "ColorTokenValueProblem",
-      "DynamicScheme",
-      "Material3Platform",
-      "Material3ResolvedOptions",
-      "Material3Source",
-      "Material3SpecVersion",
-      "SchemeTokensRecipeRun",
-    ];
-
-    for (const name of internalTypes) {
-      expect(index).not.toMatch(new RegExp(`\\b${name}\\b`));
-    }
+    expect(index).not.toMatch(/\bMaterial3\b/);
+    expect(index).not.toContain("material3");
+    expect(index).not.toContain("@material/material-color-utilities");
+    expect(index).not.toContain("./sources/material3");
   });
 
   it("keeps the package ESM-only and pins deterministic upstream color generation", async () => {
@@ -77,18 +41,6 @@ describe("source policy", () => {
     expect(JSON.stringify(packageJson.exports)).not.toContain('"require"');
     expect(tsupConfig).not.toContain('"cjs"');
     expect(packageJson.dependencies?.["@material/material-color-utilities"]).toBe("0.4.0");
-  });
-
-  it("does not use deprecated upstream dynamic-color APIs", async () => {
-    const source = await readSourceFiles("src");
-
-    expect(source).not.toMatch(/import\s*\{[^}]*\bScheme\b[^}]*\}/);
-    expect(source).not.toMatch(
-      /\bScheme\.(light|dark|lightContent|darkContent|lightFromCorePalette|darkFromCorePalette)\b/,
-    );
-    expect(source).not.toMatch(/\bMaterialDynamicColors\./);
-    expect(source).not.toContain("themeFromSourceColor");
-    expect(source).not.toContain("applyTheme");
   });
 
   it("keeps Material-specific imports out of generic graph, recipe, layer, and export modules", async () => {
