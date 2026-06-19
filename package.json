@@ -2,7 +2,7 @@
   "name": "color-scheme-tokens",
   "version": "0.0.0",
   "private": true,
-  "description": "Stable color scheme tokens for TypeScript apps.",
+  "description": "Stable graph-first color tokens for TypeScript apps.",
   "keywords": [
     "color-scheme",
     "css-variables",
@@ -27,6 +27,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./sources/material3": {
+      "types": "./dist/sources/material3/index.d.ts",
+      "import": "./dist/sources/material3/index.js"
     },
     "./package.json": "./package.json"
   },

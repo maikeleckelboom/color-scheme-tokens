@@ -1,7 +1,18 @@
 # Architecture
 
-color-scheme-tokens is a graph-first package. The public center is `ColorSchemeTokenGraph`, not a dynamic-color wrapper
-and not a product-specific theme object.
+color-scheme-tokens is a graph-first package. The public center is `ColorSchemeTokenGraph`, not a Material wrapper and
+not a product-specific theme object.
+
+## Model
+
+The package is split into three boundaries:
+
+1. Generic color token graph core.
+2. Generic recipe pipeline.
+3. Explicit source adapters, currently including the Material 3 adapter.
+
+Source adapters produce graphs. They do not define token nodes, modes, aliases, validation, compilation, layers,
+transform behavior, deterministic serialization, or CSS export.
 
 ## Pipeline
 
@@ -23,29 +34,36 @@ color values. Exporters consume compiled token sets only.
 
 ## Boundaries
 
-- Dynamic color is the first intended source, but dynamic color does not define the package identity.
-- The dynamic source emits `scheme.*` keys. That namespace is source-emitted token data, not mandatory graph structure.
-- The dynamic source is backed by `@material/material-color-utilities` internally; the backing package is a source
-  implementation detail. Upstream types and Material-branded wrappers are not public runtime API, and graph types,
-  validation, compilation, layers, the transform hook, serialization, and CSS export remain generic.
-- Token layers may add generic app aliases such as `chrome.background` and `semantic.action.background`; they must not
-  introduce project-specific semantics.
+- The graph core is source-agnostic.
+- The recipe pipeline is source-agnostic.
+- Material 3 Dynamic Color is one explicit source adapter at `color-scheme-tokens/sources/material3`.
+- The Material 3 adapter emits `m3.*` keys. That namespace is adapter-emitted token data, not mandatory graph structure.
+- Consumer/application namespaces should be owned by the consumer, such as `app.*` or `brand.*`.
+- Material 3 `keyColors` and `algorithm` options are adapter concerns. `specVersion`, `platform`, `variant`, and
+  `contrastLevel` do not belong to generic recipe options.
+- ARGB is an adapter implementation detail for Material 3 generation or an explicit low-level interop concern. The public
+  happy path uses color constructors such as `hex()` and `srgb255()`.
+- The Material 3 adapter is backed by `@material/material-color-utilities` internally. Upstream types and Material
+  utility wrappers are not public root API.
+- Graph types, validation, compilation, layers, the transform hook, serialization, and CSS export remain generic.
+- Token layers may add generic app or brand aliases; bundled layers must not quietly assume a source-emitted namespace.
 - Color token nodes store `ModeValues<ColorTokenValue>`. v0 supports only literal color values, and compiled color values
   remain concrete `ColorValue` objects.
 - `serializeTokenSet()` is the deterministic JSON/snapshot primitive. A dedicated JSON token exporter is deferred.
-- Dynamic color algorithm changes are package-level events because upstream generation changes can alter compiled token
-  output; the upstream package is pinned exactly and fixtures are expected to catch drift.
-- `tests/fixtures/dynamic-purple.token-set.snapshot.json` is byte-for-byte serialized output and is intentionally not
-  formatter-owned.
+- Material Dynamic Color algorithm changes are package-level events because upstream generation changes can alter compiled
+  token output; the upstream package is pinned exactly and fixtures are expected to catch drift.
+- `tests/fixtures/material3-purple.token-set.snapshot.json` is byte-for-byte serialized Material 3 adapter output and is
+  intentionally not formatter-owned.
 - Exporters do not validate graphs, resolve aliases, or mutate token sets.
 - Lab proof tooling remains external future work and is not package doctrine.
 
 ## Current Slice
 
-The repository exposes only implemented root behavior: key parsing, mode parsing, color constructors, literal color
-values, source-backed graph creation, graph validation, compilation, deterministic serialization, CSS variable export,
-the dynamic scheme source, the app surface layer, and the `createSchemeTokens()` recipe.
+The root package exposes generic behavior: key parsing, mode parsing, color constructors, literal color values,
+source-backed graph creation, graph validation, compilation, deterministic serialization, CSS variable export, generic
+layer types, and the `createSchemeTokens()` recipe.
 
-Dynamic source defaults are spec version `2021`, platform `phone`, contrast level `0`, and variant `tonal`. The source
-emits the reconciled role inventory as `scheme.*` keys: 55 required roles and four optional dim roles when the upstream
-adapter provides them symmetrically.
+The Material 3 subpath exposes `material3Source()` and Material 3 source option/problem types. The adapter defaults are
+spec version `2021`, platform `phone`, contrast level `0`, and variant `tonalSpot`. It emits the reconciled role
+inventory as `m3.*` keys: 55 required roles and four optional dim roles when the upstream adapter provides them
+symmetrically.

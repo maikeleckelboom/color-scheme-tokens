@@ -21,7 +21,7 @@ describe("graph core", () => {
       tokens: [
         {
           kind: "color",
-          key: tokenKey("scheme.primary"),
+          key: tokenKey("brand.primary"),
           values: [
             { mode: lightMode, value: literalColor(hex("#6750a4")) },
             { mode: darkMode, value: literalColor(hex("#d0bcff")) },
@@ -30,7 +30,7 @@ describe("graph core", () => {
         {
           kind: "alias",
           key: tokenKey("app.action"),
-          target: tokenKey("scheme.primary"),
+          target: tokenKey("brand.primary"),
         },
       ],
     });
@@ -43,7 +43,7 @@ describe("graph core", () => {
 
     expect(serializeTokenSet(compiled.value)).toContain('"key": "app.action"');
     expect(exportCssVariables(compiled.value)).toContain("--app-action: #6750a4;");
-    expect(exportCssVariables(compiled.value)).toContain("--scheme-primary: #d0bcff;");
+    expect(exportCssVariables(compiled.value)).toContain("--brand-primary: #d0bcff;");
   });
 
   it("keeps color token values at the authored graph boundary and compiles concrete colors", () => {
@@ -51,7 +51,7 @@ describe("graph core", () => {
       tokens: [
         {
           kind: "color",
-          key: tokenKey("scheme.primary"),
+          key: tokenKey("brand.primary"),
           values: [
             { mode: lightMode, value: literalColor(hex("#6750a4")) },
             { mode: darkMode, value: literalColor(hex("#d0bcff")) },

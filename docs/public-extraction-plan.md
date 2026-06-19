@@ -14,7 +14,9 @@ it does not copy old Git history.
 - Do not expose wrapper-shaped API names such as `createTheme`, `createColorScheme`, `createCssVariables`,
   `MaterialTheme`, or `createMaterialSchemeTokens`.
 - Do not expose `material.*` token keys.
+- Do not expose Material 3 source adapter exports from the package root.
 - Do not make upstream dynamic-color vocabulary the public package model.
+- Do not model key palette colors as generic graph concepts.
 - Do not add framework bindings, CLI tooling, DTCG export, theme editing, image extraction, or contrast repair in the
   initial package.
 
@@ -23,11 +25,12 @@ it does not copy old Git history.
 1. Establish graph primitives and runtime validation.
 2. Compile aliases and modes into deterministic token sets.
 3. Project compiled token sets to CSS.
-4. Internalize the dynamic-color source adapter behind `scheme.*` keys.
-5. Add plain token layer data and an app-surface layer.
-6. Add a recipe that orchestrates source adapters, layers, aliases, one transform hook, compiler, serializer, and CSS
+4. Add explicit source adapters that produce graphs.
+5. Keep Material 3 Dynamic Color behind the `color-scheme-tokens/sources/material3` adapter.
+6. Add plain token layer data as generic graph additions.
+7. Add a recipe that orchestrates source adapters, layers, aliases, one transform hook, compiler, serializer, and CSS
    export.
-7. Add source and CSS snapshots before any public release candidate.
+8. Add source and CSS snapshots before any public release candidate.
 
 ## Current Implementation Notes
 
@@ -35,11 +38,16 @@ it does not copy old Git history.
 - The package is ESM-only; CommonJS build output and `require` export conditions are not part of the public contract.
 - `ColorTokenValue` is implemented only as a literal authored color payload.
 - Source adapters generate token graphs; they do not define the graph model.
-- `dynamicSchemeSource()` accepts opaque sRGB source colors and keeps Material color utilities internal as a source
-  implementation detail.
+- `material3Source()` accepts opaque sRGB source colors through the Material 3 adapter subpath.
+- `material3Source()` emits `m3.*` tokens. Consumers should map those to application-owned namespaces such as `app.*` or
+  `brand.*` when they need stable product semantics.
+- Material 3 `keyColors` and `algorithm` options are adapter concerns. `specVersion`, `platform`, `variant`, and
+  `contrastLevel` do not belong to generic recipe options.
+- ARGB conversion is an adapter implementation detail for the Material 3 source. Public examples should prefer `hex()`
+  and `srgb255()`.
 - Recipe `aliases` are sugar for simple alias token nodes.
-- Token layers are reusable graph additions. `appSurfaceLayer` maps scheme roles to `chrome.*` and `semantic.*` aliases
-  as optional convenience data.
+- Token layers are reusable graph additions. Public layers must be source-agnostic unless their name and docs explicitly
+  state the source dependency.
 - Recipe `transform` is a single advanced graph hook that runs after layers and aliases and before compile.
 - `serializeTokenSet()` remains the deterministic snapshot path; there is no public JSON exporter.
 - The upstream dynamic color utility version is pinned exactly because algorithm changes can alter generated token output.

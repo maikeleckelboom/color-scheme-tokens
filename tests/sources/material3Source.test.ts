@@ -1,15 +1,10 @@
 import { describe, expect, it } from "vitest";
-import {
-  compileGraph,
-  createSchemeGraph,
-  dynamicSchemeSource,
-  hex,
-  tokenKey,
-} from "../../src/index";
+import { compileGraph, createSchemeGraph, hex, tokenKey } from "../../src/index";
+import { material3Source } from "../../src/sources/material3";
 
-describe("dynamicSchemeSource", () => {
-  it("generates the reconciled required dynamic role inventory", () => {
-    const source = dynamicSchemeSource({ sourceColor: hex("#6750A4") });
+describe("material3Source", () => {
+  it("generates the reconciled required Material 3 role inventory as m3 tokens", () => {
+    const source = material3Source({ sourceColor: hex("#6750A4") });
     const requiredRoles = source.roleSet.roles.filter((role) => role.required);
     const optionalRoles = source.roleSet.roles.filter((role) => !role.required);
     const graph = expectOk(createSchemeGraph({ source }));
@@ -18,11 +13,11 @@ describe("dynamicSchemeSource", () => {
     expect(optionalRoles).toHaveLength(4);
     expect(Object.prototype.hasOwnProperty.call(source, "defaults")).toBe(false);
     expect(graph.tokens).toHaveLength(59);
-    expect(graph.tokens.every((token) => String(token.key).startsWith("scheme."))).toBe(true);
+    expect(graph.tokens.every((token) => String(token.key).startsWith("m3."))).toBe(true);
     expect(graph.tokens.some((token) => String(token.key).startsWith("material."))).toBe(false);
 
     const compiled = expectOk(compileGraph(graph));
-    expect(compiled.tokens.find((token) => token.key === tokenKey("scheme.primary"))).toEqual(
+    expect(compiled.tokens.find((token) => token.key === tokenKey("m3.primary"))).toEqual(
       definedToken(),
     );
   });
@@ -30,18 +25,14 @@ describe("dynamicSchemeSource", () => {
   it("includes optional dim roles symmetrically when the upstream source provides them", () => {
     const graph = expectOk(
       createSchemeGraph({
-        source: dynamicSchemeSource({
+        source: material3Source({
           sourceColor: hex("#6750A4"),
+          algorithm: { specVersion: "2025", platform: "phone" },
         }),
       }),
     );
 
-    for (const key of [
-      "scheme.primaryDim",
-      "scheme.secondaryDim",
-      "scheme.tertiaryDim",
-      "scheme.errorDim",
-    ]) {
+    for (const key of ["m3.primaryDim", "m3.secondaryDim", "m3.tertiaryDim", "m3.errorDim"]) {
       const token = expectColorToken(
         graph.tokens.find((candidate) => candidate.key === tokenKey(key)),
       );
@@ -50,10 +41,10 @@ describe("dynamicSchemeSource", () => {
   });
 
   it("rejects non-opaque and non-srgb source colors with structured source problems", () => {
-    const alphaResult = dynamicSchemeSource({
+    const alphaResult = material3Source({
       sourceColor: { ...hex("#6750A4"), alpha: 0.5 },
     }).createGraph();
-    const wideColorResult = dynamicSchemeSource({
+    const wideColorResult = material3Source({
       sourceColor: {
         colorSpace: "display-p3",
         r: 0.4,
@@ -73,25 +64,67 @@ describe("dynamicSchemeSource", () => {
     ).toBe(true);
   });
 
-  it("rejects invalid contrast levels before generation", () => {
-    const result = dynamicSchemeSource({
+  it("keeps algorithm options adapter-specific", () => {
+    const result = material3Source({
       sourceColor: hex("#6750A4"),
-      contrastLevel: 1.5,
+      algorithm: {
+        contrastLevel: 0.25,
+        variant: "tonalSpot",
+        specVersion: "2021",
+        platform: "phone",
+      },
+    }).createGraph();
+
+    expect(result.ok).toBe(true);
+  });
+
+  it("rejects invalid algorithm options before generation", () => {
+    const result = material3Source({
+      sourceColor: hex("#6750A4"),
+      algorithm: { contrastLevel: 1.5 },
     }).createGraph();
 
     expect(expectProblems(result)).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           kind: "invalid-contrast-level",
+          path: "algorithm.contrastLevel",
         }),
       ]),
     );
+  });
+
+  it("uses optional key colors to override Material 3 palettes", () => {
+    const defaultGraph = expectOk(
+      createSchemeGraph({
+        source: material3Source({ sourceColor: hex("#6750A4") }),
+      }),
+    );
+    const keyedGraph = expectOk(
+      createSchemeGraph({
+        source: material3Source({
+          sourceColor: hex("#6750A4"),
+          keyColors: {
+            primary: hex("#006C4C"),
+          },
+        }),
+      }),
+    );
+
+    const defaultPrimary = expectColorToken(
+      defaultGraph.tokens.find((candidate) => candidate.key === tokenKey("m3.primary")),
+    );
+    const keyedPrimary = expectColorToken(
+      keyedGraph.tokens.find((candidate) => candidate.key === tokenKey("m3.primary")),
+    );
+
+    expect(keyedPrimary.values).not.toEqual(defaultPrimary.values);
   });
 });
 
 function definedToken(): unknown {
   return expect.objectContaining({
-    key: tokenKey("scheme.primary"),
+    key: tokenKey("m3.primary"),
     values: expect.any(Array),
   });
 }

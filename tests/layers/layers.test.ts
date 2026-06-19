@@ -12,23 +12,19 @@ import {
   type TokenNode,
 } from "../../src/index";
 import { applyLayers } from "../../src/layers/applyLayers";
-import { appSurfaceLayer } from "../../src/layers/appSurfaceLayer";
 
 describe("token layers", () => {
-  it("adds the exact app surface aliases without mutating the original graph", () => {
+  it("adds layer aliases without mutating the original graph", () => {
     const graph = baseGraph();
-    const layered = applyLayers(graph, [appSurfaceLayer]);
+    const layered = applyLayers(graph, [applicationLayer]);
 
-    expect(graph.tokens).toHaveLength(7);
-    expect(layered.tokens).toHaveLength(14);
-    expect(appSurfaceLayer.tokens.map((token) => String(token.key))).toEqual([
-      "chrome.background",
-      "chrome.foreground",
-      "chrome.border",
-      "semantic.action.background",
-      "semantic.action.foreground",
-      "semantic.danger.background",
-      "semantic.danger.foreground",
+    expect(graph.tokens).toHaveLength(5);
+    expect(layered.tokens).toHaveLength(9);
+    expect(applicationLayer.tokens.map((token) => String(token.key))).toEqual([
+      "app.action",
+      "app.actionText",
+      "app.border",
+      "app.notice",
     ]);
     expect(validateGraph(layered).ok).toBe(true);
   });
@@ -37,15 +33,11 @@ describe("token layers", () => {
     const graph = baseGraph();
     const firstLayer: ColorSchemeTokenLayer = {
       name: "first",
-      tokens: [
-        { kind: "alias", key: tokenKey("chrome.background"), target: tokenKey("scheme.surface") },
-      ],
+      tokens: [{ kind: "alias", key: tokenKey("app.action"), target: tokenKey("brand.primary") }],
     };
     const secondLayer: ColorSchemeTokenLayer = {
       name: "second",
-      tokens: [
-        { kind: "alias", key: tokenKey("chrome.background"), target: tokenKey("scheme.primary") },
-      ],
+      tokens: [{ kind: "alias", key: tokenKey("app.action"), target: tokenKey("app.canvas") }],
     };
 
     const problems = expectProblems(
@@ -62,8 +54,8 @@ describe("token layers", () => {
         tokens: [
           {
             kind: "alias",
-            key: tokenKey("chrome.background"),
-            target: tokenKey("scheme.missing"),
+            key: tokenKey("app.action"),
+            target: tokenKey("app.missing"),
           },
         ],
       },
@@ -81,16 +73,16 @@ describe("token layers", () => {
         tokens: [
           {
             kind: "alias",
-            key: tokenKey("chrome.background"),
+            key: tokenKey("app.activeSurface"),
             target: [
-              { mode: lightMode, value: tokenKey("scheme.surface") },
-              { mode: darkMode, value: tokenKey("scheme.primary") },
+              { mode: lightMode, value: tokenKey("app.canvas") },
+              { mode: darkMode, value: tokenKey("brand.primary") },
             ],
           },
         ],
       },
     ]);
-    const compiled = compileGraph(graph, { include: [tokenKey("chrome.background")] });
+    const compiled = compileGraph(graph, { include: [tokenKey("app.activeSurface")] });
 
     expect(compiled.ok).toBe(true);
     if (!compiled.ok) return;
@@ -108,7 +100,7 @@ describe("token layers", () => {
         tokens: [
           {
             kind: "color",
-            key: tokenKey("semantic.notice.background"),
+            key: tokenKey("app.noticeBackground"),
             values: [
               { mode: lightMode, value: literalColor(hex("#fff8e1")) },
               { mode: darkMode, value: literalColor(hex("#332600")) },
@@ -117,7 +109,7 @@ describe("token layers", () => {
         ],
       },
     ]);
-    const compiled = compileGraph(graph, { include: [tokenKey("semantic.notice.background")] });
+    const compiled = compileGraph(graph, { include: [tokenKey("app.noticeBackground")] });
 
     expect(compiled.ok).toBe(true);
     if (!compiled.ok) return;
@@ -125,16 +117,24 @@ describe("token layers", () => {
   });
 });
 
+const applicationLayer: ColorSchemeTokenLayer = {
+  name: "application",
+  tokens: [
+    { kind: "alias", key: tokenKey("app.action"), target: tokenKey("brand.primary") },
+    { kind: "alias", key: tokenKey("app.actionText"), target: tokenKey("brand.onPrimary") },
+    { kind: "alias", key: tokenKey("app.border"), target: tokenKey("brand.outline") },
+    { kind: "alias", key: tokenKey("app.notice"), target: tokenKey("brand.tertiary") },
+  ],
+};
+
 function baseGraph() {
   return testGraph({
     tokens: [
-      colorToken("scheme.surface", "#ffffff", "#141218"),
-      colorToken("scheme.onSurface", "#1d1b20", "#e6e0e9"),
-      colorToken("scheme.outlineVariant", "#cac4d0", "#49454f"),
-      colorToken("scheme.primary", "#6750a4", "#d0bcff"),
-      colorToken("scheme.onPrimary", "#ffffff", "#381e72"),
-      colorToken("scheme.error", "#ba1a1a", "#ffb4ab"),
-      colorToken("scheme.onError", "#ffffff", "#690005"),
+      colorToken("app.canvas", "#ffffff", "#141218"),
+      colorToken("brand.primary", "#6750a4", "#d0bcff"),
+      colorToken("brand.onPrimary", "#ffffff", "#381e72"),
+      colorToken("brand.outline", "#cac4d0", "#49454f"),
+      colorToken("brand.tertiary", "#7d5260", "#efb8c8"),
     ],
   });
 }

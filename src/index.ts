@@ -7,9 +7,7 @@ export { darkMode, lightMode, modeKey, parseModeKey } from "./core/modes";
 export { serializeTokenSet } from "./core/serializeTokenSet";
 export { validateGraph } from "./core/validateGraph";
 export { exportCssVariables } from "./exporters/exportCssVariables";
-export { appSurfaceLayer } from "./layers/appSurfaceLayer";
 export { createSchemeTokens } from "./recipes/createSchemeTokens";
-export { dynamicSchemeSource } from "./sources/dynamicScheme/dynamicSchemeSource";
 export type {
   AliasTokenNode,
   ColorSchemeTokenGraph,
@@ -43,8 +41,6 @@ export type { TokenProvenance } from "./core/provenance";
 export type {
   GraphBuildProblem,
   GraphBuildResult,
-  SchemeRoleDefinition,
-  SchemeRoleSet,
   SchemeSource,
   SchemeSourceProblem,
 } from "./core/schemeSource";
@@ -59,8 +55,3 @@ export type {
   SchemeTokensRecipeProblem,
   SchemeTokensRecipeResult,
 } from "./recipes/createSchemeTokens";
-export type {
-  DynamicSchemeSourceOptions,
-  DynamicSchemeSourceProblem,
-  DynamicSchemeVariant,
-} from "./sources/dynamicScheme/dynamicSchemeSource";

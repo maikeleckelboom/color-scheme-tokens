@@ -1,17 +1,18 @@
 import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
-import { appSurfaceLayer, createSchemeTokens, dynamicSchemeSource, hex } from "../../src/index";
+import { createSchemeTokens, hex } from "../../src/index";
+import { material3Source } from "../../src/sources/material3";
 
-describe("deterministic dynamic output", () => {
-  it("matches the canonical purple token-set and CSS fixtures byte-for-byte", async () => {
+describe("deterministic Material 3 output", () => {
+  it("matches the canonical purple Material 3 token-set and CSS fixtures byte-for-byte", async () => {
     const first = generateFixtureOutput();
     const second = generateFixtureOutput();
     const jsonFixture = await readFile(
-      new URL("../fixtures/dynamic-purple.token-set.snapshot.json", import.meta.url),
+      new URL("../fixtures/material3-purple.token-set.snapshot.json", import.meta.url),
       "utf8",
     );
     const cssFixture = await readFile(
-      new URL("../fixtures/dynamic-purple.css", import.meta.url),
+      new URL("../fixtures/material3-purple.css", import.meta.url),
       "utf8",
     );
 
@@ -23,14 +24,13 @@ describe("deterministic dynamic output", () => {
     );
     expect(first.snapshot).toBe(jsonFixture);
     expect(first.cssVariables).toBe(cssFixture);
-    expect(first.cssVariables).toContain("--theme-chrome-background: #fdf7ff;");
+    expect(first.cssVariables).toContain("--theme-m3-primary: #65558f;");
   });
 });
 
 function generateFixtureOutput(): { readonly snapshot: string; readonly cssVariables: string } {
   const result = createSchemeTokens({
-    source: dynamicSchemeSource({ sourceColor: hex("#6750A4") }),
-    layers: [appSurfaceLayer],
+    source: material3Source({ sourceColor: hex("#6750A4") }),
     css: { prefix: "theme" },
   });
 

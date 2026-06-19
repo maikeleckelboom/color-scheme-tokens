@@ -6,82 +6,7 @@
   ],
   "tokens": [
     {
-      "key": "chrome.background",
-      "values": [
-        {
-          "mode": "light",
-          "value": {
-            "colorSpace": "srgb",
-            "r": 0.9921568627450981,
-            "g": 0.9686274509803922,
-            "b": 1,
-            "alpha": 1
-          }
-        },
-        {
-          "mode": "dark",
-          "value": {
-            "colorSpace": "srgb",
-            "r": 0.0784313725490196,
-            "g": 0.07058823529411765,
-            "b": 0.09411764705882353,
-            "alpha": 1
-          }
-        }
-      ]
-    },
-    {
-      "key": "chrome.border",
-      "values": [
-        {
-          "mode": "light",
-          "value": {
-            "colorSpace": "srgb",
-            "r": 0.792156862745098,
-            "g": 0.7686274509803922,
-            "b": 0.8117647058823529,
-            "alpha": 1
-          }
-        },
-        {
-          "mode": "dark",
-          "value": {
-            "colorSpace": "srgb",
-            "r": 0.28627450980392155,
-            "g": 0.27058823529411763,
-            "b": 0.3058823529411765,
-            "alpha": 1
-          }
-        }
-      ]
-    },
-    {
-      "key": "chrome.foreground",
-      "values": [
-        {
-          "mode": "light",
-          "value": {
-            "colorSpace": "srgb",
-            "r": 0.11372549019607843,
-            "g": 0.10588235294117647,
-            "b": 0.12549019607843137,
-            "alpha": 1
-          }
-        },
-        {
-          "mode": "dark",
-          "value": {
-            "colorSpace": "srgb",
-            "r": 0.9019607843137255,
-            "g": 0.8784313725490196,
-            "b": 0.9137254901960784,
-            "alpha": 1
-          }
-        }
-      ]
-    },
-    {
-      "key": "scheme.background",
+      "key": "m3.background",
       "values": [
         {
           "mode": "light",
@@ -105,12 +30,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "background"
       }
     },
     {
-      "key": "scheme.error",
+      "key": "m3.error",
       "values": [
         {
           "mode": "light",
@@ -134,12 +59,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "error"
       }
     },
     {
-      "key": "scheme.errorContainer",
+      "key": "m3.errorContainer",
       "values": [
         {
           "mode": "light",
@@ -163,12 +88,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "errorContainer"
       }
     },
     {
-      "key": "scheme.errorDim",
+      "key": "m3.errorDim",
       "values": [
         {
           "mode": "light",
@@ -192,12 +117,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "errorDim"
       }
     },
     {
-      "key": "scheme.errorPaletteKeyColor",
+      "key": "m3.errorPaletteKeyColor",
       "values": [
         {
           "mode": "light",
@@ -221,12 +146,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "errorPaletteKeyColor"
       }
     },
     {
-      "key": "scheme.inverseOnSurface",
+      "key": "m3.inverseOnSurface",
       "values": [
         {
           "mode": "light",
@@ -250,12 +175,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "inverseOnSurface"
       }
     },
     {
-      "key": "scheme.inversePrimary",
+      "key": "m3.inversePrimary",
       "values": [
         {
           "mode": "light",
@@ -279,12 +204,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "inversePrimary"
       }
     },
     {
-      "key": "scheme.inverseSurface",
+      "key": "m3.inverseSurface",
       "values": [
         {
           "mode": "light",
@@ -308,12 +233,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "inverseSurface"
       }
     },
     {
-      "key": "scheme.neutralPaletteKeyColor",
+      "key": "m3.neutralPaletteKeyColor",
       "values": [
         {
           "mode": "light",
@@ -337,12 +262,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "neutralPaletteKeyColor"
       }
     },
     {
-      "key": "scheme.neutralVariantPaletteKeyColor",
+      "key": "m3.neutralVariantPaletteKeyColor",
       "values": [
         {
           "mode": "light",
@@ -366,12 +291,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "neutralVariantPaletteKeyColor"
       }
     },
     {
-      "key": "scheme.onBackground",
+      "key": "m3.onBackground",
       "values": [
         {
           "mode": "light",
@@ -395,12 +320,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "onBackground"
       }
     },
     {
-      "key": "scheme.onError",
+      "key": "m3.onError",
       "values": [
         {
           "mode": "light",
@@ -424,12 +349,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "onError"
       }
     },
     {
-      "key": "scheme.onErrorContainer",
+      "key": "m3.onErrorContainer",
       "values": [
         {
           "mode": "light",
@@ -453,12 +378,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "onErrorContainer"
       }
     },
     {
-      "key": "scheme.onPrimary",
+      "key": "m3.onPrimary",
       "values": [
         {
           "mode": "light",
@@ -482,12 +407,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "onPrimary"
       }
     },
     {
-      "key": "scheme.onPrimaryContainer",
+      "key": "m3.onPrimaryContainer",
       "values": [
         {
           "mode": "light",
@@ -511,12 +436,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "onPrimaryContainer"
       }
     },
     {
-      "key": "scheme.onPrimaryFixed",
+      "key": "m3.onPrimaryFixed",
       "values": [
         {
           "mode": "light",
@@ -540,12 +465,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "onPrimaryFixed"
       }
     },
     {
-      "key": "scheme.onPrimaryFixedVariant",
+      "key": "m3.onPrimaryFixedVariant",
       "values": [
         {
           "mode": "light",
@@ -569,12 +494,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "onPrimaryFixedVariant"
       }
     },
     {
-      "key": "scheme.onSecondary",
+      "key": "m3.onSecondary",
       "values": [
         {
           "mode": "light",
@@ -598,12 +523,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "onSecondary"
       }
     },
     {
-      "key": "scheme.onSecondaryContainer",
+      "key": "m3.onSecondaryContainer",
       "values": [
         {
           "mode": "light",
@@ -627,12 +552,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "onSecondaryContainer"
       }
     },
     {
-      "key": "scheme.onSecondaryFixed",
+      "key": "m3.onSecondaryFixed",
       "values": [
         {
           "mode": "light",
@@ -656,12 +581,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "onSecondaryFixed"
       }
     },
     {
-      "key": "scheme.onSecondaryFixedVariant",
+      "key": "m3.onSecondaryFixedVariant",
       "values": [
         {
           "mode": "light",
@@ -685,12 +610,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "onSecondaryFixedVariant"
       }
     },
     {
-      "key": "scheme.onSurface",
+      "key": "m3.onSurface",
       "values": [
         {
           "mode": "light",
@@ -714,12 +639,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "onSurface"
       }
     },
     {
-      "key": "scheme.onSurfaceVariant",
+      "key": "m3.onSurfaceVariant",
       "values": [
         {
           "mode": "light",
@@ -743,12 +668,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "onSurfaceVariant"
       }
     },
     {
-      "key": "scheme.onTertiary",
+      "key": "m3.onTertiary",
       "values": [
         {
           "mode": "light",
@@ -772,12 +697,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "onTertiary"
       }
     },
     {
-      "key": "scheme.onTertiaryContainer",
+      "key": "m3.onTertiaryContainer",
       "values": [
         {
           "mode": "light",
@@ -801,12 +726,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "onTertiaryContainer"
       }
     },
     {
-      "key": "scheme.onTertiaryFixed",
+      "key": "m3.onTertiaryFixed",
       "values": [
         {
           "mode": "light",
@@ -830,12 +755,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "onTertiaryFixed"
       }
     },
     {
-      "key": "scheme.onTertiaryFixedVariant",
+      "key": "m3.onTertiaryFixedVariant",
       "values": [
         {
           "mode": "light",
@@ -859,12 +784,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "onTertiaryFixedVariant"
       }
     },
     {
-      "key": "scheme.outline",
+      "key": "m3.outline",
       "values": [
         {
           "mode": "light",
@@ -888,12 +813,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "outline"
       }
     },
     {
-      "key": "scheme.outlineVariant",
+      "key": "m3.outlineVariant",
       "values": [
         {
           "mode": "light",
@@ -917,12 +842,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "outlineVariant"
       }
     },
     {
-      "key": "scheme.primary",
+      "key": "m3.primary",
       "values": [
         {
           "mode": "light",
@@ -946,12 +871,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "primary"
       }
     },
     {
-      "key": "scheme.primaryContainer",
+      "key": "m3.primaryContainer",
       "values": [
         {
           "mode": "light",
@@ -975,12 +900,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "primaryContainer"
       }
     },
     {
-      "key": "scheme.primaryDim",
+      "key": "m3.primaryDim",
       "values": [
         {
           "mode": "light",
@@ -1004,12 +929,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "primaryDim"
       }
     },
     {
-      "key": "scheme.primaryFixed",
+      "key": "m3.primaryFixed",
       "values": [
         {
           "mode": "light",
@@ -1033,12 +958,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "primaryFixed"
       }
     },
     {
-      "key": "scheme.primaryFixedDim",
+      "key": "m3.primaryFixedDim",
       "values": [
         {
           "mode": "light",
@@ -1062,12 +987,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "primaryFixedDim"
       }
     },
     {
-      "key": "scheme.primaryPaletteKeyColor",
+      "key": "m3.primaryPaletteKeyColor",
       "values": [
         {
           "mode": "light",
@@ -1091,12 +1016,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "primaryPaletteKeyColor"
       }
     },
     {
-      "key": "scheme.scrim",
+      "key": "m3.scrim",
       "values": [
         {
           "mode": "light",
@@ -1120,12 +1045,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "scrim"
       }
     },
     {
-      "key": "scheme.secondary",
+      "key": "m3.secondary",
       "values": [
         {
           "mode": "light",
@@ -1149,12 +1074,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "secondary"
       }
     },
     {
-      "key": "scheme.secondaryContainer",
+      "key": "m3.secondaryContainer",
       "values": [
         {
           "mode": "light",
@@ -1178,12 +1103,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "secondaryContainer"
       }
     },
     {
-      "key": "scheme.secondaryDim",
+      "key": "m3.secondaryDim",
       "values": [
         {
           "mode": "light",
@@ -1207,12 +1132,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "secondaryDim"
       }
     },
     {
-      "key": "scheme.secondaryFixed",
+      "key": "m3.secondaryFixed",
       "values": [
         {
           "mode": "light",
@@ -1236,12 +1161,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "secondaryFixed"
       }
     },
     {
-      "key": "scheme.secondaryFixedDim",
+      "key": "m3.secondaryFixedDim",
       "values": [
         {
           "mode": "light",
@@ -1265,12 +1190,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "secondaryFixedDim"
       }
     },
     {
-      "key": "scheme.secondaryPaletteKeyColor",
+      "key": "m3.secondaryPaletteKeyColor",
       "values": [
         {
           "mode": "light",
@@ -1294,12 +1219,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "secondaryPaletteKeyColor"
       }
     },
     {
-      "key": "scheme.shadow",
+      "key": "m3.shadow",
       "values": [
         {
           "mode": "light",
@@ -1323,12 +1248,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "shadow"
       }
     },
     {
-      "key": "scheme.surface",
+      "key": "m3.surface",
       "values": [
         {
           "mode": "light",
@@ -1352,12 +1277,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "surface"
       }
     },
     {
-      "key": "scheme.surfaceBright",
+      "key": "m3.surfaceBright",
       "values": [
         {
           "mode": "light",
@@ -1381,12 +1306,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "surfaceBright"
       }
     },
     {
-      "key": "scheme.surfaceContainer",
+      "key": "m3.surfaceContainer",
       "values": [
         {
           "mode": "light",
@@ -1410,12 +1335,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "surfaceContainer"
       }
     },
     {
-      "key": "scheme.surfaceContainerHigh",
+      "key": "m3.surfaceContainerHigh",
       "values": [
         {
           "mode": "light",
@@ -1439,12 +1364,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "surfaceContainerHigh"
       }
     },
     {
-      "key": "scheme.surfaceContainerHighest",
+      "key": "m3.surfaceContainerHighest",
       "values": [
         {
           "mode": "light",
@@ -1468,12 +1393,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "surfaceContainerHighest"
       }
     },
     {
-      "key": "scheme.surfaceContainerLow",
+      "key": "m3.surfaceContainerLow",
       "values": [
         {
           "mode": "light",
@@ -1497,12 +1422,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "surfaceContainerLow"
       }
     },
     {
-      "key": "scheme.surfaceContainerLowest",
+      "key": "m3.surfaceContainerLowest",
       "values": [
         {
           "mode": "light",
@@ -1526,12 +1451,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "surfaceContainerLowest"
       }
     },
     {
-      "key": "scheme.surfaceDim",
+      "key": "m3.surfaceDim",
       "values": [
         {
           "mode": "light",
@@ -1555,12 +1480,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "surfaceDim"
       }
     },
     {
-      "key": "scheme.surfaceTint",
+      "key": "m3.surfaceTint",
       "values": [
         {
           "mode": "light",
@@ -1584,12 +1509,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "surfaceTint"
       }
     },
     {
-      "key": "scheme.surfaceVariant",
+      "key": "m3.surfaceVariant",
       "values": [
         {
           "mode": "light",
@@ -1613,12 +1538,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "surfaceVariant"
       }
     },
     {
-      "key": "scheme.tertiary",
+      "key": "m3.tertiary",
       "values": [
         {
           "mode": "light",
@@ -1642,12 +1567,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "tertiary"
       }
     },
     {
-      "key": "scheme.tertiaryContainer",
+      "key": "m3.tertiaryContainer",
       "values": [
         {
           "mode": "light",
@@ -1671,12 +1596,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "tertiaryContainer"
       }
     },
     {
-      "key": "scheme.tertiaryDim",
+      "key": "m3.tertiaryDim",
       "values": [
         {
           "mode": "light",
@@ -1700,12 +1625,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "tertiaryDim"
       }
     },
     {
-      "key": "scheme.tertiaryFixed",
+      "key": "m3.tertiaryFixed",
       "values": [
         {
           "mode": "light",
@@ -1729,12 +1654,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "tertiaryFixed"
       }
     },
     {
-      "key": "scheme.tertiaryFixedDim",
+      "key": "m3.tertiaryFixedDim",
       "values": [
         {
           "mode": "light",
@@ -1758,12 +1683,12 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "tertiaryFixedDim"
       }
     },
     {
-      "key": "scheme.tertiaryPaletteKeyColor",
+      "key": "m3.tertiaryPaletteKeyColor",
       "values": [
         {
           "mode": "light",
@@ -1787,109 +1712,9 @@
         }
       ],
       "provenance": {
-        "source": "dynamic-scheme",
+        "source": "material3",
         "id": "tertiaryPaletteKeyColor"
       }
-    },
-    {
-      "key": "semantic.action.background",
-      "values": [
-        {
-          "mode": "light",
-          "value": {
-            "colorSpace": "srgb",
-            "r": 0.396078431372549,
-            "g": 0.3333333333333333,
-            "b": 0.5607843137254902,
-            "alpha": 1
-          }
-        },
-        {
-          "mode": "dark",
-          "value": {
-            "colorSpace": "srgb",
-            "r": 0.8117647058823529,
-            "g": 0.7411764705882353,
-            "b": 0.996078431372549,
-            "alpha": 1
-          }
-        }
-      ]
-    },
-    {
-      "key": "semantic.action.foreground",
-      "values": [
-        {
-          "mode": "light",
-          "value": {
-            "colorSpace": "srgb",
-            "r": 1,
-            "g": 1,
-            "b": 1,
-            "alpha": 1
-          }
-        },
-        {
-          "mode": "dark",
-          "value": {
-            "colorSpace": "srgb",
-            "r": 0.21176470588235294,
-            "g": 0.15294117647058825,
-            "b": 0.36470588235294116,
-            "alpha": 1
-          }
-        }
-      ]
-    },
-    {
-      "key": "semantic.danger.background",
-      "values": [
-        {
-          "mode": "light",
-          "value": {
-            "colorSpace": "srgb",
-            "r": 0.7294117647058823,
-            "g": 0.10196078431372549,
-            "b": 0.10196078431372549,
-            "alpha": 1
-          }
-        },
-        {
-          "mode": "dark",
-          "value": {
-            "colorSpace": "srgb",
-            "r": 1,
-            "g": 0.7058823529411765,
-            "b": 0.6705882352941176,
-            "alpha": 1
-          }
-        }
-      ]
-    },
-    {
-      "key": "semantic.danger.foreground",
-      "values": [
-        {
-          "mode": "light",
-          "value": {
-            "colorSpace": "srgb",
-            "r": 1,
-            "g": 1,
-            "b": 1,
-            "alpha": 1
-          }
-        },
-        {
-          "mode": "dark",
-          "value": {
-            "colorSpace": "srgb",
-            "r": 0.4117647058823529,
-            "g": 0,
-            "b": 0.0196078431372549,
-            "alpha": 1
-          }
-        }
-      ]
     }
   ]
 }

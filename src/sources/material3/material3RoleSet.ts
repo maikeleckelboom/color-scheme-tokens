@@ -1,7 +1,7 @@
 import type { SchemeRoleDefinition, SchemeRoleSet } from "../../core/schemeSource";
 import { tokenKey } from "../../core/keys";
 
-const REQUIRED_DYNAMIC_ROLE_NAMES = [
+const REQUIRED_MATERIAL3_ROLE_NAMES = [
   "primaryPaletteKeyColor",
   "secondaryPaletteKeyColor",
   "tertiaryPaletteKeyColor",
@@ -59,24 +59,24 @@ const REQUIRED_DYNAMIC_ROLE_NAMES = [
   "onTertiaryFixedVariant",
 ] as const;
 
-const OPTIONAL_DYNAMIC_ROLE_NAMES = [
+const OPTIONAL_MATERIAL3_ROLE_NAMES = [
   "primaryDim",
   "secondaryDim",
   "tertiaryDim",
   "errorDim",
 ] as const;
 
-export const dynamicColorRoleSet: SchemeRoleSet = {
-  sourceId: "dynamic-scheme",
+export const material3RoleSet: SchemeRoleSet = {
+  sourceId: "material3",
   roles: [
-    ...REQUIRED_DYNAMIC_ROLE_NAMES.map((role) => dynamicRole(role, true)),
-    ...OPTIONAL_DYNAMIC_ROLE_NAMES.map((role) => dynamicRole(role, false)),
+    ...REQUIRED_MATERIAL3_ROLE_NAMES.map((role) => material3Role(role, true)),
+    ...OPTIONAL_MATERIAL3_ROLE_NAMES.map((role) => material3Role(role, false)),
   ],
 };
 
-function dynamicRole(role: string, required: boolean): SchemeRoleDefinition {
+function material3Role(role: string, required: boolean): SchemeRoleDefinition {
   return {
-    key: tokenKey(`scheme.${role}`),
+    key: tokenKey(`m3.${role}`),
     sourceRole: role,
     required,
   };

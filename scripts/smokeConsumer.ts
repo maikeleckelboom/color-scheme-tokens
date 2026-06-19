@@ -53,17 +53,23 @@ writeFileSync(
 writeFileSync(
   join(consumerDirectory, "esm.mjs"),
   `
-import { appSurfaceLayer, createSchemeTokens, dynamicSchemeSource, hex } from ${JSON.stringify(packageName)};
+import { createSchemeTokens, hex } from ${JSON.stringify(packageName)};
+import { material3Source } from ${JSON.stringify(`${packageName}/sources/material3`)};
 
 const result = createSchemeTokens({
-  source: dynamicSchemeSource({ sourceColor: hex("#6750A4") }),
-  layers: [appSurfaceLayer],
+  source: material3Source({ sourceColor: hex("#6750A4") }),
+  aliases: {
+    "app.action": "m3.primary",
+    "app.actionText": "m3.onPrimary",
+    "app.canvas": "m3.surface",
+    "app.text": "m3.onSurface",
+  },
   css: { prefix: "theme" },
 });
 
 if (!result.ok) throw new Error(JSON.stringify(result.problems));
-if (!result.value.cssVariables.includes("--theme-chrome-background:")) {
-  throw new Error("Missing layered CSS variable from ESM import.");
+if (!result.value.cssVariables.includes("--theme-app-action:")) {
+  throw new Error("Missing aliased CSS variable from ESM import.");
 }
 `,
 );
@@ -71,44 +77,58 @@ writeFileSync(
   join(consumerDirectory, "types.ts"),
   `
 import {
-  appSurfaceLayer,
   createSchemeGraph,
   createSchemeTokens,
-  dynamicSchemeSource,
   hex,
   literalColor,
   type ColorTokenValue,
   type CreateSchemeGraphOptions,
-  type DynamicSchemeSourceOptions,
-  type DynamicSchemeSourceProblem,
-  type DynamicSchemeVariant,
   type LiteralColorValue,
   type Result,
   type SchemeTokensRecipeProblem,
   type SchemeTokensRecipeResult,
 } from ${JSON.stringify(packageName)};
+import * as rootApi from ${JSON.stringify(packageName)};
+import {
+  material3Source,
+  type Material3AlgorithmVariant,
+  type Material3SourceOptions,
+  type Material3SourceProblem,
+} from ${JSON.stringify(`${packageName}/sources/material3`)};
 
-const variant: DynamicSchemeVariant = "tonal";
-const sourceOptions: DynamicSchemeSourceOptions = {
+const variant: Material3AlgorithmVariant = "tonalSpot";
+const sourceOptions: Material3SourceOptions = {
   sourceColor: hex("#6750A4"),
-  variant,
-  contrastLevel: 0,
+  keyColors: {
+    primary: hex("#6750A4"),
+  },
+  algorithm: {
+    variant,
+    contrastLevel: 0,
+    specVersion: "2021",
+    platform: "phone",
+  },
 };
 const authoredColor = literalColor(hex("#6750A4"));
 const typedAuthoredColor: LiteralColorValue = authoredColor;
 const graphValue: ColorTokenValue = typedAuthoredColor;
 const graphOptions = {
-  source: dynamicSchemeSource(sourceOptions),
+  source: material3Source(sourceOptions),
 } satisfies CreateSchemeGraphOptions;
 const graphResult = createSchemeGraph(graphOptions);
 const result = createSchemeTokens({
-  source: dynamicSchemeSource({ sourceColor: hex("#6750A4") }),
-  layers: [appSurfaceLayer],
+  source: material3Source({ sourceColor: hex("#6750A4") }),
+  aliases: {
+    "app.action": "m3.primary",
+    "app.actionText": "m3.onPrimary",
+    "app.canvas": "m3.surface",
+    "app.text": "m3.onSurface",
+  },
   css: { prefix: "theme" },
 });
 
 const typedResult: Result<SchemeTokensRecipeResult, SchemeTokensRecipeProblem> = result;
-const readProblemKind = (problem: DynamicSchemeSourceProblem) => problem.kind;
+const readProblemKind = (problem: Material3SourceProblem) => problem.kind;
 readProblemKind({ kind: "invalid-contrast-level", message: "example" });
 variant.toUpperCase();
 if (graphResult.ok) {
@@ -116,7 +136,7 @@ if (graphResult.ok) {
 }
 if (result.ok) {
   const value: SchemeTokensRecipeResult = result.value;
-  value.cssVariables.includes("--theme-chrome-background:");
+  value.cssVariables.includes("--theme-app-action:");
 }
 authoredColor.value.colorSpace.toUpperCase();
 graphValue.kind.toUpperCase();
@@ -127,6 +147,12 @@ if (!typedResult.ok) {
 // @ts-expect-error old authored color factory is intentionally not public.
 import(${JSON.stringify(packageName)}).then((module) => module.solidColorIntent);
 
+// @ts-expect-error Material 3 source factory is intentionally not exported from root.
+rootApi.material3Source;
+
+// @ts-expect-error old source factory was removed from root.
+rootApi.dynamicSchemeSource;
+
 // @ts-expect-error old authored color value type is intentionally not public.
 type OldColorIntent = import(${JSON.stringify(packageName)}).ColorIntent;
 
@@ -134,10 +160,13 @@ type OldColorIntent = import(${JSON.stringify(packageName)}).ColorIntent;
 type OldSolidColorIntent = import(${JSON.stringify(packageName)}).SolidColorIntent;
 
 // @ts-expect-error source-only createSchemeGraph calls are not public.
-createSchemeGraph(dynamicSchemeSource({ sourceColor: hex("#6750A4") }));
+createSchemeGraph(material3Source({ sourceColor: hex("#6750A4") }));
 
-// @ts-expect-error specVersion is an internal fixed default, not public configuration.
-dynamicSchemeSource({ sourceColor: hex("#6750A4"), specVersion: "2025" });
+// @ts-expect-error Material algorithm knobs do not belong to generic recipe options.
+createSchemeTokens({ source: material3Source({ sourceColor: hex("#6750A4") }), specVersion: "2025" });
+
+// @ts-expect-error old tonal variant spelling was removed.
+material3Source({ sourceColor: hex("#6750A4"), algorithm: { variant: "tonal" } });
 `,
 );
 writeFileSync(

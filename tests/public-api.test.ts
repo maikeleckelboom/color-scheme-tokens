@@ -1,16 +1,15 @@
 import { describe, expect, it } from "vitest";
 import * as api from "../src/index";
+import * as material3Api from "../src/sources/material3/index";
 
 describe("public API", () => {
-  it("exports only the implemented initial runtime surface", () => {
+  it("exports only the generic root runtime surface", () => {
     expect(Object.keys(api).sort()).toEqual(
       [
-        "appSurfaceLayer",
         "compileGraph",
         "createSchemeGraph",
         "createSchemeTokens",
         "darkMode",
-        "dynamicSchemeSource",
         "exportCssVariables",
         "hex",
         "lightMode",
@@ -27,6 +26,12 @@ describe("public API", () => {
     );
   });
 
+  it("exports Material 3 source runtime from the adapter subpath only", () => {
+    expect(Object.prototype.hasOwnProperty.call(api, "material3Source")).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(api, "dynamicSchemeSource")).toBe(false);
+    expect(Object.keys(material3Api)).toEqual(["material3Source"]);
+  });
+
   it("does not expose legacy wrapper API names", () => {
     const forbidden = [
       "createTheme",
@@ -37,6 +42,9 @@ describe("public API", () => {
       "createScheme",
       "MaterialTheme",
       "DynamicColorScheme",
+      "DynamicSchemeSource",
+      "dynamicSchemeSource",
+      "material3Source",
       "PaletteStyle",
       "exportJsonTokens",
       "solidColorIntent",

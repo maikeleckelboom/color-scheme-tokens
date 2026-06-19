@@ -12,7 +12,12 @@ describe("source policy", () => {
       "createCssVariables",
       "createCssVarMap",
       "MaterialTheme",
+      "Material3AlgorithmOptions",
+      "Material3KeyColors",
+      "Material3SourceOptions",
+      "dynamicSchemeSource",
       "DynamicColorScheme",
+      "material3Source",
       "PaletteStyle",
       "exportJsonTokens",
       "solidColorIntent",
@@ -26,14 +31,15 @@ describe("source policy", () => {
     }
   });
 
-  it("keeps internal dynamic source mechanics out of the root type surface", async () => {
+  it("keeps Material source mechanics out of the root type surface", async () => {
     const index = await readFile("src/index.ts", "utf8");
     const internalTypes = [
       "ColorTokenValueProblem",
-      "DynamicSchemePlatform",
-      "DynamicSchemeResolvedOptions",
-      "DynamicSchemeSource",
-      "DynamicSchemeSpecVersion",
+      "DynamicScheme",
+      "Material3Platform",
+      "Material3ResolvedOptions",
+      "Material3Source",
+      "Material3SpecVersion",
       "SchemeTokensRecipeRun",
     ];
 
@@ -51,6 +57,9 @@ describe("source policy", () => {
       readonly dependencies?: Record<string, string>;
     };
     const rootExport = packageJson.exports?.["."] as Record<string, unknown> | undefined;
+    const material3Export = packageJson.exports?.["./sources/material3"] as
+      | Record<string, unknown>
+      | undefined;
     const tsupConfig = await readFile("tsup.config.ts", "utf8");
 
     expect(packageJson.type).toBe("module");
@@ -59,6 +68,10 @@ describe("source policy", () => {
     expect(rootExport).toEqual({
       types: "./dist/index.d.ts",
       import: "./dist/index.js",
+    });
+    expect(material3Export).toEqual({
+      types: "./dist/sources/material3/index.d.ts",
+      import: "./dist/sources/material3/index.js",
     });
     expect(JSON.stringify(packageJson.exports)).not.toContain('"require"');
     expect(tsupConfig).not.toContain('"cjs"');
