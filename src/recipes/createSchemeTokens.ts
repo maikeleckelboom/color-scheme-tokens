@@ -4,7 +4,7 @@ import {
   type CompileProblem,
   type CompiledTokenSet,
 } from "../core/compileGraph";
-import { createSchemeGraph } from "../core/createSchemeGraph";
+import { createSourceGraph } from "../core/createSourceGraph";
 import type { AliasTokenNode, ColorSchemeTokenGraph, Result } from "../core/graph";
 import type { TokenKey } from "../core/keys";
 import type { GraphBuildProblem, SchemeSource, SchemeSourceProblem } from "../core/schemeSource";
@@ -40,7 +40,7 @@ export type SchemeTokensRecipeProblem = GraphBuildProblem<SchemeSourceProblem> |
 export function createSchemeTokens(
   options: SchemeTokensRecipeOptions,
 ): Result<SchemeTokensRecipeResult, SchemeTokensRecipeProblem> {
-  const graphResult = createSchemeGraph({ source: options.source });
+  const graphResult = createSourceGraph({ source: options.source });
   if (!graphResult.ok) return graphResult;
 
   const layeredGraph =

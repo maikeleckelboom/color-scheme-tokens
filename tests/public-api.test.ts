@@ -7,8 +7,8 @@ describe("public API", () => {
     expect(Object.keys(api).sort()).toEqual(
       [
         "compileGraph",
-        "createSchemeGraph",
         "createSchemeTokens",
+        "createSourceGraph",
         "darkMode",
         "exportCssVariables",
         "hex",
@@ -48,6 +48,7 @@ describe("public API", () => {
       "PaletteStyle",
       "exportJsonTokens",
       "solidColorIntent",
+      "createSchemeGraph",
     ];
 
     for (const name of forbidden) {

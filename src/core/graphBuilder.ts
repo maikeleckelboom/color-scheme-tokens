@@ -1,2 +1,2 @@
-export { createSchemeGraph, createTokenGraph, GRAPH_SCHEMA_VERSION } from "./createSchemeGraph";
-export type { CreateSchemeGraphOptions } from "./createSchemeGraph";
+export { createSourceGraph, createTokenGraph, GRAPH_SCHEMA_VERSION } from "./createSourceGraph";
+export type { CreateSourceGraphOptions } from "./createSourceGraph";

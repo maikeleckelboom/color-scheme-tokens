@@ -1,5 +1,5 @@
 import type { SrgbColor } from "../../core/colorValue";
-import { createTokenGraph } from "../../core/createSchemeGraph";
+import { createTokenGraph } from "../../core/createSourceGraph";
 import type { Result } from "../../core/graph";
 import type { SchemeSource } from "../../core/schemeSource";
 import { createMaterial3Values, type Material3ValueProblem } from "./createMaterial3Values";

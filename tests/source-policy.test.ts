@@ -23,6 +23,7 @@ describe("source policy", () => {
       "solidColorIntent",
       "ColorIntent",
       "SolidColorIntent",
+      "createSchemeGraph",
     ];
 
     expect(index).not.toMatch(/export\s+\*/);
@@ -98,8 +99,14 @@ describe("source policy", () => {
         ),
       )
     ).join("\n");
+    const rootIndex = await readFile("src/index.ts", "utf8");
 
     expect(genericSource).not.toContain("@material/material-color-utilities");
+    expect(genericSource).not.toContain("src/sources/material3");
+    expect(genericSource).not.toContain("../sources/material3");
+    expect(rootIndex).not.toContain("@material/material-color-utilities");
+    expect(rootIndex).not.toContain("src/sources/material3");
+    expect(rootIndex).not.toContain("./sources/material3");
     expect(genericSource).not.toMatch(/\bMaterial[A-Z]/);
   });
 });

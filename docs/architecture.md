@@ -60,8 +60,8 @@ color values. Exporters consume compiled token sets only.
 ## Current Slice
 
 The root package exposes generic behavior: key parsing, mode parsing, color constructors, literal color values,
-source-backed graph creation, graph validation, compilation, deterministic serialization, CSS variable export, generic
-layer types, and the `createSchemeTokens()` recipe.
+`createSourceGraph()` source materialization, graph validation, compilation, deterministic serialization, CSS variable
+export, generic layer types, and the `createSchemeTokens()` recipe.
 
 The Material 3 subpath exposes `material3Source()` and Material 3 source option/problem types. The adapter defaults are
 spec version `2021`, platform `phone`, contrast level `0`, and variant `tonalSpot`. It emits the reconciled role

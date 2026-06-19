@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compileGraph, createSchemeGraph, hex, tokenKey } from "../../src/index";
+import { compileGraph, createSourceGraph, hex, tokenKey } from "../../src/index";
 import { material3Source } from "../../src/sources/material3";
 
 describe("material3Source", () => {
@@ -7,7 +7,7 @@ describe("material3Source", () => {
     const source = material3Source({ sourceColor: hex("#6750A4") });
     const requiredRoles = source.roleSet.roles.filter((role) => role.required);
     const optionalRoles = source.roleSet.roles.filter((role) => !role.required);
-    const graph = expectOk(createSchemeGraph({ source }));
+    const graph = expectOk(createSourceGraph({ source }));
 
     expect(requiredRoles).toHaveLength(55);
     expect(optionalRoles).toHaveLength(4);
@@ -24,7 +24,7 @@ describe("material3Source", () => {
 
   it("includes optional dim roles symmetrically when the upstream source provides them", () => {
     const graph = expectOk(
-      createSchemeGraph({
+      createSourceGraph({
         source: material3Source({
           sourceColor: hex("#6750A4"),
           algorithm: { specVersion: "2025", platform: "phone" },
@@ -96,12 +96,12 @@ describe("material3Source", () => {
 
   it("uses optional key colors to override Material 3 palettes", () => {
     const defaultGraph = expectOk(
-      createSchemeGraph({
+      createSourceGraph({
         source: material3Source({ sourceColor: hex("#6750A4") }),
       }),
     );
     const keyedGraph = expectOk(
-      createSchemeGraph({
+      createSourceGraph({
         source: material3Source({
           sourceColor: hex("#6750A4"),
           keyColors: {

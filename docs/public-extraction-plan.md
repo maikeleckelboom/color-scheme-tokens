@@ -43,8 +43,8 @@ it does not copy old Git history.
   `brand.*` when they need stable product semantics.
 - Material 3 `keyColors` and `algorithm` options are adapter concerns. `specVersion`, `platform`, `variant`, and
   `contrastLevel` do not belong to generic recipe options.
-- ARGB conversion is an adapter implementation detail for the Material 3 source. Public examples should prefer `hex()`
-  and `srgb255()`.
+- ARGB conversion is an adapter implementation detail for the Material 3 source or an explicit low-level interop concern.
+  It is not the happy-path public API. Public examples should prefer `hex()` and `srgb255()`.
 - Recipe `aliases` are sugar for simple alias token nodes.
 - Token layers are reusable graph additions. Public layers must be source-agnostic unless their name and docs explicitly
   state the source dependency.

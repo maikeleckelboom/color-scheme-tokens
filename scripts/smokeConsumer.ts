@@ -77,12 +77,12 @@ writeFileSync(
   join(consumerDirectory, "types.ts"),
   `
 import {
-  createSchemeGraph,
   createSchemeTokens,
+  createSourceGraph,
   hex,
   literalColor,
   type ColorTokenValue,
-  type CreateSchemeGraphOptions,
+  type CreateSourceGraphOptions,
   type LiteralColorValue,
   type Result,
   type SchemeTokensRecipeProblem,
@@ -114,8 +114,8 @@ const typedAuthoredColor: LiteralColorValue = authoredColor;
 const graphValue: ColorTokenValue = typedAuthoredColor;
 const graphOptions = {
   source: material3Source(sourceOptions),
-} satisfies CreateSchemeGraphOptions;
-const graphResult = createSchemeGraph(graphOptions);
+} satisfies CreateSourceGraphOptions;
+const graphResult = createSourceGraph(graphOptions);
 const result = createSchemeTokens({
   source: material3Source({ sourceColor: hex("#6750A4") }),
   aliases: {
@@ -159,8 +159,11 @@ type OldColorIntent = import(${JSON.stringify(packageName)}).ColorIntent;
 // @ts-expect-error old literal color value type is intentionally not public.
 type OldSolidColorIntent = import(${JSON.stringify(packageName)}).SolidColorIntent;
 
-// @ts-expect-error source-only createSchemeGraph calls are not public.
-createSchemeGraph(material3Source({ sourceColor: hex("#6750A4") }));
+// @ts-expect-error Material 3 option types are intentionally not exported from root.
+type RootMaterial3SourceOptions = import(${JSON.stringify(packageName)}).Material3SourceOptions;
+
+// @ts-expect-error source-only createSourceGraph calls are not public.
+createSourceGraph(material3Source({ sourceColor: hex("#6750A4") }));
 
 // @ts-expect-error Material algorithm knobs do not belong to generic recipe options.
 createSchemeTokens({ source: material3Source({ sourceColor: hex("#6750A4") }), specVersion: "2025" });

@@ -11,20 +11,17 @@ export interface CreateTokenGraphOptions {
   readonly tokens?: readonly TokenNode[];
 }
 
-export interface CreateSchemeGraphFromSourceOptions<
+export interface CreateSourceGraphOptions<
   Problem extends SchemeSourceProblem = SchemeSourceProblem,
 > {
   readonly source: SchemeSource<Problem>;
 }
 
-export type CreateSchemeGraphOptions<Problem extends SchemeSourceProblem = SchemeSourceProblem> =
-  CreateSchemeGraphFromSourceOptions<Problem>;
-
-export function createSchemeGraph<Problem extends SchemeSourceProblem>(
-  options: CreateSchemeGraphOptions<Problem>,
+export function createSourceGraph<Problem extends SchemeSourceProblem>(
+  options: CreateSourceGraphOptions<Problem>,
 ): GraphBuildResult<Problem>;
-export function createSchemeGraph<Problem extends SchemeSourceProblem>(
-  options: CreateSchemeGraphOptions<Problem>,
+export function createSourceGraph<Problem extends SchemeSourceProblem>(
+  options: CreateSourceGraphOptions<Problem>,
 ): GraphBuildResult<Problem> {
   const graph = options.source.createGraph();
   if (!graph.ok) return graph;

@@ -6,8 +6,8 @@ color-scheme-tokens builds typed, inspectable token graphs, compiles aliases and
 and exports those compiled tokens to CSS variables or stable JSON snapshots. Source adapters can generate a graph, but
 they do not define the graph model.
 
-Material 3 Dynamic Color is provided through the Material 3 source adapter. The token graph, compiler, layers,
-transform hook, deterministic serialization, and CSS export are not Material-specific.
+Material 3 Dynamic Color is provided through the Material 3 source adapter. The token graph, recipe pipeline, compiler,
+layers, transform hook, deterministic serialization, and CSS export are not Material-specific.
 
 This repository is private at version `0.0.0` while the public contract is being formed. The package is ESM-only.
 
@@ -199,10 +199,10 @@ Manual graphs can use any valid token namespace, such as `brand.*` or `app.*`.
 ## Source Graph Inspection
 
 ```ts
-import { createSchemeGraph, hex } from "color-scheme-tokens";
+import { createSourceGraph, hex } from "color-scheme-tokens";
 import { material3Source } from "color-scheme-tokens/sources/material3";
 
-const graphResult = createSchemeGraph({
+const graphResult = createSourceGraph({
   source: material3Source({
     sourceColor: hex("#6750A4"),
   }),

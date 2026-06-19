@@ -1,7 +1,7 @@
 export { literalColor } from "./core/colorTokenValue";
 export { hex, parseHexColor, srgb255 } from "./core/colorValue";
 export { compileGraph } from "./core/compileGraph";
-export { createSchemeGraph } from "./core/createSchemeGraph";
+export { createSourceGraph } from "./core/createSourceGraph";
 export { tokenKey, parseTokenKey } from "./core/keys";
 export { darkMode, lightMode, modeKey, parseModeKey } from "./core/modes";
 export { serializeTokenSet } from "./core/serializeTokenSet";
@@ -34,7 +34,7 @@ export type {
   OklchColor,
   SrgbColor,
 } from "./core/colorValue";
-export type { CreateSchemeGraphOptions } from "./core/createSchemeGraph";
+export type { CreateSourceGraphOptions } from "./core/createSourceGraph";
 export type { TokenKey, TokenKeyProblem, TokenKeyResult } from "./core/keys";
 export type { ModeKey, ModeKeyProblem, ModeKeyResult } from "./core/modes";
 export type { TokenProvenance } from "./core/provenance";
