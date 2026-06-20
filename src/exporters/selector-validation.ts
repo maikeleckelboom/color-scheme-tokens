@@ -16,3 +16,16 @@ export function isValidCssSelector(selector: string): boolean {
   }
   return /^[\s"',.0-9:=A-Z_a-z#\-[\]~>+]+$/u.test(selector);
 }
+
+export function isAppendSafeCssSelector(selector: string): boolean {
+  if (!isValidCssSelector(selector)) {
+    return false;
+  }
+  if (selector === ":root") {
+    return true;
+  }
+  if (selector.includes(":")) {
+    return false;
+  }
+  return !/[\s,>+~]/u.test(selector);
+}

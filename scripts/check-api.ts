@@ -99,10 +99,10 @@ const manifests: readonly ApiManifest[] = [
       "parseCompiledScheme",
       "parseTokenGraph",
       "parseTokenLayer",
-      "ref",
       "serializeCompiledScheme",
       "serializeTokenGraph",
       "serializeTokenLayer",
+      "tokenRef",
     ],
     types: [
       "JsonPrimitive",

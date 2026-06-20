@@ -5,7 +5,7 @@ export {
   defineTokenGraph,
   defineTokenLayer,
   defineTokens,
-  ref,
+  tokenRef,
 } from "./core/graph";
 export { parseTokenGraph, parseTokenLayer } from "./core/parse-token-graph";
 export { parseCompiledScheme } from "./core/parse-compiled-scheme";

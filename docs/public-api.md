@@ -12,7 +12,7 @@ The root API is intentionally small and explicit.
 - `parseCompiledScheme`
 - `serializeTokenGraph`
 - `serializeTokenLayer`
-- `ref`
+- `tokenRef`
 - `parseColor`
 - `compileTokenGraph`
 - `buildScheme`
@@ -52,7 +52,8 @@ receives; it does not apply visibility filtering itself.
 serialized stylesheet string. `blocks` contains one structured block per compiled mode. Each block's `declarations` is
 an ordered list of `{ tokenKey, property, value }` entries for runtime application, previews, or custom renderers. The
 stylesheet is formatted from the same blocks returned in `value.blocks`. `variableByToken` is the direct token-key to
-custom-property lookup for consumers that need one.
+custom-property lookup for consumers that need one. Declaration arrays are ordered renderer/exporter data; token lookup
+should use `variableByToken`.
 
 `prefix` is optional. Omitting it, passing `undefined`, or passing `""` emits unprefixed custom properties such as
 `--background` and `--primary-foreground`. Passing `prefix: "color"` emits namespaced properties such as
@@ -130,14 +131,15 @@ light/dark decision.
 Token shorthands are normalized by the helpers:
 
 - `"token.key": "#ffffff"` becomes a structured color value;
-- `"token.key": ref("other.token")` becomes `{ value: { ref: "other.token" } }`;
+- `"token.key": tokenRef("other.token")` becomes `{ value: { ref: "other.token" } }`;
 - `"token.key": { ref: "other.token" }` becomes `{ value: { ref: "other.token" } }`;
 - metadata plus mode records such as `{ visibility: "public", light: "#fff", dark: "#000" }` become strict
   per-mode values when modes are declared.
 
-Supported color literals remain color values. Token-key-shaped non-color strings do not become references. If a string is
-not supported by the color parser, compilation reports `unsupported-color-syntax`. References are always explicit through
-`ref("other.token")` or `{ ref: "other.token" }`.
+Supported color literals remain color values. Token-key-shaped non-color strings do not become references. If a helper
+string is not supported by the color parser, the helper throws an actionable authoring error before returning a strict
+artifact. CSS named colors such as `"red"` are not currently supported. References are always explicit through
+`tokenRef("other.token")` or `{ ref: "other.token" }`.
 
 Declared mode names must not be token-definition keys such as `value`, `valueByMode`, `visibility`, `description`,
 `deprecated`, or `extensions`. Those names are reserved so helper shorthand detection does not silently reinterpret token
@@ -155,6 +157,10 @@ Helper-only shorthand is intentionally not part of the strict wire format. Use `
 The schema subpaths validate strict persisted artifacts only: token graph input, token layer input, and serialized
 compiled scheme output. They intentionally reject helper-only shorthand such as raw token color strings, raw
 `{ ref }` token definitions, and mode records without `valueByMode`.
+
+JSON Schema is the structural persisted-shape preflight. Runtime parsers are the semantic authority. Parser-only
+semantic checks include default-mode membership, `valueByMode` coverage for declared modes, reference existence,
+reference cycles, and cross-field constraints that JSON Schema cannot express without duplicating the parser.
 
 Persisted colors are structured-only:
 
@@ -174,6 +180,10 @@ convert colors, gamut-map, compute Delta E, generate palettes, or infer browser 
 `compileTokenGraph()` returns a compiled color scheme with resolved colors, modes, token visibility, origin metadata, and
 direct dependency metadata. `serializeCompiledScheme()` serializes this compiled output in deterministic order. Compiled
 JSON contains resolved structured color objects, not the original authored color strings.
+
+Direct typed graph compilation preserves literal token keys, including keys contributed by literal `layers` arrays.
+`buildScheme()` composes dynamic source/layer input and returns a broad `CompiledColorScheme`; it does not currently
+promise literal token-key preservation for dynamic build results.
 
 ## Base Inputs
 

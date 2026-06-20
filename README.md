@@ -18,10 +18,10 @@ pnpm add scheme-tokens
 import { compileTokenGraph, defineTokens, exportCssVars } from "scheme-tokens";
 
 const graph = defineTokens({
-  background: "#ffffff",
+  background: "oklch(0.98 0.01 260)",
   foreground: "#111111",
-  primary: "#6750a4",
-  "primary-foreground": "#ffffff",
+  brand: "color(display-p3 0.42 0.32 0.74)",
+  "brand-foreground": "#ffffff",
 });
 
 const compiled = compileTokenGraph(graph);
@@ -35,7 +35,11 @@ if (!css.ok) {
 }
 
 console.log(css.value.css);
+console.log(css.value.variableByToken.background);
 ```
+
+Authoring can be ergonomic while persisted artifacts stay strict and deterministic. Core accepts modern CSS color spaces
+such as OKLCH and Display-P3, preserves the authored space, and does not perform color conversion or gamut mapping.
 
 With no `modes` field, `defineTokens()` creates one mode named `base`. In a single-mode graph, `base` means "the one
 ordinary value for this token." It is not a Material role, generated palette, light mode, or dark mode.
@@ -43,13 +47,13 @@ ordinary value for this token." It is not a Material role, generated palette, li
 The default CSS export uses `:root` for the default mode. Directly authored tokens default to `public`, and compilation
 defaults to `selection: "public"`.
 
-Omit `prefix` to emit custom properties such as `--background`, `--foreground`, `--primary`, and
-`--primary-foreground`. Pass `prefix: "color"` when you want namespaced variables such as `--color-background`.
+Omit `prefix` to emit custom properties such as `--background`, `--foreground`, `--brand`, and
+`--brand-foreground`. Pass `prefix: "color"` when you want namespaced variables such as `--color-background`.
 
 ## Light and Dark Values
 
 ```ts
-import { compileTokenGraph, defineTokenGraph, exportCssVars, ref } from "scheme-tokens";
+import { compileTokenGraph, defineTokenGraph, exportCssVars, tokenRef } from "scheme-tokens";
 
 const graph = defineTokenGraph({
   modes: ["light", "dark"],
@@ -76,11 +80,11 @@ const graph = defineTokenGraph({
     },
     primary: {
       visibility: "public",
-      value: ref("brand.primary"),
+      value: tokenRef("brand.primary"),
     },
     "primary-foreground": {
       visibility: "public",
-      value: ref("brand.on-primary"),
+      value: tokenRef("brand.on-primary"),
     },
   },
 });
@@ -110,9 +114,10 @@ The default CSS selectors are `:root` for the default mode and `:root[data-color
 
 ## Runtime CSS Variables
 
-`exportCssVars()` returns a stylesheet string and structured blocks in one `Result`. Use `value.css` when you need
-serialized CSS, and use `value.blocks` for runtime application, previews, or custom renderers that should not parse CSS
-text.
+`exportCssVars()` returns a stylesheet string, structured declaration blocks, and `variableByToken` in one `Result`. Use
+`value.css` when you need serialized CSS, and use `value.variableByToken` when runtime code needs the generated custom
+property for a token. `value.blocks` is ordered renderer/exporter data for runtime application, previews, or custom
+renderers that should not parse CSS text.
 
 ```ts
 import { compileTokenGraph, defineTokenGraph, exportCssVars } from "scheme-tokens";
@@ -137,7 +142,7 @@ if (!exported.ok) {
 }
 
 console.log(exported.value.css);
-console.log(exported.value.blocks[0]?.declarations[0]?.value);
+console.log(exported.value.variableByToken.background);
 ```
 
 Omit `prefix` to emit custom properties such as `--background`, `--foreground`, `--primary`, and
@@ -289,16 +294,16 @@ if (!built.ok) {
 Add an application layer when generated Material roles should feed project-owned tokens:
 
 ```ts
-import { buildScheme, defineTokenLayer, exportCssVars } from "scheme-tokens";
+import { buildScheme, defineTokenLayer, exportCssVars, tokenRef } from "scheme-tokens";
 import { material3 } from "@scheme-tokens/material3";
 
 const application = defineTokenLayer<"light" | "dark">({
   id: "application",
   tokens: {
-    background: "material3.surface",
-    foreground: "material3.on-surface",
-    primary: "material3.primary",
-    "primary-foreground": "material3.on-primary",
+    background: tokenRef("material3.surface"),
+    foreground: tokenRef("material3.on-surface"),
+    primary: tokenRef("material3.primary"),
+    "primary-foreground": tokenRef("material3.on-primary"),
   },
 });
 
@@ -329,17 +334,17 @@ console.log(css.value.css);
 Prepare a reusable builder when the same app layers are built repeatedly with changing base input:
 
 ```ts
-import { createSchemeBuilder, defineTokenLayer, exportCssVars } from "scheme-tokens";
+import { createSchemeBuilder, defineTokenLayer, exportCssVars, tokenRef } from "scheme-tokens";
 import { material3 } from "@scheme-tokens/material3";
 
 const application = defineTokenLayer<"light" | "dark">({
   id: "application",
   defaultVisibility: "public",
   tokens: {
-    background: "material3.surface",
-    foreground: "material3.on-surface",
-    primary: "material3.primary",
-    "primary-foreground": "material3.on-primary",
+    background: tokenRef("material3.surface"),
+    foreground: tokenRef("material3.on-surface"),
+    primary: tokenRef("material3.primary"),
+    "primary-foreground": tokenRef("material3.on-primary"),
   },
 });
 
@@ -422,7 +427,7 @@ console.log(json);
 `serializeCompiledScheme()` serializes the compiled output, not the authoring input. The output is deterministic and includes
 resolved colors, modes, token visibility, origin metadata, and direct dependency metadata.
 
-## Helper Input and Strict Input
+## Helper Input
 
 `defineTokens()` is the smallest manual-token helper. It accepts a token record plus optional graph-level helper options:
 
@@ -450,7 +455,7 @@ const graph = defineTokens(
 `defineTokenGraph()` is the full graph-shaped helper for explicit graph authoring:
 
 ```ts
-import { defineTokenGraph, ref } from "scheme-tokens";
+import { defineTokenGraph, tokenRef } from "scheme-tokens";
 
 const graph = defineTokenGraph({
   modes: ["light", "dark"],
@@ -463,7 +468,7 @@ const graph = defineTokenGraph({
     },
     primary: {
       visibility: "public",
-      value: ref("brand.primary"),
+      value: tokenRef("brand.primary"),
     },
   },
 });
@@ -472,16 +477,20 @@ const graph = defineTokenGraph({
 Both helpers accept JSON-safe authoring shorthand:
 
 - a color string such as `"#6750a4"`;
-- an explicit reference helper such as `ref("brand.primary")`;
+- an explicit reference helper such as `tokenRef("brand.primary")`;
 - an explicit reference such as `{ ref: "brand.primary" }`;
 - metadata plus mode keys such as `{ visibility: "public", light: "#fff", dark: "#000" }`;
 - mode records such as `{ light: "#fff", dark: "#000" }` when modes are declared.
 
 Bare strings are always treated as color authoring input. If a string is not supported by the color parser, it reports an
-unsupported-color diagnostic instead of becoming a reference based on spelling.
+actionable helper error instead of becoming a reference based on spelling. CSS named colors such as `"red"` are not
+currently supported by core color parsing.
 
-The helpers fill safe defaults and return strict graph input. `parseTokenGraph()` is the persisted wire-format boundary
-and stays explicit.
+The helpers fill safe defaults and return strict graph input.
+
+## Persisted Artifacts Are Explicit
+
+`parseTokenGraph()` is the persisted wire-format boundary and stays explicit.
 
 ```ts
 import { parseTokenGraph } from "scheme-tokens";
@@ -525,6 +534,8 @@ definitions with `value` or `valueByMode`. Persisted colors are structured value
 The published JSON Schemas describe this strict graph shape, strict layer input, and serialized compiled schemes.
 They do not describe `defineTokenGraph()` or `defineTokenLayer()` helper input.
 They do not describe `defineTokens()` helper input either.
+Schemas are structural preflight. Runtime parsers remain the semantic authority for declared modes, per-mode value
+coverage, references, cycles, and cross-field constraints.
 
 Compiled schemes are a third shape. They are produced by `compileTokenGraph()` or `buildScheme()` and contain
 resolved color values plus dependency and origin metadata for the selected tokens.

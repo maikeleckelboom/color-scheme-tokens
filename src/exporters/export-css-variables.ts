@@ -5,7 +5,7 @@ import { parseCompiledScheme } from "../core/parse-compiled-scheme";
 import type { Issue, Result } from "../core/result";
 import { describeUnknown } from "../core/unknown-description";
 import { formatCssColor } from "./format-css-color";
-import { isValidCssSelector } from "./selector-validation";
+import { isAppendSafeCssSelector, isValidCssSelector } from "./selector-validation";
 
 export type CssScope =
   | {
@@ -377,6 +377,13 @@ function parseSelectors(
   const strategy = strategyRecord.get("strategy");
 
   if (strategy === "selectors") {
+    const exactKeys = requireExactModeSelectorKeys(selectorStrategy.value, [
+      "strategy",
+      "selectors",
+    ]);
+    if (!exactKeys.ok) {
+      return exactKeys;
+    }
     if (scopeInput !== undefined) {
       return {
         ok: false,
@@ -390,8 +397,28 @@ function parseSelectors(
   if (!scope.ok) {
     return scope;
   }
+  if (!isAppendSafeCssSelector(scope.value)) {
+    return {
+      ok: false,
+      issues: [
+        {
+          code: "invalid-scope",
+          message:
+            "Generated mode selectors require an append-safe scope; use exact modeSelectors for complex selectors.",
+          selector: scope.value,
+        },
+      ],
+    };
+  }
 
   if (strategy === "data-attribute") {
+    const exactKeys = requireExactModeSelectorKeys(selectorStrategy.value, [
+      "strategy",
+      "attribute",
+    ]);
+    if (!exactKeys.ok) {
+      return exactKeys;
+    }
     const attribute = strategyRecord.get("attribute");
     if (typeof attribute !== "string" || !isDataAttributeName(attribute)) {
       return {
@@ -412,6 +439,13 @@ function parseSelectors(
   }
 
   if (strategy === "class") {
+    const exactKeys = requireExactModeSelectorKeys(selectorStrategy.value, [
+      "strategy",
+      "classPrefix",
+    ]);
+    if (!exactKeys.ok) {
+      return exactKeys;
+    }
     const classPrefix = strategyRecord.get("classPrefix");
     if (typeof classPrefix !== "string" || !isClassPrefix(classPrefix)) {
       return {
@@ -435,6 +469,40 @@ function parseSelectors(
     ok: false,
     issues: [{ code: "invalid-mode-selectors", message: "Unsupported mode selector strategy." }],
   };
+}
+
+function requireExactModeSelectorKeys(
+  entries: readonly { readonly key: string }[],
+  allowedKeys: readonly string[],
+): Result<void, ExportCssVarsIssue> {
+  const allowed = new Set(allowedKeys);
+  for (const entry of entries) {
+    if (!allowed.has(entry.key)) {
+      return {
+        ok: false,
+        issues: [
+          {
+            code: "invalid-mode-selectors",
+            message: `Unknown modeSelectors property: ${entry.key}.`,
+          },
+        ],
+      };
+    }
+  }
+  for (const key of allowedKeys) {
+    if (!entries.some((entry) => entry.key === key)) {
+      return {
+        ok: false,
+        issues: [
+          {
+            code: "invalid-mode-selectors",
+            message: `Missing modeSelectors property: ${key}.`,
+          },
+        ],
+      };
+    }
+  }
+  return { ok: true, value: undefined };
 }
 
 function parseScope(input: unknown): Result<string, ExportCssVarsIssue> {

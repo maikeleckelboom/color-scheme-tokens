@@ -41,7 +41,7 @@ writeJson(join(consumerDirectory, "tsconfig.json"), {
 writeFileSync(
   join(consumerDirectory, "root.mjs"),
   `
-import { buildScheme, compileTokenGraph, createSchemeBuilder, defineTokenGraph, defineTokenLayer, defineTokens, exportCssVars, parseCompiledScheme, ref } from ${JSON.stringify(manifest.name)};
+import { buildScheme, compileTokenGraph, createSchemeBuilder, defineTokenGraph, defineTokenLayer, defineTokens, exportCssVars, parseCompiledScheme, tokenRef } from ${JSON.stringify(manifest.name)};
 
 const graph = defineTokens({
   background: "#ffffff",
@@ -162,7 +162,7 @@ import {
   defineTokenGraph,
   defineTokens,
   exportCssVars,
-  ref,
+  tokenRef,
   type BuildSchemeSourceOptions,
   type CssVarBlock,
   type CssVarsExport,
@@ -180,11 +180,11 @@ import {
 } from ${JSON.stringify(manifest.name)};
 
 const graph: ColorTokenGraphInput<"base"> = defineTokenGraph({
-  tokens: { "app.background": "#ffffff", "app.foreground": ref("app.background") },
+  tokens: { "app.background": "#ffffff", "app.foreground": tokenRef("app.background") },
 });
 const ColorTokenGraph: ColorTokenGraphInput<"base"> = defineTokens({
   "app.background": "#ffffff",
-  "app.foreground": ref("app.background"),
+  "app.foreground": tokenRef("app.background"),
 });
 const layer: ColorTokenLayerInput = defineTokenLayer({
   id: "brand",

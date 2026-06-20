@@ -1,4 +1,4 @@
-import { escapePointerSegment, normalizeNumber, pointer, readPlainRecord } from "./json";
+import { escapePointerSegment, normalizeNumber, pointer, readArray, readPlainRecord } from "./json";
 import type { Issue, Result } from "./result";
 
 export const colorSpaces = [
@@ -73,6 +73,7 @@ const nonNegativeComponentIndexes = new Map<ColorSpace, readonly number[]>([
   ["oklch", [1]],
 ]);
 const hexPattern = /^#(?:[0-9a-f]{6}|[0-9a-f]{8})$/i;
+const cssNumberPattern = /^[+-]?(?:(?:\d+\.\d*)|(?:\.\d+)|(?:\d+))(?:[eE][+-]?\d+)?$/u;
 
 export function parseColor(input: unknown): Result<ColorValue, ParseColorIssue> {
   return parseColorAt(input);
@@ -354,8 +355,8 @@ function parseCylindricalFunction(
     colorSpace,
     [
       parseHueText(parts.components[0], "h"),
-      parsePercentOrNumber(parts.components[1], colorSpace === "hsl" ? "s" : "w", 1),
-      parsePercentOrNumber(parts.components[2], colorSpace === "hsl" ? "l" : "b", 1),
+      parseRequiredPercentOrNone(parts.components[1], colorSpace === "hsl" ? "s" : "w"),
+      parseRequiredPercentOrNone(parts.components[2], colorSpace === "hsl" ? "l" : "b"),
     ],
     parts.alpha === undefined
       ? { ok: true as const, value: 1 }
@@ -391,11 +392,14 @@ function parseLabLikeFunction(
   }
 
   const isPolar = colorSpace === "lch" || colorSpace === "oklch";
-  const firstScale = colorSpace === "lab" || colorSpace === "lch" ? 100 : 1;
+  const firstComponent =
+    colorSpace === "lab" || colorSpace === "lch"
+      ? parseLightness100OrNone(parts.components[0], "l")
+      : parseLightness1OrNone(parts.components[0], "l");
   return createColor(
     colorSpace,
     [
-      parsePercentOrNumber(parts.components[0], "l", firstScale),
+      firstComponent,
       parseRequiredNumberOrNone(parts.components[1], isPolar ? "c" : "a"),
       isPolar
         ? parseHueText(parts.components[2], "h")
@@ -518,7 +522,13 @@ function createColor(
 
 type NumberParseOutcome =
   | { readonly ok: true; readonly value: ColorComponent }
-  | { readonly ok: false; readonly component: string; readonly message: string };
+  | NumberParseFailure;
+
+type NumberParseFailure = {
+  readonly ok: false;
+  readonly component: string;
+  readonly message: string;
+};
 
 function splitFunctionComponents(body: string):
   | {
@@ -564,13 +574,55 @@ function parsePercentOrNumber(
     return { ok: true, value: "none" };
   }
   if (input.endsWith("%")) {
-    const value = Number(input.slice(0, -1));
-    return Number.isFinite(value) ? { ok: true, value: value / 100 } : invalidNumber(component);
+    const value = parseCssNumber(input.slice(0, -1), component);
+    return value.ok ? { ok: true, value: value.value / 100 } : value;
   }
-  const value = Number(input);
-  return Number.isFinite(value)
-    ? { ok: true, value: value / numberScale }
-    : invalidNumber(component);
+  const value = parseCssNumber(input, component);
+  return value.ok ? { ok: true, value: value.value / numberScale } : value;
+}
+
+function parseRequiredPercentOrNone(
+  input: string | undefined,
+  component: string,
+): NumberParseOutcome {
+  if (input === undefined || input === "") {
+    return invalidNumber(component);
+  }
+  if (input.toLowerCase() === "none") {
+    return { ok: true, value: "none" };
+  }
+  if (!input.endsWith("%")) {
+    return invalidNumber(component);
+  }
+  const value = parseCssNumber(input.slice(0, -1), component);
+  return value.ok ? { ok: true, value: value.value } : value;
+}
+
+function parseLightness100OrNone(input: string | undefined, component: string): NumberParseOutcome {
+  if (input === undefined || input === "") {
+    return invalidNumber(component);
+  }
+  if (input.toLowerCase() === "none") {
+    return { ok: true, value: "none" };
+  }
+  const text = input.endsWith("%") ? input.slice(0, -1) : input;
+  const value = parseCssNumber(text, component);
+  return value.ok ? { ok: true, value: value.value } : value;
+}
+
+function parseLightness1OrNone(input: string | undefined, component: string): NumberParseOutcome {
+  if (input === undefined || input === "") {
+    return invalidNumber(component);
+  }
+  if (input.toLowerCase() === "none") {
+    return { ok: true, value: "none" };
+  }
+  if (input.endsWith("%")) {
+    const value = parseCssNumber(input.slice(0, -1), component);
+    return value.ok ? { ok: true, value: value.value / 100 } : value;
+  }
+  const value = parseCssNumber(input, component);
+  return value.ok ? { ok: true, value: value.value } : value;
 }
 
 function parseRequiredNumberOrNone(
@@ -586,8 +638,8 @@ function parseRequiredNumberOrNone(
   if (input.endsWith("%")) {
     return invalidNumber(component);
   }
-  const value = Number(input);
-  return Number.isFinite(value) ? { ok: true, value } : invalidNumber(component);
+  const value = parseCssNumber(input, component);
+  return value.ok ? { ok: true, value: value.value } : value;
 }
 
 function parseHueText(input: string | undefined, component: string): NumberParseOutcome {
@@ -598,8 +650,8 @@ function parseHueText(input: string | undefined, component: string): NumberParse
     return { ok: true, value: "none" };
   }
   const text = input.toLowerCase().endsWith("deg") ? input.slice(0, -3) : input;
-  const value = Number(text);
-  return Number.isFinite(value) ? { ok: true, value } : invalidNumber(component);
+  const value = parseCssNumber(text, component);
+  return value.ok ? { ok: true, value: value.value } : value;
 }
 
 function parseAlphaText(input: string | undefined, component: string): NumberParseOutcome {
@@ -615,8 +667,19 @@ function parseAlphaText(input: string | undefined, component: string): NumberPar
     : { ok: false, component, message: "Alpha must be between 0 and 1." };
 }
 
-function invalidNumber(component: string): NumberParseOutcome {
+function invalidNumber(component: string): NumberParseFailure {
   return { ok: false, component, message: `Invalid numeric component: ${component}.` };
+}
+
+function parseCssNumber(
+  input: string | undefined,
+  component: string,
+): { readonly ok: true; readonly value: number } | NumberParseFailure {
+  if (input === undefined || input === "" || !cssNumberPattern.test(input)) {
+    return invalidNumber(component);
+  }
+  const value = Number(input);
+  return Number.isFinite(value) ? { ok: true, value } : invalidNumber(component);
 }
 
 function readComponents(
@@ -624,12 +687,12 @@ function readComponents(
   path: string | undefined,
   colorSpace: ColorSpace,
 ): Result<readonly [ColorComponent, ColorComponent, ColorComponent], ParseColorIssue> {
-  if (!Array.isArray(input)) {
+  if (input === undefined) {
     return {
       ok: false,
       issues: [
         {
-          code: input === undefined ? "missing-color-property" : "invalid-color-components",
+          code: "missing-color-property",
           message: "components must be an array of three color components.",
           component: "components",
           colorSpace,
@@ -639,29 +702,27 @@ function readComponents(
     };
   }
 
-  let descriptors: Record<string, PropertyDescriptor>;
-  try {
-    descriptors = Object.getOwnPropertyDescriptors(input) as Record<string, PropertyDescriptor>;
-  } catch {
+  const entries = readArray(input, {
+    code: "invalid-color-components",
+    message: "components must be a dense array of data properties.",
+    ...(path === undefined ? {} : { path: child(path, "components") }),
+  });
+  if (!entries.ok) {
     return componentsIssue("components must be readable data properties.", path, colorSpace);
   }
 
-  if (input.length !== 3) {
+  if (entries.value.length !== 3) {
     return componentsIssue("components must contain exactly three entries.", path, colorSpace);
   }
 
   const output: ColorComponent[] = [];
-  for (let index = 0; index < 3; index += 1) {
-    const descriptor = descriptors[String(index)];
-    if (descriptor === undefined || !("value" in descriptor)) {
-      return componentsIssue("components must not be sparse or accessor-backed.", path, colorSpace);
-    }
-    const value = descriptor.value;
+  for (const entry of entries.value) {
+    const value = entry.value;
     if (value !== "none" && (typeof value !== "number" || !Number.isFinite(value))) {
       return componentIssue(
-        String(index),
+        String(entry.index),
         "Color components must be finite numbers or none.",
-        child(path, "components", index),
+        child(path, "components", entry.index),
         colorSpace,
       );
     }
@@ -681,6 +742,11 @@ function validateComponents(
   components: readonly [ColorComponent, ColorComponent, ColorComponent],
   path: string | undefined,
 ): Result<void, ParseColorIssue> {
+  const domainIssue = validateComponentDomains(colorSpace, components, path);
+  if (!domainIssue.ok) {
+    return domainIssue;
+  }
+
   const nonNegative = nonNegativeComponentIndexes.get(colorSpace) ?? [];
   for (const index of nonNegative) {
     const component = components[index];
@@ -688,6 +754,50 @@ function validateComponents(
       return componentIssue(
         String(index),
         `${colorSpace} component ${index} must be non-negative.`,
+        child(path, "components", index),
+        colorSpace,
+      );
+    }
+  }
+  return { ok: true, value: undefined };
+}
+
+function validateComponentDomains(
+  colorSpace: ColorSpace,
+  components: readonly [ColorComponent, ColorComponent, ColorComponent],
+  path: string | undefined,
+): Result<void, ParseColorIssue> {
+  if (rgbLikeSpaces.has(colorSpace) || xyzSpaces.has(colorSpace)) {
+    return validateNumberRange(colorSpace, components, [0, 1], [0, 1, 2], path);
+  }
+  if (colorSpace === "hsl") {
+    return validateNumberRange(colorSpace, components, [0, 100], [1, 2], path);
+  }
+  if (colorSpace === "hwb") {
+    return validateNumberRange(colorSpace, components, [0, 100], [1, 2], path);
+  }
+  if (colorSpace === "lab" || colorSpace === "lch") {
+    return validateNumberRange(colorSpace, components, [0, 100], [0], path);
+  }
+  if (colorSpace === "oklab" || colorSpace === "oklch") {
+    return validateNumberRange(colorSpace, components, [0, 1], [0], path);
+  }
+  return { ok: true, value: undefined };
+}
+
+function validateNumberRange(
+  colorSpace: ColorSpace,
+  components: readonly [ColorComponent, ColorComponent, ColorComponent],
+  [min, max]: readonly [number, number],
+  indexes: readonly number[],
+  path: string | undefined,
+): Result<void, ParseColorIssue> {
+  for (const index of indexes) {
+    const component = components[index];
+    if (typeof component === "number" && (component < min || component > max)) {
+      return componentIssue(
+        String(index),
+        `${colorSpace} component ${index} must be between ${min} and ${max}.`,
         child(path, "components", index),
         colorSpace,
       );

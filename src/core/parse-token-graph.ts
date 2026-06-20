@@ -17,6 +17,7 @@ import {
   copyJsonValue,
   defineRecordValue,
   pointer,
+  readArray,
   readPlainRecord,
   sortedRecord,
 } from "./json";
@@ -162,15 +163,20 @@ export function parseTokenGraphInternal(
   const layerIds = new Map<string, string>();
   const layersInput = graphRecord.get("layers");
   if (layersInput !== undefined) {
-    if (!Array.isArray(layersInput)) {
+    const layers = readArray(layersInput, {
+      code: "invalid-object",
+      message: "layers must be a dense array of layer objects.",
+      path: pointer("layers"),
+    });
+    if (!layers.ok) {
       collector.add({
         code: "invalid-object",
         message: "layers must be an array.",
         path: pointer("layers"),
       });
     } else {
-      for (const [index, layerInput] of layersInput.entries()) {
-        parseGraphLayer(layerInput, index, {
+      for (const entry of layers.value) {
+        parseGraphLayer(entry.value, entry.index, {
           context,
           modes: validModes,
           collector,
@@ -426,7 +432,12 @@ function parseModes(
     });
     return undefined;
   }
-  if (!Array.isArray(input)) {
+  const array = readArray(input, {
+    code: "invalid-mode-key",
+    message: "modes must be a dense array.",
+    path: pointer("modes"),
+  });
+  if (!array.ok) {
     collector.add({
       code: "invalid-mode-key",
       message: "modes must be an array.",
@@ -434,7 +445,7 @@ function parseModes(
     });
     return undefined;
   }
-  if (input.length === 0) {
+  if (array.value.length === 0) {
     collector.add({
       code: "empty-modes",
       message: "modes must contain at least one mode.",
@@ -445,12 +456,13 @@ function parseModes(
 
   const modes: string[] = [];
   const seen = new Set<string>();
-  for (const [index, value] of input.entries()) {
+  for (const entry of array.value) {
+    const value = entry.value;
     if (typeof value !== "string" || !isSingleSegmentIdentifier(value)) {
       collector.add({
         code: "invalid-mode-key",
         message: "Mode identifiers must be lower-kebab single segments.",
-        path: pointer("modes", index),
+        path: pointer("modes", entry.index),
         ...(typeof value === "string" ? { mode: value } : {}),
       });
       continue;
@@ -459,7 +471,7 @@ function parseModes(
       collector.add({
         code: "duplicate-mode-key",
         message: `Duplicate mode: ${value}.`,
-        path: pointer("modes", index),
+        path: pointer("modes", entry.index),
         mode: value,
       });
       continue;

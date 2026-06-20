@@ -11,6 +11,7 @@ import {
   copyJsonValue,
   defineRecordValue,
   pointer,
+  readArray,
   readPlainRecord,
   sortedRecord,
 } from "./json";
@@ -110,7 +111,12 @@ function parseModes(
     });
     return undefined;
   }
-  if (!Array.isArray(input) || input.length === 0) {
+  const array = readArray(input, {
+    code: "invalid-mode-key",
+    message: "modes must be a non-empty dense array.",
+    path: pointer("modes"),
+  });
+  if (!array.ok || array.value.length === 0) {
     collector.add({
       code: "invalid-mode-key",
       message: "modes must be a non-empty array.",
@@ -120,12 +126,13 @@ function parseModes(
   }
   const modes: string[] = [];
   const seen = new Set<string>();
-  for (const [index, value] of input.entries()) {
+  for (const entry of array.value) {
+    const value = entry.value;
     if (typeof value !== "string" || !isSingleSegmentIdentifier(value)) {
       collector.add({
         code: "invalid-mode-key",
         message: "Mode identifiers must be lower-kebab single segments.",
-        path: pointer("modes", index),
+        path: pointer("modes", entry.index),
         ...(typeof value === "string" ? { mode: value } : {}),
       });
       continue;
@@ -134,7 +141,7 @@ function parseModes(
       collector.add({
         code: "duplicate-mode-key",
         message: `Duplicate mode: ${value}.`,
-        path: pointer("modes", index),
+        path: pointer("modes", entry.index),
         mode: value,
       });
       continue;
@@ -347,17 +354,26 @@ function parseOrigin(
     return { kind: "graph" };
   }
   if (
-    (kind === "layer" || kind === "source") &&
+    kind === "layer" &&
+    entries.value.length === 2 &&
+    typeof record.get("id") === "string" &&
+    isSingleSegmentIdentifier(record.get("id") as string)
+  ) {
+    return { kind, id: record.get("id") as string };
+  }
+  if (
+    kind === "source" &&
+    (entries.value.length === 2 || entries.value.length === 3) &&
     typeof record.get("id") === "string" &&
     isSingleSegmentIdentifier(record.get("id") as string) &&
-    (kind === "layer" ||
-      record.get("sourceToken") === undefined ||
-      typeof record.get("sourceToken") === "string")
+    (!record.has("sourceToken") ||
+      (typeof record.get("sourceToken") === "string" &&
+        isTokenKey(record.get("sourceToken") as string)))
   ) {
     return {
       kind,
       id: record.get("id") as string,
-      ...(kind === "source" && typeof record.get("sourceToken") === "string"
+      ...(typeof record.get("sourceToken") === "string"
         ? { sourceToken: record.get("sourceToken") as string }
         : {}),
     };
@@ -396,7 +412,12 @@ function parseDependenciesByMode(
       continue;
     }
     seen.add(entry.key);
-    if (!Array.isArray(entry.value)) {
+    const dependenciesInput = readArray(entry.value, {
+      code: "invalid-dependencies",
+      message: "Mode dependencies must be a dense array.",
+      path: valuePath,
+    });
+    if (!dependenciesInput.ok) {
       collector.add({
         code: "invalid-dependencies",
         message: "Mode dependencies must be an array.",
@@ -405,12 +426,13 @@ function parseDependenciesByMode(
       continue;
     }
     const dependencies: string[] = [];
-    for (const [index, dependency] of entry.value.entries()) {
+    for (const dependencyEntry of dependenciesInput.value) {
+      const dependency = dependencyEntry.value;
       if (typeof dependency !== "string" || !isTokenKey(dependency)) {
         collector.add({
           code: "invalid-dependencies",
           message: "Dependencies must be valid token keys.",
-          path: `${valuePath}/${index}`,
+          path: `${valuePath}/${dependencyEntry.index}`,
           ...(typeof dependency === "string" ? { key: dependency } : {}),
         });
         continue;

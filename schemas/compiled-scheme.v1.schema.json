@@ -84,7 +84,7 @@
                     "$ref": "token-graph.v1.schema.json#/$defs/segment"
                   },
                   "sourceToken": {
-                    "type": "string"
+                    "$ref": "token-graph.v1.schema.json#/$defs/tokenKey"
                   }
                 }
               }

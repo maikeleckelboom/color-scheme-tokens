@@ -8,7 +8,13 @@ import type {
 } from "./graph";
 import { colorTokenGraphKind } from "./graph";
 import { isSingleSegmentIdentifier } from "./identifiers";
-import { defineRecordValue, escapePointerSegment, isJsonSafeIssue, readPlainRecord } from "./json";
+import {
+  defineRecordValue,
+  escapePointerSegment,
+  isJsonSafeIssue,
+  readArray,
+  readPlainRecord,
+} from "./json";
 import { parseTokenGraphInternal } from "./parse-token-graph";
 import type { Issue, Result } from "./result";
 
@@ -258,8 +264,15 @@ function copyPreparedValue(input: unknown, seen: Set<object>): unknown {
     if (seen.has(input)) {
       return input;
     }
+    const entries = readArray(input, {
+      code: "invalid-build-options",
+      message: "Array config values must be dense data arrays.",
+    });
+    if (!entries.ok) {
+      return input;
+    }
     seen.add(input);
-    const output = input.map((value) => copyPreparedValue(value, seen));
+    const output = entries.value.map((entry) => copyPreparedValue(entry.value, seen));
     seen.delete(input);
     return Object.freeze(output);
   }
@@ -450,13 +463,24 @@ function parseBuildOptions<I extends Issue>(
     };
   }
   const layers = record.get("layers");
-  if (layers !== undefined && !Array.isArray(layers)) {
+  const layerEntries =
+    layers === undefined
+      ? undefined
+      : readArray(layers, {
+          code: "invalid-build-options",
+          message: "layers must be a dense array.",
+          path: "/layers",
+        });
+  if (layerEntries !== undefined && !layerEntries.ok) {
     return {
       ok: false,
       issues: [{ code: "invalid-build-options", message: "layers must be an array." }],
     };
   }
-  if (sources.value.length === 0 && (layers === undefined || layers.length === 0)) {
+  if (
+    sources.value.length === 0 &&
+    (layerEntries === undefined || layerEntries.value.length === 0)
+  ) {
     return {
       ok: false,
       issues: [
@@ -473,7 +497,9 @@ function parseBuildOptions<I extends Issue>(
     value: {
       envelope: envelope.value,
       sources: sources.value,
-      ...(layers === undefined ? {} : { layers: layers as readonly ColorTokenLayerInput[] }),
+      ...(layerEntries === undefined
+        ? {}
+        : { layers: layerEntries.value.map((entry) => entry.value as ColorTokenLayerInput) }),
       ...(record.has("selection") ? { selection: record.get("selection") as TokenSelection } : {}),
     },
   };
@@ -560,7 +586,12 @@ function parseBuildEnvelope(
 }
 
 function parseBuildModes(input: unknown): Result<readonly [string, ...string[]], BuildSchemeIssue> {
-  if (!Array.isArray(input)) {
+  const entries = readArray(input, {
+    code: "invalid-build-options",
+    message: "modes must be a non-empty dense array.",
+    path: "/modes",
+  });
+  if (!entries.ok) {
     return {
       ok: false,
       issues: [
@@ -572,7 +603,7 @@ function parseBuildModes(input: unknown): Result<readonly [string, ...string[]],
       ],
     };
   }
-  if (input.length === 0) {
+  if (entries.value.length === 0) {
     return {
       ok: false,
       issues: [
@@ -587,8 +618,9 @@ function parseBuildModes(input: unknown): Result<readonly [string, ...string[]],
 
   const modes: string[] = [];
   const modePaths = new Map<string, string>();
-  for (const [index, value] of input.entries()) {
-    const path = `/modes/${index}`;
+  for (const entry of entries.value) {
+    const value = entry.value;
+    const path = `/modes/${entry.index}`;
     if (typeof value !== "string" || !isSingleSegmentIdentifier(value)) {
       return {
         ok: false,
@@ -646,7 +678,12 @@ function parseBase<I extends Issue>(
     const source = parseSource<I>(input, 0);
     return source.ok ? { ok: true, value: [source.value] } : source;
   }
-  if (!Array.isArray(input)) {
+  const entries = readArray(input, {
+    code: "invalid-build-options",
+    message: "base must be a source or a dense array of sources.",
+    path: "/base",
+  });
+  if (!entries.ok) {
     return {
       ok: false,
       issues: [
@@ -661,7 +698,9 @@ function parseBase<I extends Issue>(
 
   const sources: ColorTokenSource<I>[] = [];
   const sourceIdPaths = new Map<string, string>();
-  for (const [sourceIndex, value] of input.entries()) {
+  for (const entry of entries.value) {
+    const sourceIndex = entry.index;
+    const value = entry.value;
     const source = parseSource<I>(value, sourceIndex);
     if (!source.ok) {
       return source;
@@ -822,7 +861,12 @@ function validateSourceResult<I extends Issue>(
     };
   }
   const issues = record.get("issues");
-  if (!Array.isArray(issues) || issues.length === 0) {
+  const issueEntries = readArray(issues, {
+    code: "invalid-source-result",
+    message: "Failed source issues must be a non-empty dense array.",
+    path: `/base/${sourceIndex}/issues`,
+  });
+  if (!issueEntries.ok || issueEntries.value.length === 0) {
     return {
       ok: false,
       issues: [
@@ -836,7 +880,8 @@ function validateSourceResult<I extends Issue>(
       ],
     };
   }
-  for (const issue of issues) {
+  for (const entry of issueEntries.value) {
+    const issue = entry.value;
     if (!isJsonSafeIssue(issue)) {
       return {
         ok: false,
@@ -1051,7 +1096,15 @@ function readSourceGraph(source: BuiltSourceGraph): Result<RawSourceGraphParts, 
   }
   const record = new Map(entries.value.map((entry) => [entry.key, entry.value]));
   const layers = record.get("layers");
-  if (layers !== undefined && !Array.isArray(layers)) {
+  const layerEntries =
+    layers === undefined
+      ? undefined
+      : readArray(layers, {
+          code: "invalid-source-result",
+          message: "Source graph layers must be a dense array.",
+          path: `${sourcePath}/layers`,
+        });
+  if (layerEntries !== undefined && !layerEntries.ok) {
     return {
       ok: false,
       issues: [
@@ -1074,7 +1127,9 @@ function readSourceGraph(source: BuiltSourceGraph): Result<RawSourceGraphParts, 
       ...(record.has("$schema") ? { schema: record.get("$schema") } : {}),
       defaultVisibility: record.get("defaultVisibility"),
       tokens: record.get("tokens"),
-      ...(layers === undefined ? {} : { layers }),
+      ...(layerEntries === undefined
+        ? {}
+        : { layers: layerEntries.value.map((entry) => entry.value) }),
     },
   };
 }
@@ -1140,14 +1195,22 @@ function validateSourceModes(
 }
 
 function sameModes(left: unknown, right: unknown): boolean {
-  if (!Array.isArray(left) || !Array.isArray(right)) {
+  const leftEntries = readArray(left, {
+    code: "invalid-build-options",
+    message: "modes must be a dense array.",
+  });
+  const rightEntries = readArray(right, {
+    code: "invalid-build-options",
+    message: "modes must be a dense array.",
+  });
+  if (!leftEntries.ok || !rightEntries.ok) {
     return false;
   }
-  if (left.length !== right.length) {
+  if (leftEntries.value.length !== rightEntries.value.length) {
     return false;
   }
-  const rightModes = new Set(right);
-  return left.every((mode) => rightModes.has(mode));
+  const rightModes = new Set(rightEntries.value.map((entry) => entry.value));
+  return leftEntries.value.every((entry) => rightModes.has(entry.value));
 }
 
 function appendSourceTokens(

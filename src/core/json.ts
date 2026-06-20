@@ -15,6 +15,11 @@ export interface RecordEntry {
   readonly value: unknown;
 }
 
+export interface ArrayEntry {
+  readonly index: number;
+  readonly value: unknown;
+}
+
 export function pointer(...segments: readonly (string | number)[]): string {
   if (segments.length === 0) {
     return "";
@@ -66,6 +71,59 @@ export function readPlainRecord<Code extends string>(
       return invalidRecord(issue);
     }
     entries.push({ key, value: descriptor.value });
+  }
+
+  return { ok: true, value: entries };
+}
+
+export function readArray<Code extends string>(
+  input: unknown,
+  issue: Omit<Issue<Code>, "message"> & { readonly message?: string },
+): Result<readonly ArrayEntry[], Issue<Code>> {
+  if (!Array.isArray(input)) {
+    return invalidArray(issue);
+  }
+
+  let descriptors: Record<string, PropertyDescriptor>;
+  try {
+    descriptors = Object.getOwnPropertyDescriptors(input) as Record<string, PropertyDescriptor>;
+  } catch {
+    return invalidArray(issue);
+  }
+
+  const lengthDescriptor = descriptors.length;
+  if (
+    lengthDescriptor === undefined ||
+    !("value" in lengthDescriptor) ||
+    typeof lengthDescriptor.value !== "number" ||
+    !Number.isSafeInteger(lengthDescriptor.value) ||
+    lengthDescriptor.value < 0
+  ) {
+    return invalidArray(issue);
+  }
+
+  const length = lengthDescriptor.value;
+  const entries: ArrayEntry[] = [];
+  for (let index = 0; index < length; index += 1) {
+    const descriptor = descriptors[String(index)];
+    if (descriptor === undefined || !descriptor.enumerable || !("value" in descriptor)) {
+      return invalidArray(issue);
+    }
+    entries.push({ index, value: descriptor.value });
+  }
+
+  for (const key of Object.keys(descriptors)) {
+    if (key === "length") {
+      continue;
+    }
+    const index = Number(key);
+    const descriptor = descriptors[key];
+    if (
+      descriptor?.enumerable === true &&
+      (!Number.isSafeInteger(index) || index < 0 || index >= length || String(index) !== key)
+    ) {
+      return invalidArray(issue);
+    }
   }
 
   return { ok: true, value: entries };
@@ -160,6 +218,20 @@ function invalidRecord<Code extends string>(
   };
 }
 
+function invalidArray<Code extends string>(
+  issue: Omit<Issue<Code>, "message"> & { readonly message?: string },
+): Result<never, Issue<Code>> {
+  return {
+    ok: false,
+    issues: [
+      {
+        ...issue,
+        message: issue.message ?? "Expected an array with dense enumerable data elements.",
+      },
+    ],
+  };
+}
+
 function copyJsonValueInternal<Code extends string>(
   input: unknown,
   path: string | undefined,
@@ -194,12 +266,28 @@ function copyJsonValueInternal<Code extends string>(
       return undefined;
     }
 
+    const entries = readArray(input, {
+      code,
+      message: message ?? "Expected a JSON-safe array.",
+      ...(path === undefined ? {} : { path }),
+    });
+    if (!entries.ok) {
+      collector.addMany(entries.issues);
+      return undefined;
+    }
+
     seen.add(input);
     const output: JsonValue[] = [];
-    for (const [index, value] of input.entries()) {
+    for (const entry of entries.value) {
       output.push(
-        copyJsonValueInternal(value, childPointer(path, index), code, message, seen, collector) ??
-          null,
+        copyJsonValueInternal(
+          entry.value,
+          childPointer(path, entry.index),
+          code,
+          message,
+          seen,
+          collector,
+        ) ?? null,
       );
     }
     seen.delete(input);

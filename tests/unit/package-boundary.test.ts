@@ -32,10 +32,10 @@ describe("package boundary", () => {
       "parseCompiledScheme",
       "parseTokenGraph",
       "parseTokenLayer",
-      "ref",
       "serializeCompiledScheme",
       "serializeTokenGraph",
       "serializeTokenLayer",
+      "tokenRef",
     ]);
     expect(root).not.toHaveProperty(`defineToken${"Frag"}${"ment"}`);
   });

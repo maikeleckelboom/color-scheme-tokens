@@ -39,16 +39,16 @@ writeJson(join(consumerDirectory, "tsconfig.json"), {
 writeFileSync(
   join(consumerDirectory, "material3.mjs"),
   `
-import { buildScheme, createSchemeBuilder, defineTokenLayer, ref } from "scheme-tokens";
+import { buildScheme, createSchemeBuilder, defineTokenLayer, tokenRef } from "scheme-tokens";
 import { material3, material3Preset } from "@scheme-tokens/material3";
 
 const application = defineTokenLayer({
   id: "application",
   defaultVisibility: "public",
   tokens: {
-    "app.background": ref("material3.surface"),
-    "app.foreground": ref("material3.on-surface"),
-    "app.success": ref("material3.extended.success.color"),
+    "app.background": tokenRef("material3.surface"),
+    "app.foreground": tokenRef("material3.on-surface"),
+    "app.success": tokenRef("material3.extended.success.color"),
   },
 });
 

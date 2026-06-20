@@ -54,7 +54,9 @@ Compiled schemes are output artifacts. They contain resolved colors, selected to
 dependencies. Exporters consume compiled schemes only.
 
 The published JSON Schemas cover strict persisted graph input, strict layer input, and serialized compiled scheme
-output. They are not authoring-helper schemas and do not accept helper shorthand.
+output. They are structural preflight contracts, not semantic equivalence with the runtime parsers. Runtime parsers remain
+the authority for default-mode membership, per-mode value coverage, references, cycles, and cross-field constraints. The
+schemas are not authoring-helper schemas and do not accept helper shorthand.
 
 ## Compilation
 

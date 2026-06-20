@@ -17,7 +17,13 @@ import type {
 } from "./graph";
 import { compiledColorSchemeKind } from "./graph";
 import { isTokenKey } from "./identifiers";
-import { compareCodeUnits, defineRecordValue, readPlainRecord, sortedRecord } from "./json";
+import {
+  compareCodeUnits,
+  defineRecordValue,
+  readArray,
+  readPlainRecord,
+  sortedRecord,
+} from "./json";
 import { parseTokenGraphInternal } from "./parse-token-graph";
 import { IssueCollector, type Result } from "./result";
 
@@ -168,13 +174,17 @@ export function parseCompileSelection<Key extends string = string>(
   }
 
   const keys = selectionEntries.value[0].value;
-  if (!Array.isArray(keys)) {
+  const keyEntries = readArray(keys, {
+    code: "invalid-selection",
+    message: "selection.keys must be a dense array.",
+  });
+  if (!keyEntries.ok) {
     return {
       ok: false,
       issues: [{ code: "invalid-selection", message: "selection.keys must be an array." }],
     };
   }
-  if (keys.length === 0) {
+  if (keyEntries.value.length === 0) {
     return {
       ok: false,
       issues: [{ code: "empty-selection", message: "Exact selection must not be empty." }],
@@ -184,7 +194,8 @@ export function parseCompileSelection<Key extends string = string>(
   const collector = new IssueCollector<CompileTokenGraphIssue>();
   const seen = new Set<string>();
   const output: Key[] = [];
-  for (const key of keys) {
+  for (const entry of keyEntries.value) {
+    const key = entry.value;
     if (typeof key !== "string" || !isTokenKey(key)) {
       collector.add({
         code: "invalid-selection-key",

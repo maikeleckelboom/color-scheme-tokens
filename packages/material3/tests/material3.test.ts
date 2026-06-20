@@ -7,7 +7,7 @@ import {
   defineTokenLayer,
   formatCssColor,
   parseTokenGraph,
-  ref,
+  tokenRef,
   type Issue,
   type Result,
   type ColorTokenDefinitionInput,
@@ -487,9 +487,9 @@ describe("material3", () => {
       id: "application",
       defaultVisibility: "public",
       tokens: {
-        "app.background": ref("material3.surface"),
-        "app.foreground": ref("material3.on-surface"),
-        "app.action": ref("material3.primary"),
+        "app.background": tokenRef("material3.surface"),
+        "app.foreground": tokenRef("material3.on-surface"),
+        "app.action": tokenRef("material3.primary"),
       },
     });
 

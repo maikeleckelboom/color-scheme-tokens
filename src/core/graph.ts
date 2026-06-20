@@ -8,7 +8,9 @@ import {
 } from "./color";
 import type { JsonValue } from "./json";
 import { defineRecordValue, readPlainRecord } from "./json";
+import { isTokenKey } from "./identifiers";
 import type { Issue, Result } from "./result";
+import { describeUnknown } from "./unknown-description";
 
 export const colorTokenGraphKind = "scheme-tokens/color-token-graph";
 export const colorTokenLayerKind = "scheme-tokens/color-token-layer";
@@ -175,9 +177,17 @@ export interface ColorTokenGraph<Mode extends string = string, Key extends strin
   readonly tokens: Readonly<Record<Key, ColorTokenGraphToken<Mode, Key>>>;
 }
 
-export type TokenKeyOf<T> = T extends { readonly tokens: Readonly<Record<infer Key, unknown>> }
+type DirectTokenKeyOf<T> = T extends { readonly tokens: Readonly<Record<infer Key, unknown>> }
   ? Extract<Key, string>
   : never;
+
+type LayerTokenKeyOf<T> = T extends { readonly layers: infer Layers }
+  ? Layers extends readonly (infer Layer)[]
+    ? TokenKeyOf<Layer>
+    : never
+  : never;
+
+export type TokenKeyOf<T> = DirectTokenKeyOf<T> | LayerTokenKeyOf<T>;
 
 export type ModeOf<T> = T extends { readonly modes: readonly [infer First, ...infer Rest] }
   ? Extract<First | Rest[number], string>
@@ -224,10 +234,26 @@ export type ColorTokenGraphIssue =
       readonly cycle?: readonly string[];
     });
 
-export function ref<const Key extends string>(key: Key): ReferenceInput<Key> {
+export function tokenRef<const Key extends string>(key: Key): ReferenceInput<Key> {
+  if (!isTokenKey(key)) {
+    throw new RangeError("tokenRef key must be a dot-separated lower-kebab token key.");
+  }
   return { ref: key };
 }
 
+export function defineTokenGraph<
+  const Tokens extends Readonly<Record<string, ColorTokenDefinitionAuthoringInput<"base", string>>>,
+  const Layers extends readonly ColorTokenLayerInput<"base", string>[],
+>(input: {
+  readonly $schema?: string;
+  readonly kind?: ColorTokenGraphKind;
+  readonly formatVersion?: 1;
+  readonly modes?: never;
+  readonly defaultMode?: never;
+  readonly defaultVisibility?: TokenVisibility;
+  readonly tokens: Tokens;
+  readonly layers: Layers;
+}): ColorTokenGraphInput<"base", Extract<keyof Tokens, string>> & { readonly layers: Layers };
 export function defineTokenGraph<
   const Tokens extends Readonly<Record<string, ColorTokenDefinitionAuthoringInput<"base", string>>>,
 >(input: {
@@ -240,6 +266,24 @@ export function defineTokenGraph<
   readonly tokens: Tokens;
   readonly layers?: readonly ColorTokenLayerInput<"base">[];
 }): ColorTokenGraphInput<"base", Extract<keyof Tokens, string>>;
+export function defineTokenGraph<
+  const Modes extends readonly [string, ...string[]],
+  const Tokens extends Readonly<
+    Record<string, ColorTokenDefinitionAuthoringInput<NoInfer<Modes[number]>, string>>
+  >,
+  const Layers extends readonly ColorTokenLayerInput<NoInfer<Modes[number]>, string>[],
+>(input: {
+  readonly $schema?: string;
+  readonly kind?: ColorTokenGraphKind;
+  readonly formatVersion?: 1;
+  readonly modes: Modes;
+  readonly defaultMode: Modes[number];
+  readonly defaultVisibility?: TokenVisibility;
+  readonly tokens: Tokens;
+  readonly layers: Layers;
+}): ColorTokenGraphInput<Modes[number], Extract<keyof Tokens, string>> & {
+  readonly layers: Layers;
+};
 export function defineTokenGraph<
   const Modes extends readonly [string, ...string[]],
   const Tokens extends Readonly<
@@ -392,7 +436,12 @@ function normalizeTokenRecord(
     defineRecordValue(
       output,
       entry.key,
-      normalizeTokenDefinition(entry.value as ColorTokenDefinitionAuthoringInput, modes),
+      normalizeTokenDefinition(
+        entry.value as ColorTokenDefinitionAuthoringInput,
+        modes,
+        helperName,
+        entry.key,
+      ),
     );
   }
   return output;
@@ -417,20 +466,24 @@ function assertGraphHelperInput(
 function normalizeTokenDefinition(
   input: ColorTokenDefinitionAuthoringInput | undefined,
   modes: readonly string[] | undefined,
+  helperName: string,
+  tokenKey: string,
 ): ColorTokenDefinitionInput {
   if (isTokenDefinitionObject(input)) {
-    return normalizeObjectTokenDefinition(input);
+    return normalizeObjectTokenDefinition(input, helperName, tokenKey);
   }
 
   if (modes !== undefined && isModeValueRecord(input, modes)) {
-    return { valueByMode: normalizeModeValues(input) };
+    return { valueByMode: normalizeModeValues(input, helperName, tokenKey) };
   }
 
-  return { value: normalizeColorExpression(input as ColorExpressionInput) };
+  return { value: normalizeColorExpression(input as ColorExpressionInput, helperName, tokenKey) };
 }
 
 function normalizeObjectTokenDefinition(
   input: TokenDefinitionMetadataAuthoringInput & Readonly<Record<string, unknown>>,
+  helperName: string,
+  tokenKey: string,
 ): ColorTokenDefinitionInput {
   const entries = readPlainRecord(input, {
     code: "invalid-token-definition",
@@ -449,22 +502,29 @@ function normalizeObjectTokenDefinition(
 
   const metadata = tokenDefinitionMetadata(input);
   if ("value" in input && input.value !== undefined) {
-    return { ...metadata, value: normalizeColorExpression(input.value as ColorExpressionInput) };
+    return {
+      ...metadata,
+      value: normalizeColorExpression(input.value as ColorExpressionInput, helperName, tokenKey),
+    };
   }
   const valueByMode = "valueByMode" in input ? input.valueByMode : undefined;
   if (valueByMode === undefined) {
     if (modeEntries.length === 0) {
-      return metadata as ColorTokenDefinitionInput;
+      throw new TypeError(`${helperName} token "${tokenKey}" must include a value.`);
     }
     const modeValues: Record<string, ColorExpressionInput> = {};
     for (const entry of modeEntries) {
       defineRecordValue(modeValues, entry.key, entry.value as ColorExpressionInput);
     }
-    return { ...metadata, valueByMode: normalizeModeValues(modeValues) };
+    return { ...metadata, valueByMode: normalizeModeValues(modeValues, helperName, tokenKey) };
   }
   return {
     ...metadata,
-    valueByMode: normalizeModeValues(valueByMode as Readonly<Record<string, ColorExpressionInput>>),
+    valueByMode: normalizeModeValues(
+      valueByMode as Readonly<Record<string, ColorExpressionInput>>,
+      helperName,
+      tokenKey,
+    ),
   };
 }
 
@@ -481,20 +541,72 @@ function tokenDefinitionMetadata(
 
 function normalizeModeValues(
   input: Readonly<Record<string, ColorExpressionInput>>,
+  helperName: string,
+  tokenKey: string,
 ): Readonly<Record<string, ColorTokenExpressionInput>> {
+  const entries = readPlainRecord(input, {
+    code: "invalid-token-definition",
+    message: "valueByMode must be a plain object record.",
+  });
+  if (!entries.ok) {
+    throw new TypeError(`${helperName} token "${tokenKey}" valueByMode must be a plain object.`);
+  }
   const output: Record<string, ColorTokenExpressionInput> = {};
-  for (const mode of Object.keys(input)) {
-    defineRecordValue(output, mode, normalizeColorExpression(input[mode] as ColorExpressionInput));
+  for (const entry of entries.value) {
+    defineRecordValue(
+      output,
+      entry.key,
+      normalizeColorExpression(entry.value as ColorExpressionInput, helperName, tokenKey),
+    );
   }
   return output;
 }
 
-function normalizeColorExpression(input: ColorExpressionInput): ColorTokenExpressionInput {
+function normalizeColorExpression(
+  input: ColorExpressionInput,
+  helperName: string,
+  tokenKey: string,
+): ColorTokenExpressionInput {
   if (isReferenceInput(input)) {
-    return input;
+    return normalizeReferenceInput(input, helperName, tokenKey);
   }
   const color = parseColor(input);
-  return color.ok ? cloneColor(color.value) : (input as ColorValueInput);
+  if (color.ok) {
+    return cloneColor(color.value);
+  }
+  const firstIssue = color.issues[0];
+  throw new TypeError(
+    `${helperName} token "${tokenKey}" has unsupported color input (${describeUnknown(input)}). ${
+      firstIssue?.message ?? "Use a supported concrete CSS color string or structured color value."
+    } Use tokenRef("token.key") or { ref: "token.key" } for references.`,
+  );
+}
+
+function normalizeReferenceInput(
+  input: ReferenceInput,
+  helperName: string,
+  tokenKey: string,
+): ReferenceInput {
+  const entries = readPlainRecord(input, {
+    code: "invalid-reference",
+    message: "Reference helpers must be plain data.",
+  });
+  if (!entries.ok) {
+    throw new TypeError(`${helperName} token "${tokenKey}" reference must be a plain object.`);
+  }
+  const record = new Map(entries.value.map((entry) => [entry.key, entry.value]));
+  if (entries.value.length !== 1 || typeof record.get("ref") !== "string") {
+    throw new TypeError(
+      `${helperName} token "${tokenKey}" reference must contain exactly one ref string.`,
+    );
+  }
+  const key = record.get("ref") as string;
+  if (!isTokenKey(key)) {
+    throw new RangeError(
+      `${helperName} token "${tokenKey}" reference must be a dot-separated lower-kebab token key.`,
+    );
+  }
+  return { ref: key };
 }
 
 function isTokenDefinitionObject(input: unknown): input is TokenDefinitionMetadataAuthoringInput {

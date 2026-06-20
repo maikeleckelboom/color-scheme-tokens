@@ -24,7 +24,10 @@ export function formatCssColor(color: ColorValue): string {
   }
 
   if (color.colorSpace === "hsl" || color.colorSpace === "hwb") {
-    return `${color.colorSpace}(${formatComponents(color.components)}${formatAlpha(color.alpha)})`;
+    return `${color.colorSpace}(${formatPercentComponents(
+      color.components,
+      [1, 2],
+    )}${formatAlpha(color.alpha)})`;
   }
 
   return `${color.colorSpace}(${formatComponents(color.components)}${formatAlpha(color.alpha)})`;
@@ -42,6 +45,20 @@ function formatComponents(
   components: readonly [ColorComponent, ColorComponent, ColorComponent],
 ): string {
   return components.map(formatComponent).join(" ");
+}
+
+function formatPercentComponents(
+  components: readonly [ColorComponent, ColorComponent, ColorComponent],
+  percentIndexes: readonly number[],
+): string {
+  const percentIndexSet = new Set(percentIndexes);
+  return components
+    .map((component, index) =>
+      component === "none" || !percentIndexSet.has(index)
+        ? formatComponent(component)
+        : `${formatNumber(component)}%`,
+    )
+    .join(" ");
 }
 
 function formatAlpha(alpha: number): string {

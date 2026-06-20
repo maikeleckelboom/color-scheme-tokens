@@ -11,9 +11,10 @@ import {
   exportCssVars,
   formatCssColor,
   parseColor,
-  ref,
+  parseCompiledScheme,
   parseTokenGraph,
   serializeCompiledScheme,
+  tokenRef,
   type ColorValue,
   type Issue,
   type Result,
@@ -84,11 +85,62 @@ describe("v1 color parsing and formatting", () => {
       },
     });
 
-    const extended = parseColor({ colorSpace: "srgb", components: [1.08, 0.12, -0.03] });
-    expect(formatCssColor(unwrap(extended))).toBe("color(srgb 1.08 0.12 -0.03)");
+    const structured = parseColor({ colorSpace: "srgb", components: [0.92, 0.12, 0.03] });
+    expect(formatCssColor(unwrap(structured))).toBe("color(srgb 0.92 0.12 0.03)");
 
     const p3 = parseColor("color(display-p3 0.94 0.28 0.08 / 75%)");
     expect(formatCssColor(unwrap(p3))).toBe("color(display-p3 0.94 0.28 0.08 / 0.75)");
+  });
+
+  test.each([
+    ["rgb(1e2 5e1 0 / 5e-1)", "color(srgb 0.39215686274509803 0.19607843137254902 0 / 0.5)"],
+    ["color(display-p3 4e-1 .3 +8e-1)", "color(display-p3 0.4 0.3 0.8)"],
+    ["oklch(7e-1 1.2e-1 265)", "oklch(0.7 0.12 265)"],
+  ] as const)("accepts CSS decimal and exponent numeric syntax in %s", (input, output) => {
+    expect(formatCssColor(unwrap(parseColor(input)))).toBe(output);
+  });
+
+  test.each([
+    "rgb(0x10 0 0)",
+    "rgb(0b10 0 0)",
+    "rgb(0o10 0 0)",
+    "rgb(1_000 0 0)",
+    "rgb(Infinity 0 0)",
+    "rgb(NaN 0 0)",
+    "rgb(12abc 0 0)",
+    "",
+  ])("rejects non-CSS numeric syntax %s", (input) => {
+    expect(parseColor(input)).toMatchObject({ ok: false });
+  });
+
+  test.each([
+    ["hsl(270 50% 50%)", "hsl(270 50% 50%)"],
+    ["hwb(270 20% 10%)", "hwb(270 20% 10%)"],
+    ["lab(50 20 -30)", "lab(50 20 -30)"],
+    ["lch(50 40 270)", "lch(50 40 270)"],
+    ["oklab(0.7 0.1 -0.1)", "oklab(0.7 0.1 -0.1)"],
+    ["oklch(0.7 0.12 265)", "oklch(0.7 0.12 265)"],
+    ["color(display-p3 0.4 0.3 0.8)", "color(display-p3 0.4 0.3 0.8)"],
+    ["hsl(270 50% 50% / 25%)", "hsl(270 50% 50% / 0.25)"],
+    ["hsl(none 50% 50%)", "hsl(none 50% 50%)"],
+    ["lab(none 20 -30)", "lab(none 20 -30)"],
+  ] as const)("formats %s without changing the stored color meaning", (input, output) => {
+    expect(formatCssColor(unwrap(parseColor(input)))).toBe(output);
+  });
+
+  test("normalizes hue into the stored hue domain", () => {
+    expect(unwrap(parseColor("lch(50 40 -90)")).components).toEqual([50, 40, 270]);
+    expect(formatCssColor(unwrap(parseColor("hsl(630 50% 50%)")))).toBe("hsl(270 50% 50%)");
+  });
+
+  test.each([
+    ["hsl(270 101% 50%)", "invalid-color-component"],
+    ["hwb(270 20% -1%)", "invalid-color-component"],
+    ["lch(50 -1 270)", "invalid-color-component"],
+    ["oklch(0.7 -0.01 265)", "invalid-color-component"],
+    [{ colorSpace: "srgb", components: [1.08, 0.12, 0.03], alpha: 1 }, "invalid-color-component"],
+  ] as const)("rejects out-of-domain color components in %s", (input, code) => {
+    expect(parseColor(input)).toMatchObject({ ok: false, issues: [{ code }] });
   });
 
   test("rejects contextual CSS and unsafe objects with issues", () => {
@@ -141,7 +193,7 @@ describe("v1 graph and compiler", () => {
     const graph = defineTokenGraph({
       tokens: {
         "app.background": "#ffffff",
-        "app.foreground": ref("app.background"),
+        "app.foreground": tokenRef("app.background"),
       },
     });
 
@@ -165,7 +217,7 @@ describe("v1 graph and compiler", () => {
   test("defines simple token records through defineTokens", () => {
     const tokens = {
       background: "#ffffff",
-      foreground: ref("background"),
+      foreground: tokenRef("background"),
     } as const;
 
     expect(defineTokens(tokens)).toEqual(defineTokenGraph({ tokens }));
@@ -174,20 +226,40 @@ describe("v1 graph and compiler", () => {
     expect(compiled.tokens.foreground?.dependenciesByMode.base).toEqual(["background"]);
   });
 
-  test("does not reinterpret unsupported bare strings as references", () => {
-    const graph = defineTokens({ danger: "red" });
-    expect(graph.tokens.danger).toEqual({ value: "red" });
-    expect(compileTokenGraph(graph)).toMatchObject({
-      ok: false,
-      issues: [{ code: "unsupported-color-syntax", path: "/tokens/danger/value" }],
-    });
+  test.each(["red", "banana", "var(--x)", "brand.primary"])(
+    "helper calls reject unsupported bare string %s before returning artifacts",
+    (value) => {
+      expect(() => defineTokens({ danger: value })).toThrow(
+        /Use tokenRef\("token\.key"\) or \{ ref: "token\.key" \} for references\./,
+      );
+      expect(() =>
+        defineTokenGraph({
+          tokens: {
+            danger: value,
+          },
+        }),
+      ).toThrow(/unsupported color input/);
+      expect(() =>
+        defineTokenLayer({
+          id: "application",
+          tokens: {
+            danger: value,
+          },
+        }),
+      ).toThrow(/unsupported color input/);
+    },
+  );
+
+  test("helper calls normalize supported strings into structured color values", () => {
+    const graph = defineTokens({ brand: "oklch(0.7 0.12 265)" });
+    expect(graph.tokens.brand).toEqual({ value: color("oklch(0.7 0.12 265)") });
   });
 
   test("accepts explicit helper and object references", () => {
     const graph = defineTokenGraph({
       tokens: {
         "brand.primary": "#6750a4",
-        "app.action": ref("brand.primary"),
+        "app.action": tokenRef("brand.primary"),
         "app.alias": { ref: "brand.primary" },
       },
     });
@@ -202,7 +274,7 @@ describe("v1 graph and compiler", () => {
       compileTokenGraph(
         defineTokenGraph({
           tokens: {
-            "app.action": ref("brand.primary"),
+            "app.action": tokenRef("brand.primary"),
           },
         }),
       ),
@@ -279,7 +351,7 @@ describe("v1 graph and compiler", () => {
         },
         "app.foreground": {
           visibility: "public",
-          value: ref("material3.on-surface"),
+          value: tokenRef("material3.on-surface"),
         },
       },
     });
@@ -667,6 +739,109 @@ describe("v1 graph and compiler", () => {
     expect(exported.css).toContain(`${exported.blocks[0]?.declarations[0]?.property}:`);
   });
 
+  test("rejects unknown and missing mode selector strategy keys", () => {
+    const compiled = unwrap(compileTokenGraph(makeGraph()));
+
+    expect(
+      exportCssVars(compiled, {
+        modeSelectors: { strategy: "class", classPrefix: "theme-", extra: true } as never,
+      }),
+    ).toMatchObject({
+      ok: false,
+      issues: [{ code: "invalid-mode-selectors" }],
+    });
+
+    expect(
+      exportCssVars(compiled, {
+        modeSelectors: { strategy: "selectors" } as never,
+      }),
+    ).toMatchObject({
+      ok: false,
+      issues: [{ code: "invalid-mode-selectors" }],
+    });
+  });
+
+  test("rejects unsafe generated selectors and exact selector collisions", () => {
+    const compiled = unwrap(compileTokenGraph(makeGraph()));
+
+    expect(
+      exportCssVars(compiled, {
+        scope: { strategy: "selector", selector: ".preview .panel" },
+      }),
+    ).toMatchObject({
+      ok: false,
+      issues: [{ code: "invalid-scope" }],
+    });
+
+    expect(
+      exportCssVars(compiled, {
+        scope: { strategy: "selector", selector: ".preview::before" },
+      }),
+    ).toMatchObject({
+      ok: false,
+      issues: [{ code: "invalid-scope" }],
+    });
+
+    expect(
+      exportCssVars(compiled, {
+        scope: { strategy: "selector", selector: ".preview, .other" },
+      }),
+    ).toMatchObject({
+      ok: false,
+      issues: [{ code: "invalid-scope" }],
+    });
+
+    expect(
+      exportCssVars(compiled, {
+        modeSelectors: { strategy: "data-attribute", attribute: "aria-theme" },
+      }),
+    ).toMatchObject({
+      ok: false,
+      issues: [{ code: "invalid-data-attribute" }],
+    });
+
+    expect(
+      exportCssVars(compiled, {
+        modeSelectors: { strategy: "class", classPrefix: "Theme-" },
+      }),
+    ).toMatchObject({
+      ok: false,
+      issues: [{ code: "invalid-class-prefix" }],
+    });
+
+    expect(
+      exportCssVars(compiled, {
+        modeSelectors: {
+          strategy: "selectors",
+          selectors: {
+            light: ".theme",
+            dark: ".theme",
+          },
+        },
+      }),
+    ).toMatchObject({
+      ok: false,
+      issues: [{ code: "duplicate-mode-selector" }],
+    });
+
+    expect(
+      exportCssVars(compiled, {
+        modeSelectors: {
+          strategy: "selectors",
+          selectors: {
+            light: ".theme, .light",
+            dark: ".dark",
+          },
+        },
+      }),
+    ).toMatchObject({
+      ok: true,
+      value: {
+        blocks: [{ selector: ".theme, .light" }, { selector: ".dark" }],
+      },
+    });
+  });
+
   test("rejects the removed CSS variablePrefix option at runtime", () => {
     const compiled = unwrap(compileTokenGraph(makeGraph()));
     const oldOptions: unknown = { variablePrefix: "theme" };
@@ -698,8 +873,8 @@ describe("v1 graph and compiler", () => {
         defineTokenGraph({
           tokens: {
             "brand.primary": "#6750a4",
-            "brand.alias": ref("brand.primary"),
-            "app.action": ref("brand.alias"),
+            "brand.alias": tokenRef("brand.primary"),
+            "app.action": tokenRef("brand.alias"),
           },
         }),
       ),
@@ -707,6 +882,59 @@ describe("v1 graph and compiler", () => {
 
     expect(compiled.tokens["app.action"]?.dependenciesByMode.base).toEqual(["brand.alias"]);
     expect(compiled.tokens["brand.alias"]?.dependenciesByMode.base).toEqual(["brand.primary"]);
+  });
+
+  test("compiled origin parser accepts only exact origin shapes", () => {
+    const compiled = JSON.parse(
+      serializeCompiledScheme(
+        unwrap(
+          compileTokenGraph(
+            defineTokenGraph({
+              tokens: {
+                primary: "#6750a4",
+              },
+            }),
+          ),
+        ),
+      ),
+    ) as {
+      tokens: {
+        primary: {
+          origin: unknown;
+        };
+      };
+    };
+
+    compiled.tokens.primary.origin = { kind: "graph", extra: true };
+    expect(parseCompiledScheme(compiled)).toMatchObject({
+      ok: false,
+      issues: [{ code: "invalid-origin" }],
+    });
+
+    compiled.tokens.primary.origin = { kind: "layer" };
+    expect(parseCompiledScheme(compiled)).toMatchObject({
+      ok: false,
+      issues: [{ code: "invalid-origin" }],
+    });
+
+    compiled.tokens.primary.origin = { kind: "layer", id: "brand", extra: true };
+    expect(parseCompiledScheme(compiled)).toMatchObject({
+      ok: false,
+      issues: [{ code: "invalid-origin" }],
+    });
+
+    compiled.tokens.primary.origin = { kind: "source", id: "material", sourceToken: "Bad Key" };
+    expect(parseCompiledScheme(compiled)).toMatchObject({
+      ok: false,
+      issues: [{ code: "invalid-origin" }],
+    });
+
+    compiled.tokens.primary.origin = {
+      kind: "source",
+      id: "material",
+      sourceToken: "material.primary",
+    };
+    expect(parseCompiledScheme(compiled)).toMatchObject({ ok: true });
   });
 
   test("reports exact-selection issues and cycles", () => {
@@ -784,7 +1012,7 @@ describe("v1 graph and compiler", () => {
         defineTokenGraph({
           tokens: {
             primary: "#6750a4",
-            background: ref("primary"),
+            background: tokenRef("primary"),
           },
           layers: [
             defineTokenLayer({
@@ -1091,10 +1319,10 @@ describe("v1 sources", () => {
     const application = defineTokenLayer({
       id: "application",
       tokens: {
-        background: ref("material3.surface"),
-        foreground: ref("material3.on-surface"),
-        primary: ref("material3.primary"),
-        "primary-foreground": ref("material3.on-primary"),
+        background: tokenRef("material3.surface"),
+        foreground: tokenRef("material3.on-surface"),
+        primary: tokenRef("material3.primary"),
+        "primary-foreground": tokenRef("material3.on-primary"),
       },
     });
 
@@ -1251,7 +1479,7 @@ describe("v1 sources", () => {
     const app = defineTokenLayer({
       id: "application",
       tokens: {
-        "app.action": ref("company.primary"),
+        "app.action": tokenRef("company.primary"),
       },
     });
 
@@ -1270,7 +1498,7 @@ describe("v1 sources", () => {
       defineTokenGraph({
         tokens: {
           primary: "#6750a4",
-          background: ref("primary"),
+          background: tokenRef("primary"),
         },
       }),
     );
@@ -1346,7 +1574,7 @@ describe("v1 sources", () => {
       "semantic",
       defineTokenGraph({
         tokens: {
-          "semantic.action": ref("palette.primary"),
+          "semantic.action": tokenRef("palette.primary"),
         },
       }),
     );
@@ -1375,14 +1603,14 @@ describe("v1 sources", () => {
       defineTokenGraph({
         defaultVisibility: "internal",
         tokens: {
-          "semantic.action": ref("palette.primary"),
+          "semantic.action": tokenRef("palette.primary"),
         },
       }),
     );
     const app = defineTokenLayer({
       id: "application",
       tokens: {
-        "app.action": ref("semantic.action"),
+        "app.action": tokenRef("semantic.action"),
       },
     });
 
@@ -1500,8 +1728,8 @@ describe("v1 sources", () => {
         tokens: {
           "second.token": {
             valueByMode: {
-              light: ref("first.token"),
-              dark: ref("first.token"),
+              light: tokenRef("first.token"),
+              dark: tokenRef("first.token"),
             },
           },
         },
@@ -1643,7 +1871,7 @@ describe("v1 sources", () => {
       defineTokenGraph({
         defaultVisibility: "public",
         tokens: {
-          "semantic.action": ref("palette.primary"),
+          "semantic.action": tokenRef("palette.primary"),
           "semantic.hidden": { visibility: "internal", value: "#000000" },
         },
       }),
@@ -1882,6 +2110,107 @@ describe("public boundaries reject hostile unknown input without throwing", () =
     expect(parseTokenGraph(hostile)).toMatchObject({
       ok: false,
       issues: [{ code: "invalid-object" }],
+    });
+  });
+
+  test("array readers reject sparse, accessor, proxy, and array-like parser input", () => {
+    const sparseModes = ["base"];
+    delete sparseModes[0];
+    expect(() =>
+      parseTokenGraph({
+        kind: colorTokenGraphKind,
+        formatVersion: 1,
+        modes: sparseModes,
+        defaultMode: "base",
+        defaultVisibility: "public",
+        tokens: {},
+      }),
+    ).not.toThrow();
+    expect(
+      parseTokenGraph({
+        kind: colorTokenGraphKind,
+        formatVersion: 1,
+        modes: sparseModes,
+        defaultMode: "base",
+        defaultVisibility: "public",
+        tokens: {},
+      }),
+    ).toMatchObject({ ok: false, issues: [{ code: "invalid-mode-key" }] });
+
+    const accessorComponents = [1, 1, 1];
+    Object.defineProperty(accessorComponents, "1", {
+      enumerable: true,
+      get() {
+        throw new Error("component getter should not run");
+      },
+    });
+    expect(() =>
+      parseColor({ colorSpace: "srgb", components: accessorComponents, alpha: 1 }),
+    ).not.toThrow();
+    expect(
+      parseColor({ colorSpace: "srgb", components: accessorComponents, alpha: 1 }),
+    ).toMatchObject({
+      ok: false,
+      issues: [{ code: "invalid-color-components" }],
+    });
+
+    const proxyModes = new Proxy(["base"], {
+      ownKeys() {
+        throw new Error("array trap should be contained");
+      },
+    });
+    expect(() =>
+      parseTokenGraph({
+        kind: colorTokenGraphKind,
+        formatVersion: 1,
+        modes: proxyModes,
+        defaultMode: "base",
+        defaultVisibility: "public",
+        tokens: {},
+      }),
+    ).not.toThrow();
+
+    expect(
+      parseTokenGraph({
+        kind: colorTokenGraphKind,
+        formatVersion: 1,
+        modes: { 0: "base", length: 1 },
+        defaultMode: "base",
+        defaultVisibility: "public",
+        tokens: {},
+      }),
+    ).toMatchObject({ ok: false, issues: [{ code: "invalid-mode-key" }] });
+
+    const compiled = JSON.parse(
+      serializeCompiledScheme(
+        unwrap(
+          compileTokenGraph(
+            defineTokenGraph({
+              tokens: {
+                primary: "#6750a4",
+              },
+            }),
+          ),
+        ),
+      ),
+    ) as {
+      tokens: {
+        primary: {
+          dependenciesByMode: {
+            base: unknown;
+          };
+        };
+      };
+    };
+    compiled.tokens.primary.dependenciesByMode.base = new Proxy(["primary"], {
+      getOwnPropertyDescriptor() {
+        throw new Error("dependency trap should be contained");
+      },
+    });
+    expect(() => parseCompiledScheme(compiled)).not.toThrow();
+    expect(parseCompiledScheme(compiled)).toMatchObject({
+      ok: false,
+      issues: [{ code: "invalid-dependencies" }],
     });
   });
 });

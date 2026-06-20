@@ -6,8 +6,9 @@ import {
   defineTokenGraph,
   defineTokens,
   exportCssVars,
-  ref,
+  tokenRef,
   type BuildSchemeSourceOptions,
+  type ColorValueInput,
   type CssVarBlock,
   type CssVarsExport,
   type ExportCssVarsOptions,
@@ -43,7 +44,7 @@ export type RemovedCompiledType = RootModule[RemovedCompiledName];
 const simpleGraph = defineTokenGraph({
   tokens: {
     "app.background": "#ffffff",
-    "app.foreground": ref("app.background"),
+    "app.foreground": tokenRef("app.background"),
   },
 });
 
@@ -56,7 +57,7 @@ export type SimpleGraphModes = Expect<Equal<ModeOf<typeof simpleGraph>, "base">>
 
 const simpleTokensGraph = defineTokens({
   "app.background": "#ffffff",
-  "app.foreground": ref("app.background"),
+  "app.foreground": tokenRef("app.background"),
 });
 const typedSimpleTokensGraph = simpleTokensGraph satisfies ColorTokenGraphInput<"base">;
 typedSimpleTokensGraph.defaultMode.toUpperCase();
@@ -167,11 +168,25 @@ const layer = defineTokenLayer({
   id: "brand",
   tokens: {
     "brand.primary": "#6750a4",
-    "brand.on-primary": ref("brand.primary"),
+    "brand.on-primary": tokenRef("brand.primary"),
   },
 });
 const typedLayer = layer satisfies ColorTokenLayerInput;
 typedLayer.id.toUpperCase();
+
+const graphWithLayer = defineTokenGraph({
+  tokens: {
+    "app.background": "#ffffff",
+  },
+  layers: [layer],
+});
+export type GraphWithLayerKeys = Expect<
+  Equal<TokenKeyOf<typeof graphWithLayer>, "app.background" | "brand.primary" | "brand.on-primary">
+>;
+
+// @ts-expect-error raw strings are helper authoring input, not structured ColorValueInput.
+const unsupportedColorValueInput: ColorValueInput = "red";
+unsupportedColorValueInput.toString();
 
 const sourceAndLayerBuilt = buildScheme(source, { layers: [layer], selection: "all" });
 if (sourceAndLayerBuilt.ok) {
