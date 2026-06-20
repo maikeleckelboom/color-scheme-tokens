@@ -1,4 +1,8 @@
 {
+  "ignorePatterns": [
+    "packages/material3/src/vendor/material-color-utilities/**",
+    "src/vendor/material-color-utilities/**"
+  ],
   "rules": {
     "curly": "error"
   }
