@@ -34,8 +34,10 @@ if (!css.ok) {
   throw new Error(JSON.stringify(css.issues, null, 2));
 }
 
-console.log(css.value.css);
-console.log(css.value.variableByToken.background);
+const stylesheet = css.value.css;
+const backgroundVariable = css.value.variableByToken.background;
+
+export { backgroundVariable, stylesheet };
 ```
 
 Authoring can be ergonomic while persisted artifacts stay strict and deterministic. Core accepts modern CSS color spaces
@@ -90,7 +92,9 @@ if (!css.ok) {
   throw new Error(JSON.stringify(css.issues, null, 2));
 }
 
-console.log(css.value.css);
+const stylesheet = css.value.css;
+
+export { stylesheet };
 ```
 
 Use direct color values when your app owns the token values. Direct colors need no reference helper, and modern CSS color
@@ -134,8 +138,11 @@ if (!exported.ok) {
   throw new Error(JSON.stringify(exported.issues, null, 2));
 }
 
-console.log(exported.value.css);
-console.log(exported.value.variableByToken.background);
+const stylesheet = exported.value.css;
+const backgroundVariable = exported.value.variableByToken.background;
+const blocks = exported.value.blocks;
+
+export { backgroundVariable, blocks, stylesheet };
 ```
 
 Omit `prefix` to emit custom properties such as `--background`, `--foreground`, `--primary`, and
@@ -169,7 +176,9 @@ if (!css.ok) {
   throw new Error(JSON.stringify(css.issues, null, 2));
 }
 
-console.log(css.value.css);
+const runtimeCss = css.value.css;
+
+export { runtimeCss };
 ```
 
 Step 2: load the generated runtime CSS in your app.
@@ -321,7 +330,9 @@ if (!css.ok) {
   throw new Error(JSON.stringify(css.issues, null, 2));
 }
 
-console.log(css.value.css);
+const stylesheet = css.value.css;
+
+export { stylesheet };
 ```
 
 Generated-source tokens are often internal implementation detail. Public app tokens may reference them explicitly.
@@ -359,7 +370,9 @@ if (!exported.ok) {
   throw new Error(JSON.stringify(exported.issues, null, 2));
 }
 
-console.log(exported.value.css);
+const stylesheet = exported.value.css;
+
+export { stylesheet };
 ```
 
 `buildScheme()` is the runner that composes base inputs and layers, validates the composed graph material, and produces
@@ -418,7 +431,9 @@ if (!compiled.ok) {
 }
 
 const json = serializeCompiledScheme(compiled.value);
-console.log(json);
+const artifactJson = json;
+
+export { artifactJson };
 ```
 
 `serializeCompiledScheme()` serializes the compiled output, not the authoring input. The output is deterministic and includes
@@ -548,6 +563,7 @@ resolved color values plus dependency and origin metadata for the selected token
 
 ## More Docs
 
+- [Documentation site source](https://github.com/maikeleckelboom/scheme-tokens/tree/main/docs-site)
 - [Public API](./docs/public-api.md)
 - [Diagnostics](./docs/diagnostics.md)
 - [Architecture](./docs/architecture.md)

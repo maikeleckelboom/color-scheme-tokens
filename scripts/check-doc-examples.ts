@@ -25,12 +25,17 @@ const adapterManifest = JSON.parse(
 ) as PackageManifest;
 const readme = readFileSync(join(repoRoot, "README.md"), "utf8");
 const adapterReadme = readFileSync(join(adapterRoot, "README.md"), "utf8");
+const docsSiteFiles = listFiles(join(repoRoot, "docs-site")).filter((file) => file.endsWith(".md"));
 assertNoRemovedPublicNames();
 assertTailwindRecipe(readme);
 
 const blocks = extractTypeScriptExamples([
   { label: "README.md", text: readme },
   { label: "packages/material3/README.md", text: adapterReadme },
+  ...docsSiteFiles.map((file) => ({
+    label: file,
+    text: readFileSync(file, "utf8"),
+  })),
 ]);
 if (blocks.length === 0) {
   throw new Error("Public READMEs contain no executable TypeScript examples");
@@ -64,7 +69,8 @@ writeJson(join(consumerDirectory, "tsconfig.json"), {
     moduleResolution: "NodeNext",
     target: "ES2022",
     noEmit: true,
-    types: [],
+    types: ["node"],
+    typeRoots: [join(repoRoot, "node_modules", "@types")],
   },
   include: ["example-*.ts"],
 });
@@ -187,6 +193,7 @@ function assertNoRemovedPublicNames(): void {
     join(repoRoot, "CHANGELOG.md"),
     join(repoRoot, "AGENTS.md"),
     ...listFiles(join(repoRoot, "docs")),
+    ...listFiles(join(repoRoot, "docs-site")),
   ];
 
   for (const file of publicFiles) {

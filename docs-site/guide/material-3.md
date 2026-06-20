@@ -1,0 +1,99 @@
+# Material 3
+
+Material 3 is optional. Manual colors only need `scheme-tokens`; install `@scheme-tokens/material3` when you want a real
+Material Dynamic Color base.
+
+```bash
+pnpm add scheme-tokens @scheme-tokens/material3
+```
+
+## Build a Material Base
+
+```ts
+import { buildScheme, exportCssVars } from "scheme-tokens";
+import { material3 } from "@scheme-tokens/material3";
+
+const built = buildScheme(material3("#6750a4"));
+if (!built.ok) {
+  throw new Error(JSON.stringify(built.issues, null, 2));
+}
+
+const exported = exportCssVars(built.value);
+if (!exported.ok) {
+  throw new Error(JSON.stringify(exported.issues, null, 2));
+}
+
+const materialCss = exported.value.css;
+export { materialCss };
+```
+
+This exports Material role tokens such as `material3.primary` and `material3.surface`. That is useful for inspection or
+internal tooling, but Material roles do not naturally equal app semantic tokens.
+
+## Map Roles Into App Tokens
+
+Keep generated Material roles internal by default, then expose app-owned aliases.
+
+```ts
+import { buildScheme, defineAliases, defineTokenLayer, exportCssVars } from "scheme-tokens";
+import { material3 } from "@scheme-tokens/material3";
+
+const application = defineTokenLayer<"light" | "dark">({
+  id: "application",
+  defaultVisibility: "public",
+  tokens: defineAliases({
+    background: "material3.surface",
+    foreground: "material3.on-surface",
+    primary: "material3.primary",
+    "primary-foreground": "material3.on-primary",
+  }),
+});
+
+const built = buildScheme(
+  material3("#6750a4", undefined, {
+    defaultVisibility: "internal",
+  }),
+  {
+    layers: [application],
+  },
+);
+
+if (!built.ok) {
+  throw new Error(JSON.stringify(built.issues, null, 2));
+}
+
+const exported = exportCssVars(built.value);
+if (!exported.ok) {
+  throw new Error(JSON.stringify(exported.issues, null, 2));
+}
+
+const appCss = exported.value.css;
+const primaryVariable = exported.value.variableByToken.primary;
+
+export { appCss, primaryVariable };
+```
+
+`material3()` creates a source input. `buildScheme()` runs that source, applies layers, validates references, and
+compiles the selected scheme.
+
+Use `defineAliases()` when app tokens should point at generated role tokens. The alias layer is the contract your app
+uses; the Material role names stay an implementation detail unless you deliberately export them.
+
+## Material Input
+
+```ts
+import { material3 } from "@scheme-tokens/material3";
+
+const base = material3({
+  sourceColors: "#6750a4",
+  variant: "tonal-spot",
+  contrastLevel: 0,
+  specVersion: "2021",
+});
+
+export { base };
+```
+
+`sourceColors` accepts a strict `#rrggbb` string or a non-empty array for official multi-source paths. Material controls
+such as `variant`, `contrastLevel`, `specVersion`, `platform`, `palettes`, `extendedColors`, and `paletteTones` belong
+inside `material3()`, not on the root package.

@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
 
-const checkedRoots = ["src", "tests", "scripts", "docs", "packages"] as const;
+const checkedRoots = ["src", "tests", "scripts", "docs", "docs-site", "packages"] as const;
 const conventionalNames = new Set([
   "AGENTS.md",
   "CHANGELOG.md",
@@ -43,7 +43,7 @@ function checkDirectory(directory: string): void {
   for (const entry of readdirSync(directory)) {
     const path = join(directory, entry);
     if (statSync(path).isDirectory()) {
-      if (entry === "node_modules") {
+      if (entry === "node_modules" || entry === "dist" || entry === "build") {
         continue;
       }
       checkDirectory(path);

@@ -50,6 +50,9 @@
     "test:schemas": "vitest run tests/schemas",
     "test:docs": "node --experimental-strip-types scripts/check-doc-examples.ts",
     "test:filenames": "node --experimental-strip-types scripts/check-filenames.ts",
+    "docs:dev": "vitepress dev docs-site",
+    "docs:build": "vitepress build docs-site",
+    "docs:preview": "vitepress preview docs-site",
     "api:check": "node --experimental-strip-types scripts/check-api.ts",
     "package:check": "pnpm build && publint --strict && attw --pack . --profile esm-only",
     "smoke:consumer": "node --experimental-strip-types scripts/smoke-consumer.ts",
@@ -58,7 +61,7 @@
     "check:tarball": "node --experimental-strip-types scripts/check-tarball.ts",
     "format": "oxfmt --check --ignore-path .gitignore --ignore-path .oxfmtignore . \"!packages/material3/src/vendor/material-color-utilities/**\"",
     "format:fix": "oxfmt --write --ignore-path .gitignore --ignore-path .oxfmtignore . \"!packages/material3/src/vendor/material-color-utilities/**\"",
-    "validate:core": "pnpm typecheck && pnpm lint && pnpm test && pnpm test:types && pnpm test:properties && pnpm test:schemas && pnpm test:filenames && pnpm build && pnpm api:check && pnpm format",
+    "validate:core": "pnpm typecheck && pnpm lint && pnpm test && pnpm test:types && pnpm test:properties && pnpm test:schemas && pnpm test:filenames && pnpm build && pnpm api:check && pnpm docs:build && pnpm format",
     "validate": "pnpm validate:core && pnpm -r --if-present --filter=!scheme-tokens validate",
     "check": "pnpm validate",
     "release:core": "pnpm validate:core && pnpm package:check && pnpm test:docs && pnpm smoke:consumer && pnpm check:tarball",
@@ -75,6 +78,7 @@
     "publint": "0.3.21",
     "tsdown": "^0.22.3",
     "typescript": "^6.0.3",
+    "vitepress": "^1.6.4",
     "vitest": "^4.1.9"
   },
   "engines": {
