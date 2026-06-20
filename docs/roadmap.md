@@ -49,6 +49,38 @@ Target adapters map compiled or core token material into a target framework or d
 target-specific scaffolds. shadcn belongs to target adapters, not source adapters, format adapters, conversion adapters,
 or Material 3 features.
 
+## High-Gamut Doctrine
+
+High-gamut is native token value capability. Texel is explicit conversion and projection capability.
+
+Core already supports canonical color values in `srgb`, `display-p3`, and `oklch`. Texel is not required for high-gamut
+authoring. Texel is useful later for explicit conversion, gamut mapping, and compiled token-set projection.
+
+Do not model high gamut as modes. This is the wrong shape:
+
+```ts
+defineTokenGraph({
+  modes: ["light", "dark", "light-p3", "dark-p3"],
+  defaultMode: "light",
+  tokens: {},
+});
+```
+
+Real theme modes stay `light` and `dark`. Each token value may use `srgb`, `display-p3`, or `oklch`:
+
+```ts
+defineTokenGraph({
+  modes: ["light", "dark"],
+  defaultMode: "light",
+  tokens: {
+    background: {
+      light: "#ffffff",
+      dark: { colorSpace: "display-p3", r: 0.08, g: 0.07, b: 0.1 },
+    },
+  },
+});
+```
+
 ## Canonical Core Keys
 
 Core token keys remain dot-separated lower-kebab identifier segments such as `background`, `primary-foreground`,
@@ -101,16 +133,44 @@ then, unsupported spaces should fail through adapter-owned `Result` issues inste
 It should depend on the upstream engine package `@texel/color` inside the adapter package only. Do not use
 `@texel/colors`. The root `color-scheme-tokens` package must remain free of `@texel/color`.
 
-Conversion and gamut mapping should be explicit operations, never silent behavior in core compilation or CSS export. The
-likely first operations are:
+Conversion and gamut mapping should be explicit operations, never silent behavior in core compilation or CSS export.
+`@color-scheme-tokens/conversion-texel` should export scoped function names because the package import path already owns
+the Texel context. The likely first operations are:
 
-- `convertWithTexel(input)`;
-- `mapGamutWithTexel(input)`.
+- `convertColor(input)` for one color;
+- `mapGamut(input)` for one explicit gamut-mapping operation;
+- `projectTokenSet(input)` for projecting a compiled token set into a target delivery color space or gamut.
 
 Unsupported spaces, non-finite output, and out-of-gamut RGB results should return adapter-owned `Result` issues rather
-than silently clipping.
+than silently clipping. Default out-of-gamut RGB behavior should fail, not map or clip. Gamut mapping must never be
+silent.
 
 Core `ColorValue` remains limited to the core-supported color spaces until a deliberate core API change is made.
+
+Planned token-set projection should be explicit and auditable:
+
+```ts
+const projected = projectTokenSet({
+  tokenSet: built.value.compiled,
+  to: "display-p3",
+  gamut: {
+    behavior: "map",
+    target: "display-p3",
+    mapping: "map-to-cusp-l",
+  },
+});
+```
+
+Projected output should include:
+
+- projected `CompiledTokenSet`;
+- JSON-safe conversion records per token and mode;
+- from space;
+- to space;
+- `inGamut`;
+- `mapped`;
+- target gamut where applicable;
+- mapping strategy where applicable.
 
 Deferred Texel-adjacent work:
 
@@ -120,6 +180,7 @@ Deferred Texel-adjacent work:
 - image extraction;
 - DTCG integration;
 - serializer wrappers.
+- unsupported non-core output spaces.
 
 ## Planned shadcn Target Adapter
 

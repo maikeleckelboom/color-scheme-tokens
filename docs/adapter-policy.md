@@ -66,7 +66,8 @@ their own packages.
 
 Conversion adapters perform explicit color conversion, gamut mapping, color math, or engine-backed transformations. They
 are separate operations, not `TokenSource` objects by default. They should export verb-based functions such as
-`convertWithTexel(input)` and `mapGamutWithTexel(input)` and return `Result` with adapter-owned issues.
+`convertColor(input)`, `mapGamut(input)`, and `projectTokenSet(input)` from their package root and return `Result` with
+adapter-owned issues.
 
 Conversion output may be package-specific JSON-safe data or an explicit core artifact. If it claims to be a core graph,
 layer, or compiled token set, it must satisfy the matching core parser and schema contract.
@@ -74,6 +75,11 @@ layer, or compiled token set, it must satisfy the matching core parser and schem
 Texel belongs to conversion adapters, not source adapters or format adapters. Future Texel support belongs in
 `@color-scheme-tokens/conversion-texel` and should depend on the upstream engine package `@texel/color` inside that
 adapter package only. Do not use `@texel/colors`.
+
+High-gamut authoring is not a Texel feature. Core already supports canonical color values in `srgb`, `display-p3`, and
+`oklch`, and high gamut should be modeled as token values rather than as fake modes such as `light-p3` or `dark-p3`.
+Texel should be used later only for explicit, auditable conversion, gamut mapping, or compiled token-set projection.
+Gamut mapping must never be silent; default out-of-gamut RGB behavior should fail instead of mapping or clipping.
 
 ## Format Adapters
 

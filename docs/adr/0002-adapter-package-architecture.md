@@ -74,7 +74,7 @@ registry.
 A conversion adapter performs a conversion operation. It is not a `TokenSource` by default. The minimum package root
 surface is:
 
-- a verb-based conversion function, for example `convertWithTexel(input)`;
+- verb-based conversion functions exported from the adapter package, for example `convertColor(input)`;
 - JSON-safe input and output types owned by the adapter;
 - adapter issue types returned through `Result`.
 
