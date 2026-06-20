@@ -57,6 +57,7 @@ These lanes can participate in one workflow, but they are not one transitive cha
 ```text
 source adapters
 + authored token layers
++ semantic-token mapping layers
 + target mapping layers
 -> buildScheme()
 -> optional conversion projection
@@ -79,6 +80,7 @@ It shows the intended composition shape using current scheme vocabulary:
 
 ```text
 application layer
++ semantic-token mapping layer
 + future target mapping layer
 + material3({ sourceColors: "#6750a4" }, { defaultVisibility: "internal" })
 -> buildScheme()

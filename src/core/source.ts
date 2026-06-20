@@ -948,9 +948,11 @@ function composeSourceGraphs(
   }
 
   const tokens: Record<string, unknown> = {};
+  const semanticTokens: Record<string, unknown> = {};
   const tokenSourceIds = new Map<string, string>();
   const layerSourceIds = new Map<string, string>();
   const firstTokenPaths = new Map<string, string>();
+  const firstSemanticTokenPaths = new Map<string, string>();
   const composedLayers: unknown[] = [];
 
   for (const sourceGraph of sourceGraphs) {
@@ -961,9 +963,27 @@ function composeSourceGraphs(
       }
     }
 
-    const addedTokens = appendSourceTokens(tokens, tokenSourceIds, firstTokenPaths, sourceGraph);
+    const addedTokens = appendSourceDefinitions({
+      output: tokens,
+      tokenSourceIds,
+      firstPaths: firstTokenPaths,
+      otherLanePaths: firstSemanticTokenPaths,
+      sourceGraph,
+      lane: "tokens",
+    });
     if (!addedTokens.ok) {
       return addedTokens;
+    }
+    const addedSemanticTokens = appendSourceDefinitions({
+      output: semanticTokens,
+      tokenSourceIds,
+      firstPaths: firstSemanticTokenPaths,
+      otherLanePaths: firstTokenPaths,
+      sourceGraph,
+      lane: "semanticTokens",
+    });
+    if (!addedSemanticTokens.ok) {
+      return addedSemanticTokens;
     }
 
     if (sourceGraph.layers !== undefined) {
@@ -978,6 +998,9 @@ function composeSourceGraphs(
   }
 
   defineRecordValue(output, "tokens", tokens);
+  if (Object.keys(semanticTokens).length > 0) {
+    defineRecordValue(output, "semanticTokens", semanticTokens);
+  }
   if (layers !== undefined) {
     composedLayers.push(...layers);
   }
@@ -1047,6 +1070,7 @@ interface RawSourceGraphParts {
   readonly schema?: unknown;
   readonly defaultVisibility: unknown;
   readonly tokens: unknown;
+  readonly semanticTokens?: unknown;
   readonly layers?: readonly unknown[];
 }
 
@@ -1126,6 +1150,7 @@ function readSourceGraph(source: BuiltSourceGraph): Result<RawSourceGraphParts, 
       ...(record.has("$schema") ? { schema: record.get("$schema") } : {}),
       defaultVisibility: record.get("defaultVisibility"),
       tokens: record.get("tokens"),
+      ...(record.has("semanticTokens") ? { semanticTokens: record.get("semanticTokens") } : {}),
       ...(layerEntries === undefined
         ? {}
         : { layers: layerEntries.value.map((entry) => entry.value) }),
@@ -1212,24 +1237,48 @@ function sameModes(left: unknown, right: unknown): boolean {
   return leftEntries.value.every((entry) => rightModes.has(entry.value));
 }
 
-function appendSourceTokens(
-  output: Record<string, unknown>,
-  tokenSourceIds: Map<string, string>,
-  firstTokenPaths: Map<string, string>,
-  sourceGraph: SourceGraphParts,
-): Result<void, BuildSchemeIssue> {
-  const entries = readPlainRecord(sourceGraph.tokens, {
+function appendSourceDefinitions(options: {
+  readonly output: Record<string, unknown>;
+  readonly tokenSourceIds: Map<string, string>;
+  readonly firstPaths: Map<string, string>;
+  readonly otherLanePaths: ReadonlyMap<string, string>;
+  readonly sourceGraph: SourceGraphParts;
+  readonly lane: "tokens" | "semanticTokens";
+}): Result<void, BuildSchemeIssue> {
+  const input =
+    options.lane === "tokens" ? options.sourceGraph.tokens : options.sourceGraph.semanticTokens;
+  if (input === undefined) {
+    return { ok: true, value: undefined };
+  }
+
+  const path = `/base/${options.sourceGraph.sourceIndex}/${options.lane}`;
+  const entries = readPlainRecord(input, {
     code: "invalid-source-result",
-    message: "Source graph tokens must be a plain object record.",
-    path: `/base/${sourceGraph.sourceIndex}/tokens`,
+    message: `Source graph ${options.lane} must be a plain object record.`,
+    path,
   });
   if (!entries.ok) {
     return entries as Result<never, BuildSchemeIssue>;
   }
 
   for (const entry of entries.value) {
-    const tokenPath = `/base/${sourceGraph.sourceIndex}/tokens/${escapePointerSegment(entry.key)}`;
-    const firstPath = firstTokenPaths.get(entry.key);
+    const tokenPath = `${path}/${escapePointerSegment(entry.key)}`;
+    const collisionPath = options.otherLanePaths.get(entry.key);
+    if (collisionPath !== undefined) {
+      return {
+        ok: false,
+        issues: [
+          {
+            code: "duplicate-token-key",
+            message: `Semantic token and implementation token keys must not collide: ${entry.key}.`,
+            path: tokenPath,
+            key: entry.key,
+            firstPath: collisionPath,
+          },
+        ],
+      };
+    }
+    const firstPath = options.firstPaths.get(entry.key);
     if (firstPath !== undefined) {
       return {
         ok: false,
@@ -1244,12 +1293,14 @@ function appendSourceTokens(
         ],
       };
     }
-    firstTokenPaths.set(entry.key, tokenPath);
-    tokenSourceIds.set(entry.key, sourceGraph.sourceId);
+    options.firstPaths.set(entry.key, tokenPath);
+    options.tokenSourceIds.set(entry.key, options.sourceGraph.sourceId);
     defineRecordValue(
-      output,
+      options.output,
       entry.key,
-      withDefaultVisibility(entry.value, sourceGraph.defaultVisibility),
+      options.lane === "tokens"
+        ? withDefaultVisibility(entry.value, options.sourceGraph.defaultVisibility)
+        : entry.value,
     );
   }
 

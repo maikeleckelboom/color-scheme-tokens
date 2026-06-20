@@ -318,6 +318,13 @@ function cloneOrigin(origin: ColorTokenGraphToken["origin"]): ColorTokenGraphTok
   if (origin.kind === "layer") {
     return { kind: "layer", id: origin.id };
   }
+  if (origin.kind === "semanticToken") {
+    return {
+      kind: "semanticToken",
+      origin: cloneOrigin(origin.origin) as typeof origin.origin,
+      ...(origin.target === undefined ? {} : { target: origin.target }),
+    };
+  }
   return {
     kind: "source",
     id: origin.id,

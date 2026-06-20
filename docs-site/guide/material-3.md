@@ -32,21 +32,20 @@ internal tooling, but Material roles do not naturally equal app semantic tokens.
 
 ## Map Roles Into App Tokens
 
-Keep generated Material roles internal by default, then expose app-owned aliases.
+Keep generated Material roles internal by default, then expose app-owned semantic tokens.
 
 ```ts
-import { buildScheme, defineAliases, defineTokenLayer, exportCssVars } from "scheme-tokens";
+import { buildScheme, defineTokenLayer, exportCssVars, tokenRef } from "scheme-tokens";
 import { material3 } from "@scheme-tokens/material3";
 
 const application = defineTokenLayer<"light" | "dark">({
   id: "application",
-  defaultVisibility: "public",
-  tokens: defineAliases({
-    background: "material3.surface",
-    foreground: "material3.on-surface",
-    primary: "material3.primary",
-    "primary-foreground": "material3.on-primary",
-  }),
+  semanticTokens: {
+    background: { value: tokenRef("material3.surface") },
+    foreground: { value: tokenRef("material3.on-surface") },
+    primary: { value: tokenRef("material3.primary") },
+    "primary-foreground": { value: tokenRef("material3.on-primary") },
+  },
 });
 
 const built = buildScheme(
@@ -76,8 +75,9 @@ export { appCss, primaryVariable };
 `material3()` creates a source input. `buildScheme()` runs that source, applies layers, validates references, and
 compiles the selected scheme.
 
-Use `defineAliases()` when app tokens should point at generated role tokens. The alias layer is the contract your app
-uses; the Material role names stay an implementation detail unless you deliberately export them.
+Use `semanticTokens` when app tokens should point at generated role tokens. The semantic-token layer is the contract your
+app uses; the Material role names stay an implementation detail unless you deliberately export them. An alias is the
+mechanism. A semantic token is the product concept.
 
 ## Material Input
 

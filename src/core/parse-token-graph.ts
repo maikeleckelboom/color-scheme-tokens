@@ -6,6 +6,7 @@ import type {
   ColorTokenGraphIssue,
   ColorTokenGraphToken,
   ColorTokenLayerInput,
+  BaseTokenOrigin,
   ReferenceInput,
   TokenOrigin,
   TokenVisibility,
@@ -45,8 +46,11 @@ interface ParsedToken {
 interface TokenDeclaration {
   readonly key: string;
   readonly path: string;
+  readonly lane: TokenLane;
   readonly token: ParsedToken;
 }
+
+type TokenLane = "tokens" | "semanticTokens";
 
 const topLevelKeys = new Set([
   "$schema",
@@ -56,6 +60,7 @@ const topLevelKeys = new Set([
   "defaultMode",
   "defaultVisibility",
   "tokens",
+  "semanticTokens",
   "layers",
 ]);
 
@@ -66,6 +71,7 @@ const layerKeys = new Set([
   "id",
   "defaultVisibility",
   "tokens",
+  "semanticTokens",
 ]);
 const tokenKeys = new Set([
   "visibility",
@@ -142,17 +148,32 @@ export function parseTokenGraphInternal(
   const validModes = canonicalModes ?? [];
 
   const tokensInput = graphRecord.get("tokens");
-  if (tokensInput === undefined) {
+  const semanticTokensInput = graphRecord.get("semanticTokens");
+  if (tokensInput === undefined && semanticTokensInput === undefined) {
     collector.add({
       code: "missing-property",
-      message: "Color token graph requires tokens.",
+      message: "Color token graph requires tokens or semanticTokens.",
       path: pointer("tokens"),
     });
-  } else if (defaultVisibility !== undefined) {
+  }
+  if (tokensInput !== undefined && defaultVisibility !== undefined) {
     parseTokenRecord(tokensInput, {
       path: pointer("tokens"),
       modes: validModes,
       defaultVisibility,
+      lane: "tokens",
+      originForKey: (key) => directOrigin(context, key),
+      collector,
+      declarations,
+      firstTokenPaths: graphTokenPaths,
+    });
+  }
+  if (semanticTokensInput !== undefined) {
+    parseTokenRecord(semanticTokensInput, {
+      path: pointer("semanticTokens"),
+      modes: validModes,
+      defaultVisibility: "public",
+      lane: "semanticTokens",
       originForKey: (key) => directOrigin(context, key),
       collector,
       declarations,
@@ -264,7 +285,24 @@ function parseStandaloneLayer(
     collector,
   );
   const tokens = parseStandaloneLayerTokens(record.get("tokens"), pointer("tokens"), collector);
-  if (id === undefined || defaultVisibility === undefined || tokens === undefined) {
+  const semanticTokens = parseStandaloneLayerTokens(
+    record.get("semanticTokens"),
+    pointer("semanticTokens"),
+    collector,
+  );
+  if (record.get("tokens") === undefined && record.get("semanticTokens") === undefined) {
+    collector.add({
+      code: "missing-property",
+      message: "Layer requires tokens or semanticTokens.",
+      path: pointer("tokens"),
+    });
+  }
+  if (
+    id === undefined ||
+    defaultVisibility === undefined ||
+    tokens === undefined ||
+    semanticTokens === undefined
+  ) {
     return undefined;
   }
   return {
@@ -274,6 +312,7 @@ function parseStandaloneLayer(
     id,
     defaultVisibility,
     tokens,
+    ...(record.get("semanticTokens") === undefined ? {} : { semanticTokens }),
   };
 }
 
@@ -283,8 +322,7 @@ function parseStandaloneLayerTokens(
   collector: IssueCollector<ColorTokenGraphIssue>,
 ): Readonly<Record<string, ColorTokenDefinitionInput>> | undefined {
   if (input === undefined) {
-    collector.add({ code: "missing-property", message: "Layer requires tokens.", path });
-    return undefined;
+    return {};
   }
   const entries = readPlainRecord(input, {
     code: "invalid-object",
@@ -527,6 +565,7 @@ function parseTokenRecord(
     readonly path: string;
     readonly modes: readonly string[];
     readonly defaultVisibility: TokenVisibility;
+    readonly lane: TokenLane;
     readonly originForKey: (key: string) => TokenOrigin;
     readonly collector: IssueCollector<ColorTokenGraphIssue>;
     readonly declarations: Map<string, TokenDeclaration>;
@@ -566,12 +605,24 @@ function parseTokenRecord(
       });
       continue;
     }
+    const existing = options.declarations.get(entry.key);
+    if (existing !== undefined && existing.lane !== options.lane) {
+      options.collector.add({
+        code: "duplicate-token-key",
+        message: `Semantic token and implementation token keys must not collide: ${entry.key}.`,
+        path: tokenPath,
+        key: entry.key,
+        firstPath: existing.path,
+      });
+      continue;
+    }
 
     const token = parseGraphTokenDefinition(entry.value, {
       path: tokenPath,
       key: entry.key,
       modes: options.modes,
       defaultVisibility: options.defaultVisibility,
+      lane: options.lane,
       origin: options.originForKey(entry.key),
       collector: options.collector,
     });
@@ -580,7 +631,12 @@ function parseTokenRecord(
     }
 
     options.firstTokenPaths.set(entry.key, tokenPath);
-    options.declarations.set(entry.key, { key: entry.key, path: tokenPath, token });
+    options.declarations.set(entry.key, {
+      key: entry.key,
+      path: tokenPath,
+      lane: options.lane,
+      token,
+    });
   }
 }
 
@@ -649,27 +705,43 @@ function parseGraphLayer(
     options.collector,
   );
   const tokens = record.get("tokens");
-  if (tokens === undefined) {
+  const semanticTokens = record.get("semanticTokens");
+  if (tokens === undefined && semanticTokens === undefined) {
     options.collector.add({
       code: "missing-property",
-      message: "Layer requires tokens.",
+      message: "Layer requires tokens or semanticTokens.",
       path: `${path}/tokens`,
     });
   }
-  if (layerId === undefined || defaultVisibility === undefined || tokens === undefined) {
+  if (layerId === undefined || defaultVisibility === undefined) {
     return;
   }
 
   const layerTokenPaths = new Map<string, string>();
-  parseTokenRecord(tokens, {
-    path: `${path}/tokens`,
-    modes: options.modes,
-    defaultVisibility,
-    originForKey: () => layerOrigin(layerId, options.context),
-    collector: options.collector,
-    declarations: options.declarations,
-    firstTokenPaths: layerTokenPaths,
-  });
+  if (tokens !== undefined) {
+    parseTokenRecord(tokens, {
+      path: `${path}/tokens`,
+      modes: options.modes,
+      defaultVisibility,
+      lane: "tokens",
+      originForKey: () => layerOrigin(layerId, options.context),
+      collector: options.collector,
+      declarations: options.declarations,
+      firstTokenPaths: layerTokenPaths,
+    });
+  }
+  if (semanticTokens !== undefined) {
+    parseTokenRecord(semanticTokens, {
+      path: `${path}/semanticTokens`,
+      modes: options.modes,
+      defaultVisibility: "public",
+      lane: "semanticTokens",
+      originForKey: () => layerOrigin(layerId, options.context),
+      collector: options.collector,
+      declarations: options.declarations,
+      firstTokenPaths: layerTokenPaths,
+    });
+  }
 }
 
 function parseGraphTokenDefinition(
@@ -679,6 +751,7 @@ function parseGraphTokenDefinition(
     readonly key: string;
     readonly modes: readonly string[];
     readonly defaultVisibility: TokenVisibility;
+    readonly lane: TokenLane;
     readonly origin: TokenOrigin;
     readonly collector: IssueCollector<ColorTokenGraphIssue>;
   },
@@ -696,15 +769,25 @@ function parseGraphTokenDefinition(
 
   const record = new Map(entries.value.map((entry) => [entry.key, entry.value]));
   const visibilityInput = record.get("visibility");
+  if (options.lane === "semanticTokens" && visibilityInput === "internal") {
+    options.collector.add({
+      code: "invalid-visibility",
+      message: "Semantic tokens are public and cannot use internal visibility.",
+      path: `${options.path}/visibility`,
+    });
+    return undefined;
+  }
   const visibility =
-    visibilityInput === undefined
-      ? options.defaultVisibility
-      : parseVisibility(
-          visibilityInput,
-          `${options.path}/visibility`,
-          "invalid-visibility",
-          options.collector,
-        );
+    options.lane === "semanticTokens"
+      ? "public"
+      : visibilityInput === undefined
+        ? options.defaultVisibility
+        : parseVisibility(
+            visibilityInput,
+            `${options.path}/visibility`,
+            "invalid-visibility",
+            options.collector,
+          );
   if (visibility === undefined) {
     return undefined;
   }
@@ -759,11 +842,15 @@ function parseGraphTokenDefinition(
   if (Object.keys(valueByMode).length !== options.modes.length) {
     return undefined;
   }
+  const origin =
+    options.lane === "semanticTokens"
+      ? semanticTokenOrigin(options.origin, semanticTarget(valueByMode, options.modes))
+      : options.origin;
   return {
     visibility,
     valueByMode: sortedRecord(Object.entries(valueByMode)),
     expressionPathsByMode: sortedRecord(Object.entries(expressionPathsByMode)),
-    origin: options.origin,
+    origin,
     ...metadata,
   };
 }
@@ -1093,12 +1180,12 @@ function canonicalizeModes(
   ] as readonly [string, ...string[]];
 }
 
-function directOrigin(context: ParseContext, tokenKey: string): TokenOrigin {
+function directOrigin(context: ParseContext, tokenKey: string): BaseTokenOrigin {
   const sourceId = context.tokenSourceIds?.get(tokenKey) ?? context.sourceId;
   return sourceId === undefined ? { kind: "graph" } : { kind: "source", id: sourceId };
 }
 
-function layerOrigin(layerId: string, context: ParseContext): TokenOrigin {
+function layerOrigin(layerId: string, context: ParseContext): BaseTokenOrigin {
   const sourceId = context.layerSourceIds?.get(layerId);
   if (sourceId !== undefined) {
     return { kind: "source", id: sourceId };
@@ -1107,6 +1194,36 @@ function layerOrigin(layerId: string, context: ParseContext): TokenOrigin {
     return { kind: "source", id: context.sourceId };
   }
   return { kind: "layer", id: layerId };
+}
+
+function semanticTokenOrigin(origin: TokenOrigin, target: string | undefined): TokenOrigin {
+  const baseOrigin: BaseTokenOrigin = origin.kind === "semanticToken" ? origin.origin : origin;
+  return {
+    kind: "semanticToken",
+    origin: baseOrigin,
+    ...(target === undefined ? {} : { target }),
+  };
+}
+
+function semanticTarget(
+  valueByMode: Readonly<Record<string, ColorExpression>>,
+  modes: readonly string[],
+): string | undefined {
+  let target: string | undefined;
+  for (const mode of modes) {
+    const expression = valueByMode[mode];
+    if (expression === undefined || !isReferenceExpression(expression)) {
+      return undefined;
+    }
+    if (target === undefined) {
+      target = expression.ref;
+      continue;
+    }
+    if (target !== expression.ref) {
+      return undefined;
+    }
+  }
+  return target;
 }
 
 function cloneExpression(expression: ColorExpression): ColorExpression {

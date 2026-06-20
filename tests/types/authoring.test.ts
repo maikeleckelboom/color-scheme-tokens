@@ -2,7 +2,6 @@ import {
   buildScheme,
   compileTokenGraph,
   createSchemeBuilder,
-  defineAliases,
   defineTokenLayer,
   defineTokenGraph,
   defineTokens,
@@ -63,17 +62,17 @@ const simpleTokensGraph = defineTokens({
 const typedSimpleTokensGraph = simpleTokensGraph satisfies ColorTokenGraphInput<"base">;
 typedSimpleTokensGraph.defaultMode.toUpperCase();
 
-const aliasTokens = defineAliases({
-  "app.foreground": "app.background",
+const semanticGraph = defineTokenGraph({
+  tokens: {
+    "brand.primary": "#6750a4",
+  },
+  semanticTokens: {
+    primary: tokenRef("brand.primary"),
+  },
 });
-const aliasTarget: "app.background" = aliasTokens["app.foreground"].value.ref;
-aliasTarget.toUpperCase();
-export type AliasTokenKeys = Expect<Equal<keyof typeof aliasTokens, "app.foreground">>;
-
-defineTokens({
-  "app.background": "#ffffff",
-  ...aliasTokens,
-});
+export type SemanticGraphKeys = Expect<
+  Equal<TokenKeyOf<typeof semanticGraph>, "brand.primary" | "primary">
+>;
 
 const multiModeTokensGraph = defineTokens(
   {
@@ -183,6 +182,9 @@ const layer = defineTokenLayer({
     "brand.primary": "#6750a4",
     "brand.on-primary": tokenRef("brand.primary"),
   },
+  semanticTokens: {
+    primary: tokenRef("brand.primary"),
+  },
 });
 const typedLayer = layer satisfies ColorTokenLayerInput;
 typedLayer.id.toUpperCase();
@@ -194,7 +196,10 @@ const graphWithLayer = defineTokenGraph({
   layers: [layer],
 });
 export type GraphWithLayerKeys = Expect<
-  Equal<TokenKeyOf<typeof graphWithLayer>, "app.background" | "brand.primary" | "brand.on-primary">
+  Equal<
+    TokenKeyOf<typeof graphWithLayer>,
+    "app.background" | "brand.primary" | "brand.on-primary" | "primary"
+  >
 >;
 
 // @ts-expect-error raw strings are helper authoring input, not structured ColorValueInput.

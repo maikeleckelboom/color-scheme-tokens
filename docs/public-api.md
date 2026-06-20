@@ -11,7 +11,6 @@ The root API is intentionally small and explicit.
 - `compileTokenGraph`
 - `compiledColorSchemeKind`
 - `createSchemeBuilder`
-- `defineAliases`
 - `defineTokenGraph`
 - `defineTokenLayer`
 - `defineTokens`
@@ -68,6 +67,9 @@ should use `variableByToken`.
 
 External CSS variable contracts can be supported by authoring matching token keys and exporting without a prefix. Core
 does not hard-code framework presets or browser mutation behavior.
+
+`exports` is reserved for package subpaths and output/export behavior such as CSS variable naming, filtering, prefixing,
+target formats, or future export profiles. It is not a graph or layer lane for mapping one token key to another.
 
 Generated mode selectors append to the configured scope for `data-attribute` and `class` strategies. The scope must be a
 single append-safe selector such as `:root` or `.preview`; selector lists, pseudo-elements, descendant selectors, and
@@ -127,36 +129,41 @@ contracts. Core does not silently slugify external names.
 `formatVersion` to `1` and `defaultVisibility` to `public`. Graph helpers also default to one `base` mode when
 `modes` is omitted.
 
-`defineAliases()` is helper-only alias-map sugar for token records.
-
 `defineTokens(tokens, options?)` is the simple token-record helper. It returns the same strict graph shape as
 `defineTokenGraph({ ...options, tokens })`, while keeping token keys separate from graph-level fields such as `modes`,
-`defaultMode`, `defaultVisibility`, `tokens`, `formatVersion`, and `$schema`.
+`defaultMode`, `defaultVisibility`, `tokens`, `semanticTokens`, `formatVersion`, and `$schema`.
 
-`defineTokenGraph(input)` is the full graph helper. Its input remains graph-shaped and does not accept ambiguous flat
-top-level token records.
+`defineTokenGraph(input)` is the full graph helper. Its input remains graph-shaped and accepts `tokens`,
+`semanticTokens`, or both. It does not accept ambiguous flat top-level token records.
+
+`defineTokenLayer(input)` accepts ordered layer material with `tokens`, `semanticTokens`, or both. Layer
+`semanticTokens` are the public app/product role lane for mapping generated source tokens into app-owned token keys.
 
 `base` is the single ordinary mode for simple graphs. It is not a generated scheme, Material role set, or hidden
 light/dark decision.
 
-Direct color values need no reference helper. Token aliases are explicit: use `tokenRef("other.token")`,
-`{ ref: "other.token" }`, or `defineAliases()` when an alias map is the clearest authoring shape. `defineAliases()`
-returns ordinary strict token definitions such as `{ value: { ref: "other.token" } }`; it is not a second persisted
-representation.
+`tokens` contains authored color token definitions, generated source tokens, brand tokens, palette tokens, and
+implementation tokens. `semanticTokens` contains product, app, role, and context tokens. A semantic token is public by
+default and remains public even when `defaultVisibility` is `internal`. An alias is the mechanism. A semantic token is
+the product concept.
+
+Direct color values need no reference helper. References are explicit: use `tokenRef("other.token")` or
+`{ ref: "other.token" }` inside token definitions and semantic token definitions.
 
 Token shorthands are normalized by the helpers:
 
 - `"token.key": "#ffffff"` becomes a structured color value;
 - `"token.key": tokenRef("other.token")` becomes `{ value: { ref: "other.token" } }`;
 - `"token.key": { ref: "other.token" }` becomes `{ value: { ref: "other.token" } }`;
-- `...defineAliases({ "token.key": "other.token" })` becomes `"token.key": { value: { ref: "other.token" } }`;
+- `semanticTokens: { "token.key": tokenRef("other.token") }` becomes
+  `"token.key": { value: { ref: "other.token" } }` under `semanticTokens`;
 - metadata plus mode records such as `{ visibility: "public", light: "#fff", dark: "#000" }` become strict
   per-mode values when modes are declared.
 
 Supported color literals remain color values. Token-key-shaped non-color strings do not become references. If a helper
 string is not supported by the color parser, the helper throws an actionable authoring error before returning a strict
 artifact. CSS named colors such as `"red"` are not currently supported. References are always explicit through
-`tokenRef("other.token")`, `{ ref: "other.token" }`, or `defineAliases()`.
+`tokenRef("other.token")` or `{ ref: "other.token" }`.
 
 Declared mode names must not be token-definition keys such as `value`, `valueByMode`, `visibility`, `description`,
 `deprecated`, or `extensions`. Those names are reserved so helper shorthand detection does not silently reinterpret token
@@ -172,8 +179,9 @@ Helper-only shorthand is intentionally not part of the strict wire format. Use `
 `defineTokenGraph()` at authoring boundaries and `parseTokenGraph()` at persistence or untrusted-input boundaries.
 
 The schema subpaths validate strict persisted artifacts only: token graph input, token layer input, and serialized
-compiled scheme output. They intentionally reject helper-only shorthand such as raw token color strings, raw
-`{ ref }` token definitions, and mode records without `valueByMode`.
+compiled scheme output. Graph and layer schemas include strict `semanticTokens` records, but intentionally reject
+helper-only shorthand such as raw token color strings, raw `{ ref }` token definitions, and mode records without
+`valueByMode`.
 
 JSON Schema is the structural persisted-shape preflight. Runtime parsers are the semantic authority. Parser-only
 semantic checks include default-mode membership, `valueByMode` coverage for declared modes, reference existence,
@@ -195,8 +203,9 @@ convert colors, gamut-map, compute Delta E, generate palettes, or infer browser 
 ## Compiled Schemes
 
 `compileTokenGraph()` returns a compiled color scheme with resolved colors, modes, token visibility, origin metadata, and
-direct dependency metadata. `serializeCompiledScheme()` serializes this compiled output in deterministic order. Compiled
-JSON contains resolved structured color objects, not the original authored color strings.
+direct dependency metadata. Semantic tokens are selected by the default public compilation even when implementation
+tokens are internal. `serializeCompiledScheme()` serializes this compiled output in deterministic order. Compiled JSON
+contains resolved structured color objects, not the original authored color strings.
 
 Direct typed graph compilation preserves literal token keys, including keys contributed by literal `layers` arrays.
 `buildScheme()` composes dynamic source/layer input and returns a broad `CompiledColorScheme`; it does not currently

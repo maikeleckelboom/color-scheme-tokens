@@ -75,4 +75,5 @@ export function buildTokenCss(): string {
 ```
 
 Direct colors can use supported CSS color strings such as hex, `rgb()`, `hsl()`, OKLCH, and `color(display-p3 ...)`.
-Aliases are explicit and come later.
+Public product roles can stay direct like this, or move into `semanticTokens` later when they need to reference
+implementation tokens.

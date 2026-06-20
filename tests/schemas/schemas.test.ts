@@ -69,6 +69,78 @@ describe("JSON Schemas", () => {
     });
   });
 
+  test("graph and layer schemas accept strict semanticTokens", () => {
+    const ajv = createAjv();
+    const graph = {
+      kind: colorTokenGraphKind,
+      formatVersion: 1,
+      modes: ["base"],
+      defaultMode: "base",
+      defaultVisibility: "internal",
+      tokens: {
+        "brand.primary": { value: srgb(0.4, 0.31, 0.64) },
+      },
+      semanticTokens: {
+        primary: { value: { ref: "brand.primary" } },
+      },
+    };
+    const layer = {
+      kind: colorTokenLayerKind,
+      formatVersion: 1,
+      id: "application",
+      defaultVisibility: "internal",
+      semanticTokens: {
+        background: { value: { ref: "brand.primary" } },
+      },
+    };
+
+    expectSchemaValid(ajv, graphSchema, graph, "graph semanticTokens");
+    expect(parseTokenGraph(graph)).toMatchObject({
+      ok: true,
+      value: {
+        tokens: {
+          primary: {
+            visibility: "public",
+            origin: {
+              kind: "semanticToken",
+              origin: { kind: "graph" },
+              target: "brand.primary",
+            },
+          },
+        },
+      },
+    });
+    expectSchemaValid(ajv, layerSchema, layer, "layer semanticTokens");
+    expect(parseTokenLayer(layer)).toMatchObject({
+      ok: true,
+      value: {
+        tokens: {},
+        semanticTokens: {
+          background: { value: { ref: "brand.primary" } },
+        },
+      },
+    });
+  });
+
+  test("parser rejects malformed semanticTokens", () => {
+    const graph = {
+      kind: colorTokenGraphKind,
+      formatVersion: 1,
+      modes: ["base"],
+      defaultMode: "base",
+      defaultVisibility: "public",
+      tokens: {},
+      semanticTokens: {
+        primary: "#6750a4",
+      },
+    };
+
+    expect(parseTokenGraph(graph)).toMatchObject({
+      ok: false,
+      issues: [{ code: "invalid-token-definition", path: "/semanticTokens/primary" }],
+    });
+  });
+
   test("token graph schema preflight and parser accept structured persisted colors", () => {
     expect.hasAssertions();
 

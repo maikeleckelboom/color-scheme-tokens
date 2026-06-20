@@ -32,6 +32,10 @@ if (failures.length > 0) {
 }
 
 function checkDirectory(directory: string): void {
+  if (isGeneratedDocsSiteDirectory(directory)) {
+    return;
+  }
+
   if (directory === vendoredMaterialPath) {
     const governanceFile = join(directory, "README.md");
     if (!existsSync(governanceFile)) {
@@ -57,4 +61,12 @@ function checkDirectory(directory: string): void {
 
     failures.push(path);
   }
+}
+
+function isGeneratedDocsSiteDirectory(directory: string): boolean {
+  const normalized = directory.replaceAll("\\", "/");
+  return (
+    normalized.includes("docs-site/.vitepress/cache") ||
+    normalized.includes("docs-site/.vitepress/dist")
+  );
 }

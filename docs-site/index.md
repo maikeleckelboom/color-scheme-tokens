@@ -1,9 +1,9 @@
 # scheme-tokens
 
-Define color tokens, compile the selected scheme, and export deterministic CSS variables.
+Own your color token names. Compile the selected scheme. Export deterministic CSS variables.
 
-`scheme-tokens` is for applications that own their token names and need stable CSS artifacts. Start with manual colors:
-Material 3, Tailwind, persisted JSON, and adapter architecture can wait until the first stylesheet is working.
+For apps that want stable color contracts without adopting a runtime theme engine. Start with manual colors, then add
+Material only when a real generator is needed.
 
 ## Install
 
@@ -39,6 +39,12 @@ const primaryVariable = exported.value.variableByToken.primary;
 export { primaryVariable, stylesheet };
 ```
 
+## Why It Fits
+
+- Author colors directly: keep product token names in the app contract from the first file.
+- Compile deterministic output: resolve the selected scheme before CSS or JSON leaves the package.
+- Add generators without coupling: optional engines live in adapter packages, not the root import.
+
 Use the stylesheet artifact in a build step, SSR response, or app CSS import:
 
 ```css
@@ -73,6 +79,6 @@ The default export uses authored runtime variable names:
 
 ## What It Owns
 
-The root package owns color token graphs, parsing, compilation, deterministic serialization, and CSS variable export. It
-does not load Material 3, Texel, browser canvas, image extraction, or conversion engines. Optional capabilities live in
-adapter packages such as `@scheme-tokens/material3`.
+The root package gives you the core color-token path: strict graph contracts, validation, compilation, deterministic
+serialization, and CSS variable export. It does not load Material 3, Texel, browser canvas, image extraction, or
+conversion engines. Optional capabilities live in adapter packages such as `@scheme-tokens/material3`.

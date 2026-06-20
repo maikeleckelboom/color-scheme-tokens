@@ -54,8 +54,8 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import {
   compileTokenGraph,
-  defineAliases,
   defineTokenLayer,
+  defineTokenGraph,
   defineTokens,
   exportCssVars,
   parseCompiledScheme,
@@ -104,13 +104,23 @@ const refGraph = defineTokens({
   primary: tokenRef("brand.primary"),
 });
 expectOk(compileTokenGraph(refGraph, { selection: "all" }), "tokenRef compile");
-const aliasGraph = defineTokens({
-  "brand.primary": "#6750a4",
-  ...defineAliases({ primary: "brand.primary" }),
+const semanticGraph = defineTokenGraph({
+  defaultVisibility: "internal",
+  tokens: {
+    "brand.primary": "#6750a4",
+  },
+  semanticTokens: {
+    primary: tokenRef("brand.primary"),
+  },
 });
-expectOk(compileTokenGraph(aliasGraph, { selection: "all" }), "defineAliases compile");
-expectThrow(() => defineAliases({ "Bad Key": "brand.primary" }), "dot-separated lower-kebab token key");
-expectThrow(() => defineAliases({ primary: "Brand.Primary" }), "dot-separated lower-kebab token key");
+const semanticCompiled = expectOk(compileTokenGraph(semanticGraph), "semanticTokens compile");
+if (!("primary" in semanticCompiled.tokens) || "brand.primary" in semanticCompiled.tokens) {
+  throw new Error("semanticTokens did not compile as the public product lane");
+}
+const rootModule = await import("scheme-tokens");
+if ("defineAliases" in rootModule) {
+  throw new Error("defineAliases must not be exported");
+}
 for (const value of ["red", "brand.primary", "var(--x)"]) {
   expectThrow(() => defineTokens({ sample: value }), "Use tokenRef");
 }
@@ -260,7 +270,7 @@ function writeAdapterConsumer(): void {
     `
 import { readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { buildScheme, defineAliases, defineTokenLayer, exportCssVars } from "scheme-tokens";
+import { buildScheme, defineTokenLayer, exportCssVars, tokenRef } from "scheme-tokens";
 import { material3 } from "@scheme-tokens/material3";
 
 const require = createRequire(import.meta.url);
@@ -272,12 +282,12 @@ if (!("material3.primary" in materialOnly.tokens)) {
 const application = defineTokenLayer({
   id: "application",
   defaultVisibility: "public",
-  tokens: defineAliases({
-    background: "material3.surface",
-    foreground: "material3.on-surface",
-    primary: "material3.primary",
-    "primary-foreground": "material3.on-primary",
-  }),
+  semanticTokens: {
+    background: { value: tokenRef("material3.surface") },
+    foreground: { value: tokenRef("material3.on-surface") },
+    primary: { value: tokenRef("material3.primary") },
+    "primary-foreground": { value: tokenRef("material3.on-primary") },
+  },
 });
 const layered = expectOk(
   buildScheme(
@@ -292,7 +302,7 @@ const layered = expectOk(
 );
 for (const key of ["background", "foreground", "primary", "primary-foreground"]) {
   if (!(key in layered.tokens)) {
-    throw new Error("application alias token missing: " + key);
+    throw new Error("application semantic token missing: " + key);
   }
 }
 const css = expectOk(exportCssVars(layered), "material3 CSS export");

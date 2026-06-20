@@ -23,7 +23,6 @@ describe("package boundary", () => {
       "compileTokenGraph",
       "compiledColorSchemeKind",
       "createSchemeBuilder",
-      "defineAliases",
       "defineTokenGraph",
       "defineTokenLayer",
       "defineTokens",

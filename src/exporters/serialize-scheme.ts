@@ -34,6 +34,9 @@ function canonicalTokenGraph(graph: ColorTokenGraphInput): unknown {
   defineRecordValue(output, "defaultMode", graph.defaultMode);
   defineRecordValue(output, "defaultVisibility", graph.defaultVisibility);
   defineRecordValue(output, "tokens", canonicalDefinitions(graph.tokens));
+  if (graph.semanticTokens !== undefined) {
+    defineRecordValue(output, "semanticTokens", canonicalDefinitions(graph.semanticTokens));
+  }
   if (graph.layers !== undefined) {
     defineRecordValue(output, "layers", graph.layers.map(canonicalTokenLayer));
   }
@@ -50,6 +53,9 @@ function canonicalTokenLayer(layer: ColorTokenLayerInput): unknown {
   defineRecordValue(output, "id", layer.id);
   defineRecordValue(output, "defaultVisibility", layer.defaultVisibility);
   defineRecordValue(output, "tokens", canonicalDefinitions(layer.tokens));
+  if (layer.semanticTokens !== undefined) {
+    defineRecordValue(output, "semanticTokens", canonicalDefinitions(layer.semanticTokens));
+  }
   return output;
 }
 
@@ -148,6 +154,12 @@ function canonicalOrigin(origin: CompiledColorScheme["tokens"][string]["origin"]
   }
   if (origin.kind === "source" && origin.sourceToken !== undefined) {
     defineRecordValue(output, "sourceToken", origin.sourceToken);
+  }
+  if (origin.kind === "semanticToken") {
+    defineRecordValue(output, "origin", canonicalOrigin(origin.origin));
+    if (origin.target !== undefined) {
+      defineRecordValue(output, "target", origin.target);
+    }
   }
   return output;
 }

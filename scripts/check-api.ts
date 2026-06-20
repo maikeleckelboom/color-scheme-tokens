@@ -61,6 +61,7 @@ const removedPublicNames = [
   `Srgb${"Color"}`,
   `DisplayP3${"Color"}`,
   `Oklch${"Color"}`,
+  `define${"Aliases"}`,
 ] as const;
 
 if (JSON.stringify(packageJson).includes(removedRootPackageName)) {
@@ -90,7 +91,6 @@ const manifests: readonly ApiManifest[] = [
       "compileTokenGraph",
       "compiledColorSchemeKind",
       "createSchemeBuilder",
-      "defineAliases",
       "defineTokenGraph",
       "defineTokenLayer",
       "defineTokens",
@@ -134,6 +134,7 @@ const manifests: readonly ApiManifest[] = [
       "ColorTokenLayerAuthoringInput",
       "ColorTokenLayerInput",
       "ColorTokenLayerKind",
+      "BaseTokenOrigin",
       "CompiledColorSchemeKind",
       "ModeOf",
       "TokenKeyOf",

@@ -33,7 +33,7 @@ export { firstCode, firstPath };
 `"red"` is an unsupported color string in 0.1.0. Use supported concrete CSS color syntax such as hex, `rgb()`, `hsl()`,
 OKLCH, or `color(display-p3 ...)`.
 
-## Invalid Alias Target
+## Invalid Reference Target
 
 Strict persisted artifacts reject invalid reference targets with a `Result`.
 
@@ -53,8 +53,8 @@ const parsed = parseTokenGraph({
   },
 });
 
-const aliasIssue = parsed.ok ? undefined : parsed.issues[0];
-export { aliasIssue };
+const referenceIssue = parsed.ok ? undefined : parsed.issues[0];
+export { referenceIssue };
 ```
 
 Core token keys are dot-separated lower-kebab segments, so `Brand.Primary` is invalid.
@@ -64,12 +64,12 @@ Core token keys are dot-separated lower-kebab segments, so `Brand.Primary` is in
 Well-formed references still need an existing target.
 
 ```ts
-import { compileTokenGraph, defineAliases, defineTokens } from "scheme-tokens";
+import { compileTokenGraph, defineTokenGraph, tokenRef } from "scheme-tokens";
 
-const graph = defineTokens({
-  ...defineAliases({
-    primary: "brand.primary",
-  }),
+const graph = defineTokenGraph({
+  semanticTokens: {
+    primary: { value: tokenRef("brand.primary") },
+  },
 });
 
 const compiled = compileTokenGraph(graph);

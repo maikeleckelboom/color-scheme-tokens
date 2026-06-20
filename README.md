@@ -51,6 +51,8 @@ defaults to `selection: "public"`.
 
 Omit `prefix` to emit custom properties such as `--background`, `--foreground`, `--brand`, and
 `--brand-foreground`. Pass `prefix: "color"` when you want namespaced variables such as `--color-background`.
+`exports` is reserved for package subpaths and output/export behavior such as CSS naming, filtering, prefixing, target
+formats, or future export profiles. It is not a graph or layer lane for mapping one token key to another.
 
 ## Light and Dark Values
 
@@ -296,17 +298,17 @@ if (!built.ok) {
 Add an application layer when generated Material roles should feed project-owned tokens:
 
 ```ts
-import { buildScheme, defineAliases, defineTokenLayer, exportCssVars } from "scheme-tokens";
+import { buildScheme, defineTokenLayer, exportCssVars, tokenRef } from "scheme-tokens";
 import { material3 } from "@scheme-tokens/material3";
 
 const application = defineTokenLayer<"light" | "dark">({
   id: "application",
-  tokens: defineAliases({
-    background: "material3.surface",
-    foreground: "material3.on-surface",
-    primary: "material3.primary",
-    "primary-foreground": "material3.on-primary",
-  }),
+  semanticTokens: {
+    background: { value: tokenRef("material3.surface") },
+    foreground: { value: tokenRef("material3.on-surface") },
+    primary: { value: tokenRef("material3.primary") },
+    "primary-foreground": { value: tokenRef("material3.on-primary") },
+  },
 });
 
 const built = buildScheme(
@@ -335,25 +337,25 @@ const stylesheet = css.value.css;
 export { stylesheet };
 ```
 
-Generated-source tokens are often internal implementation detail. Public app tokens may reference them explicitly.
-Direct color values stay simple; aliases to another token require an explicit reference marker. `defineAliases()` is
-alias-map authoring sugar that returns strict token definitions with `{ value: { ref: "other.token" } }`.
+Generated-source tokens are often internal implementation detail. Public app tokens should be authored as
+`semanticTokens` that reference them explicitly. An alias is the mechanism. A semantic token is the product concept.
+Direct color values stay simple; references require `tokenRef("other.token")` or `{ ref: "other.token" }`.
 
 Prepare a reusable builder when the same app layers are built repeatedly with changing base input:
 
 ```ts
-import { createSchemeBuilder, defineAliases, defineTokenLayer, exportCssVars } from "scheme-tokens";
+import { createSchemeBuilder, defineTokenLayer, exportCssVars, tokenRef } from "scheme-tokens";
 import { material3 } from "@scheme-tokens/material3";
 
 const application = defineTokenLayer<"light" | "dark">({
   id: "application",
   defaultVisibility: "public",
-  tokens: defineAliases({
-    background: "material3.surface",
-    foreground: "material3.on-surface",
-    primary: "material3.primary",
-    "primary-foreground": "material3.on-primary",
-  }),
+  semanticTokens: {
+    background: { value: tokenRef("material3.surface") },
+    foreground: { value: tokenRef("material3.on-surface") },
+    primary: { value: tokenRef("material3.primary") },
+    "primary-foreground": { value: tokenRef("material3.on-primary") },
+  },
 });
 
 const builder = createSchemeBuilder({
@@ -467,7 +469,7 @@ const graph = defineTokens(
 `defineTokenGraph()` is the full graph-shaped helper for explicit graph authoring:
 
 ```ts
-import { defineAliases, defineTokenGraph, tokenRef } from "scheme-tokens";
+import { defineTokenGraph, tokenRef } from "scheme-tokens";
 
 const graph = defineTokenGraph({
   modes: ["light", "dark"],
@@ -482,13 +484,10 @@ const graph = defineTokenGraph({
       light: "#ffffff",
       dark: "#381e72",
     },
-    primary: {
-      visibility: "public",
-      value: tokenRef("brand.primary"),
-    },
-    ...defineAliases({
-      "primary-foreground": "brand.on-primary",
-    }),
+  },
+  semanticTokens: {
+    primary: { value: tokenRef("brand.primary") },
+    "primary-foreground": { value: tokenRef("brand.on-primary") },
   },
 });
 ```
@@ -498,14 +497,14 @@ The authoring helpers accept JSON-safe shorthand:
 - a color string such as `"#6750a4"`;
 - an explicit reference helper such as `tokenRef("brand.primary")`;
 - an explicit reference such as `{ ref: "brand.primary" }`;
-- alias-map sugar such as `...defineAliases({ primary: "brand.primary" })`;
+- graph or layer `semanticTokens` for public product and app role tokens;
 - metadata plus mode keys such as `{ visibility: "public", light: "#fff", dark: "#000" }`;
 - mode records such as `{ light: "#fff", dark: "#000" }` when modes are declared.
 
 Bare strings are always treated as color authoring input. If a string is not supported by the color parser, it reports an
 actionable helper error instead of becoming a reference based on spelling. CSS named colors such as `"red"` are not
-currently supported by core color parsing. Direct color values need no reference helper. Token aliases are explicit:
-use `tokenRef("brand.primary")`, `{ ref: "brand.primary" }`, or `defineAliases()` when an alias map is clearer.
+currently supported by core color parsing. Direct color values need no reference helper. References are explicit:
+use `tokenRef("brand.primary")` or `{ ref: "brand.primary" }` inside token definitions and semantic token definitions.
 
 The helpers fill safe defaults and return strict graph input.
 
@@ -549,8 +548,9 @@ if (!parsed.ok) {
 ```
 
 Strict graph input spells out `kind`, `formatVersion`, `modes`, `defaultMode`, `defaultVisibility`, and token
-definitions with `value` or `valueByMode`. Persisted colors are structured values with `colorSpace`, `components`,
-`alpha`, and optional `hex`. It does not accept helper-only shorthand.
+definitions with `value` or `valueByMode`. Public product roles may be persisted under `semanticTokens` with the same
+strict structured color and reference expressions. Persisted colors are structured values with `colorSpace`,
+`components`, `alpha`, and optional `hex`. It does not accept helper-only shorthand.
 
 The published JSON Schemas describe this strict graph shape, strict layer input, and serialized compiled schemes.
 They do not describe `defineTokenGraph()` or `defineTokenLayer()` helper input.

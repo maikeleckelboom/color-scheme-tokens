@@ -2,7 +2,8 @@ import { defineConfig } from "vitepress";
 
 export default defineConfig({
   title: "scheme-tokens",
-  description: "Define color tokens, compile schemes, and export deterministic CSS variables.",
+  description:
+    "Own color token names, compile selected schemes, and export deterministic CSS variables.",
   lang: "en-US",
   cleanUrls: true,
   lastUpdated: false,
@@ -32,7 +33,8 @@ export default defineConfig({
       "meta",
       {
         property: "og:description",
-        content: "Dependency-light color token graphs and deterministic CSS variable export.",
+        content:
+          "Stable color token contracts, selected scheme compilation, and deterministic CSS variable export.",
       },
     ],
   ],

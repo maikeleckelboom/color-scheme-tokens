@@ -17,18 +17,21 @@ const graph = defineTokens({
 export { graph };
 ```
 
-## Aliases
+## Semantic Tokens
 
-Aliases point one token at another token. They are explicit so color strings and references cannot be confused.
+Semantic tokens are product, app, role, and context tokens. They may hold direct color values or reference implementation
+tokens. An alias is the mechanism. A semantic token is the product concept.
 
 ```ts
-import { defineAliases, defineTokens } from "scheme-tokens";
+import { defineTokenGraph, tokenRef } from "scheme-tokens";
 
-const graph = defineTokens({
-  "brand.primary": "#6750a4",
-  ...defineAliases({
-    primary: "brand.primary",
-  }),
+const graph = defineTokenGraph({
+  tokens: {
+    "brand.primary": "#6750a4",
+  },
+  semanticTokens: {
+    primary: { value: tokenRef("brand.primary") },
+  },
 });
 
 export { graph };

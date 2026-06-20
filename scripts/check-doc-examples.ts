@@ -25,7 +25,10 @@ const adapterManifest = JSON.parse(
 ) as PackageManifest;
 const readme = readFileSync(join(repoRoot, "README.md"), "utf8");
 const adapterReadme = readFileSync(join(adapterRoot, "README.md"), "utf8");
-const docsSiteFiles = listFiles(join(repoRoot, "docs-site")).filter((file) => file.endsWith(".md"));
+const authoredDocsSiteFiles = listFiles(join(repoRoot, "docs-site")).filter(
+  (file) => !isGeneratedDocsSiteFile(file),
+);
+const docsSiteFiles = authoredDocsSiteFiles.filter((file) => file.endsWith(".md"));
 assertNoRemovedPublicNames();
 assertTailwindRecipe(readme);
 
@@ -193,7 +196,7 @@ function assertNoRemovedPublicNames(): void {
     join(repoRoot, "CHANGELOG.md"),
     join(repoRoot, "AGENTS.md"),
     ...listFiles(join(repoRoot, "docs")),
-    ...listFiles(join(repoRoot, "docs-site")),
+    ...authoredDocsSiteFiles,
   ];
 
   for (const file of publicFiles) {
@@ -249,4 +252,12 @@ function listFiles(directory: string): readonly string[] {
     const path = join(directory, entry);
     return statSync(path).isDirectory() ? listFiles(path) : [path];
   });
+}
+
+function isGeneratedDocsSiteFile(file: string): boolean {
+  const normalized = file.replaceAll("\\", "/");
+  return (
+    normalized.includes("/docs-site/.vitepress/cache/") ||
+    normalized.includes("/docs-site/.vitepress/dist/")
+  );
 }

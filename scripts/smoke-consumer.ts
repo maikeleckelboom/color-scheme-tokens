@@ -60,6 +60,20 @@ const prefixedCss = exportCssVars(compiled.value, { prefix: "color" });
 if (!prefixedCss.ok || !prefixedCss.value.css.includes("--color-background: #ffffff;")) {
   throw new Error("explicit CSS prefix export failed");
 }
+const semanticGraph = defineTokenGraph({
+  defaultVisibility: "internal",
+  tokens: {
+    "brand.primary": "#6750a4",
+  },
+  semanticTokens: {
+    primary: tokenRef("brand.primary"),
+  },
+});
+const semanticCompiled = compileTokenGraph(semanticGraph);
+if (!semanticCompiled.ok) throw new Error(JSON.stringify(semanticCompiled.issues));
+if (!("primary" in semanticCompiled.value.tokens) || "brand.primary" in semanticCompiled.value.tokens) {
+  throw new Error("semantic token public selection failed");
+}
 const declarations = css.value.blocks[0]?.declarations;
 if (declarations?.[0]?.property !== "--background" || declarations?.[0]?.value !== "#ffffff") {
   throw new Error("structured CSS export failed");
@@ -180,7 +194,8 @@ import {
 } from ${JSON.stringify(manifest.name)};
 
 const graph: ColorTokenGraphInput<"base"> = defineTokenGraph({
-  tokens: { "app.background": "#ffffff", "app.foreground": tokenRef("app.background") },
+  tokens: { "app.background": "#ffffff" },
+  semanticTokens: { "app.foreground": tokenRef("app.background") },
 });
 const ColorTokenGraph: ColorTokenGraphInput<"base"> = defineTokens({
   "app.background": "#ffffff",

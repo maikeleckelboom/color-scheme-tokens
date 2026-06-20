@@ -78,19 +78,22 @@ const graph = defineTokens({
 export { graph };
 ```
 
-## Aliases With `defineAliases()`
+## Semantic Tokens From Implementation Tokens
 
 ```ts
-import { compileTokenGraph, defineAliases, defineTokens } from "scheme-tokens";
+import { compileTokenGraph, defineTokenGraph, tokenRef } from "scheme-tokens";
 
-const graph = defineTokens({
-  "brand.primary": "#6750a4",
-  ...defineAliases({
-    primary: "brand.primary",
-  }),
+const graph = defineTokenGraph({
+  defaultVisibility: "internal",
+  tokens: {
+    "brand.primary": "#6750a4",
+  },
+  semanticTokens: {
+    primary: { value: tokenRef("brand.primary") },
+  },
 });
 
-const compiled = compileTokenGraph(graph, { selection: "all" });
+const compiled = compileTokenGraph(graph);
 if (!compiled.ok) {
   throw new Error(JSON.stringify(compiled.issues, null, 2));
 }
@@ -101,17 +104,17 @@ export { compiled };
 ## Material Roles Into App Tokens
 
 ```ts
-import { buildScheme, defineAliases, defineTokenLayer, exportCssVars } from "scheme-tokens";
+import { buildScheme, defineTokenLayer, exportCssVars, tokenRef } from "scheme-tokens";
 import { material3 } from "@scheme-tokens/material3";
 
 const application = defineTokenLayer<"light" | "dark">({
   id: "application",
-  tokens: defineAliases({
-    background: "material3.surface",
-    foreground: "material3.on-surface",
-    primary: "material3.primary",
-    "primary-foreground": "material3.on-primary",
-  }),
+  semanticTokens: {
+    background: { value: tokenRef("material3.surface") },
+    foreground: { value: tokenRef("material3.on-surface") },
+    primary: { value: tokenRef("material3.primary") },
+    "primary-foreground": { value: tokenRef("material3.on-primary") },
+  },
 });
 
 const built = buildScheme(material3("#6750a4", undefined, { defaultVisibility: "internal" }), {
@@ -325,15 +328,15 @@ export { css };
 ## Root Plus Material Adapter
 
 ```ts
-import { buildScheme, defineAliases, defineTokenLayer, exportCssVars } from "scheme-tokens";
+import { buildScheme, defineTokenLayer, exportCssVars, tokenRef } from "scheme-tokens";
 import { material3 } from "@scheme-tokens/material3";
 
 const appLayer = defineTokenLayer<"light" | "dark">({
   id: "application",
-  tokens: defineAliases({
-    background: "material3.surface",
-    foreground: "material3.on-surface",
-  }),
+  semanticTokens: {
+    background: { value: tokenRef("material3.surface") },
+    foreground: { value: tokenRef("material3.on-surface") },
+  },
 });
 
 const built = buildScheme(material3("#6750a4"), {
