@@ -28,7 +28,7 @@ browser canvas, CSS color engines, or other optional capability engines from the
 
 Supported engines belong behind explicit adapter package boundaries, for example:
 
-* `@scheme-tokens/source-material3`
+* `@scheme-tokens/material3`
 * `@scheme-tokens/conversion-texel`
 * future source or conversion adapters
 
@@ -121,7 +121,7 @@ Goal: implement one real adapter outside core after the adapter architecture is 
 
 Preferred first adapter:
 
-* `@scheme-tokens/source-material3`
+* `@scheme-tokens/material3`
 
 Requirements:
 
