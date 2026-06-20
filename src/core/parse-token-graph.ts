@@ -24,6 +24,8 @@ import { IssueCollector, type Result } from "./result";
 interface ParseContext {
   readonly sourceId?: string;
   readonly callerFragmentIds?: ReadonlySet<string>;
+  readonly tokenSourceIds?: ReadonlyMap<string, string>;
+  readonly fragmentSourceIds?: ReadonlyMap<string, string>;
 }
 
 interface ParsedToken {
@@ -129,7 +131,7 @@ export function parseTokenGraphInternal(
       path: pointer("tokens"),
       modes: validModes,
       defaultVisibility,
-      origin: directOrigin(context),
+      originForKey: (key) => directOrigin(context, key),
       collector,
       declarations,
       firstTokenPaths,
@@ -293,7 +295,7 @@ function parseTokenRecord(
     readonly path: string;
     readonly modes: readonly string[];
     readonly defaultVisibility: TokenVisibility;
-    readonly origin: TokenOrigin;
+    readonly originForKey: (key: string) => TokenOrigin;
     readonly collector: IssueCollector<TokenGraphIssue>;
     readonly declarations: TokenDeclaration[];
     readonly firstTokenPaths: Map<string, string>;
@@ -338,7 +340,7 @@ function parseTokenRecord(
       key: entry.key,
       modes: options.modes,
       defaultVisibility: options.defaultVisibility,
-      origin: options.origin,
+      origin: options.originForKey(entry.key),
       collector: options.collector,
     });
     if (token === undefined) {
@@ -438,7 +440,7 @@ function parseFragment(
     path: `${path}/tokens`,
     modes: options.modes,
     defaultVisibility,
-    origin: fragmentOrigin(fragmentId, options.context),
+    originForKey: () => fragmentOrigin(fragmentId, options.context),
     collector: options.collector,
     declarations: options.declarations,
     firstTokenPaths: options.firstTokenPaths,
@@ -841,13 +843,16 @@ function canonicalizeModes(
   ] as readonly [string, ...string[]];
 }
 
-function directOrigin(context: ParseContext): TokenOrigin {
-  return context.sourceId === undefined
-    ? { kind: "graph" }
-    : { kind: "source", id: context.sourceId };
+function directOrigin(context: ParseContext, tokenKey: string): TokenOrigin {
+  const sourceId = context.tokenSourceIds?.get(tokenKey) ?? context.sourceId;
+  return sourceId === undefined ? { kind: "graph" } : { kind: "source", id: sourceId };
 }
 
 function fragmentOrigin(fragmentId: string, context: ParseContext): TokenOrigin {
+  const sourceId = context.fragmentSourceIds?.get(fragmentId);
+  if (sourceId !== undefined) {
+    return { kind: "source", id: sourceId };
+  }
   if (context.sourceId !== undefined && !context.callerFragmentIds?.has(fragmentId)) {
     return { kind: "source", id: context.sourceId };
   }

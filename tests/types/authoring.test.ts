@@ -1,8 +1,12 @@
 import {
+  buildTokenSet,
   defineTokenFragment,
   defineTokenGraph,
   type ExportCssVariablesOptions,
+  type Issue,
+  type Result,
   type TokenGraphInput,
+  type TokenSource,
 } from "../../src";
 
 const simpleGraph = defineTokenGraph({
@@ -14,6 +18,24 @@ const simpleGraph = defineTokenGraph({
 
 const typedSimpleGraph = simpleGraph satisfies TokenGraphInput<"base">;
 typedSimpleGraph.defaultMode.toUpperCase();
+
+const source: TokenSource = {
+  id: "brand",
+  build(): Result<TokenGraphInput, Issue> {
+    return { ok: true, value: simpleGraph };
+  },
+};
+
+buildTokenSet({ sources: [source] });
+
+// @ts-expect-error source is not a buildTokenSet option.
+buildTokenSet({ source });
+
+// @ts-expect-error sources is required.
+buildTokenSet({});
+
+// @ts-expect-error sources must be a non-empty array.
+buildTokenSet({ sources: [] });
 
 const graph = defineTokenGraph({
   modes: ["light", "dark"],

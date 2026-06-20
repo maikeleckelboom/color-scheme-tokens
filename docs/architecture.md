@@ -56,8 +56,9 @@ data-attribute, class, and simple exact-selector workflows without making a CSS 
 
 ## Sources
 
-`buildTokenSet()` runs a `TokenSource`, composes caller fragments, validates the returned strict graph input, and compiles
-the selected token set. This is the core integration point for adapter packages.
+`buildTokenSet()` runs one or more `TokenSource` objects in array order, composes their graph material before caller
+fragments, validates the composed strict graph input, and compiles the selected token set. This is the core integration
+point for adapter packages.
 
 Adapter packages may depend on engines. Core exposes the interface but does not provide Material 3, Texel, conversion, or
 image-backed behavior. The first source adapter is `@color-scheme-tokens/source-material3`; it lives outside the root

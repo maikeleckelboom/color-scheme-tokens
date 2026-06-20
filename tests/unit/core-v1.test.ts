@@ -281,7 +281,7 @@ describe("v1 graph and compiler", () => {
 });
 
 describe("v1 sources", () => {
-  test("buildTokenSet calls a source once and composes caller fragments", () => {
+  test("buildTokenSet accepts one source through sources and composes caller fragments", () => {
     let calls = 0;
     interface CompanyIssue extends Issue<"missing-company-primary"> {}
     const source: TokenSource<CompanyIssue> = {
@@ -317,13 +317,104 @@ describe("v1 sources", () => {
       },
     });
 
-    const value = unwrap(buildTokenSet({ source, fragments: [app] }));
+    const value = unwrap(buildTokenSet({ sources: [source], fragments: [app] }));
     expect(calls).toBe(1);
     expect(Object.keys(value.tokenSet.tokens)).toEqual(["app.action"]);
     expect(value.graph.tokens["company.primary"]?.origin).toEqual({
       kind: "source",
       id: "company",
     });
+    expect(value.graph.tokens["app.action"]?.origin).toEqual({
+      kind: "fragment",
+      id: "application",
+    });
+  });
+
+  test("buildTokenSet composes multiple sources in array order", () => {
+    const palette: TokenSource = {
+      id: "palette",
+      build(): Result<TokenGraphInput, Issue> {
+        return {
+          ok: true,
+          value: defineTokenGraph({
+            defaultVisibility: "internal",
+            tokens: {
+              "palette.primary": "#1455d9",
+            },
+          }),
+        };
+      },
+    };
+    const semantic: TokenSource = {
+      id: "semantic",
+      build(): Result<TokenGraphInput, Issue> {
+        return {
+          ok: true,
+          value: defineTokenGraph({
+            tokens: {
+              "semantic.action": { ref: "palette.primary" },
+            },
+          }),
+        };
+      },
+    };
+
+    const value = unwrap(buildTokenSet({ sources: [palette, semantic] }));
+
+    expect(Object.keys(value.tokenSet.tokens)).toEqual(["semantic.action"]);
+    expect(value.graph.tokens["palette.primary"]?.origin).toEqual({
+      kind: "source",
+      id: "palette",
+    });
+    expect(value.graph.tokens["semantic.action"]?.origin).toEqual({
+      kind: "source",
+      id: "semantic",
+    });
+    expect(value.tokenSet.tokens["semantic.action"]?.dependenciesByMode.base).toEqual([
+      "palette.primary",
+    ]);
+  });
+
+  test("buildTokenSet composes caller fragments after all sources", () => {
+    const palette: TokenSource = {
+      id: "palette",
+      build(): Result<TokenGraphInput, Issue> {
+        return {
+          ok: true,
+          value: defineTokenGraph({
+            defaultVisibility: "internal",
+            tokens: {
+              "palette.primary": "#1455d9",
+            },
+          }),
+        };
+      },
+    };
+    const semantic: TokenSource = {
+      id: "semantic",
+      build(): Result<TokenGraphInput, Issue> {
+        return {
+          ok: true,
+          value: defineTokenGraph({
+            defaultVisibility: "internal",
+            tokens: {
+              "semantic.action": { ref: "palette.primary" },
+            },
+          }),
+        };
+      },
+    };
+    const app = defineTokenFragment({
+      id: "application",
+      defaultVisibility: "public",
+      tokens: {
+        "app.action": { ref: "semantic.action" },
+      },
+    });
+
+    const value = unwrap(buildTokenSet({ sources: [palette, semantic], fragments: [app] }));
+
+    expect(Object.keys(value.tokenSet.tokens)).toEqual(["app.action"]);
     expect(value.graph.tokens["app.action"]?.origin).toEqual({
       kind: "fragment",
       id: "application",
@@ -346,7 +437,7 @@ describe("v1 sources", () => {
       },
     };
 
-    const built = unwrap(buildTokenSet({ source }));
+    const built = unwrap(buildTokenSet({ sources: [source] }));
 
     expect(built.graph.tokens["brand.primary"]?.valueByMode.base).toEqual({
       colorSpace: "srgb",
@@ -354,6 +445,77 @@ describe("v1 sources", () => {
       g: 0.3333333333333333,
       b: 0.8509803921568627,
       alpha: 1,
+    });
+  });
+
+  test("buildTokenSet rejects missing, empty, and singular source options", () => {
+    expect(buildTokenSet({} as never)).toMatchObject({
+      ok: false,
+      issues: [{ code: "invalid-build-options", path: "/sources" }],
+    });
+    expect(buildTokenSet({ sources: [] } as never)).toMatchObject({
+      ok: false,
+      issues: [{ code: "invalid-build-options", path: "/sources" }],
+    });
+    expect(
+      buildTokenSet({
+        source: {
+          id: "brand",
+          build: () => ({ ok: true, value: defineTokenGraph({ tokens: {} }) }),
+        },
+      } as never),
+    ).toMatchObject({
+      ok: false,
+      issues: [{ code: "invalid-build-options", message: "Unknown build option: source." }],
+    });
+  });
+
+  test("buildTokenSet rejects duplicate source ids", () => {
+    const source = {
+      id: "brand",
+      build: () => ({ ok: true as const, value: defineTokenGraph({ tokens: {} }) }),
+    };
+
+    expect(buildTokenSet({ sources: [source, source] })).toMatchObject({
+      ok: false,
+      issues: [
+        {
+          code: "duplicate-source-id",
+          path: "/sources/1/id",
+          sourceId: "brand",
+          firstPath: "/sources/0/id",
+        },
+      ],
+    });
+  });
+
+  test("buildTokenSet rejects duplicate token keys across sources", () => {
+    const first = {
+      id: "first",
+      build: () =>
+        ({
+          ok: true,
+          value: defineTokenGraph({ tokens: { "brand.primary": "#1455d9" } }),
+        }) as const,
+    };
+    const second = {
+      id: "second",
+      build: () =>
+        ({
+          ok: true,
+          value: defineTokenGraph({ tokens: { "brand.primary": "#6750a4" } }),
+        }) as const,
+    };
+
+    expect(buildTokenSet({ sources: [first, second] })).toMatchObject({
+      ok: false,
+      issues: [
+        {
+          code: "duplicate-token-key",
+          path: "/sources/1/tokens/brand.primary",
+          firstPath: "/sources/0/tokens/brand.primary",
+        },
+      ],
     });
   });
 });

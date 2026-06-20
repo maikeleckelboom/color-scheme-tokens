@@ -54,7 +54,7 @@ needs a reproducible implementation at runtime.
 
 ## Source Adapter Shape
 
-A source adapter creates a `TokenSource` for `buildTokenSet()`. The minimum package root surface is:
+A source adapter creates a `TokenSource` for `buildTokenSet({ sources })`. The minimum package root surface is:
 
 - a factory named after the capability, for example `material3Source(input)`;
 - JSON-safe public input types, for example `Material3SourceInput`;

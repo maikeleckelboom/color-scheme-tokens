@@ -9,7 +9,7 @@ a real engine-backed capability is ready.
 
 ## Source Adapters
 
-Source adapters create `TokenSource` objects for `buildTokenSet()`.
+Source adapters create `TokenSource` objects for `buildTokenSet({ sources })`.
 
 ```ts
 interface TokenSource<I extends Issue = Issue> {

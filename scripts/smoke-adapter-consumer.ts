@@ -53,11 +53,11 @@ const application = defineTokenFragment({
 });
 
 const built = buildTokenSet({
-  source: material3Source({
+  sources: [material3Source({
     sourceColor: "#6750a4",
     defaultVisibility: "internal",
     extendedColors: [{ name: "success", color: "#2e7d32" }],
-  }),
+  })],
   fragments: [application],
 });
 
@@ -116,7 +116,7 @@ import {
 const extendedColor: Material3ExtendedColorInput = { name: "success", color: "#2e7d32" };
 const input: Material3SourceInput = { sourceColor: "#6750a4", extendedColors: [extendedColor] };
 const source: TokenSource<Material3SourceIssue> = material3Source(input);
-const built = buildTokenSet({ source });
+const built = buildTokenSet({ sources: [source] });
 if (built.ok) built.value.tokenSet.defaultMode.toUpperCase();
 `,
 );

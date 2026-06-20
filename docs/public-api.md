@@ -81,7 +81,8 @@ contains resolved color objects, not the original authored color strings.
 `TokenSource` is structural. Core accepts a safe source object with a valid string `id` and callable `build`, permits
 extra adapter metadata, and invokes `build()` with the original source object as `this`.
 
-`buildTokenSet()` is the adapter runner. It calls a source, composes caller fragments, validates the returned graph, and
-compiles the selected tokens. The root package does not implement Material 3, Texel, conversion, image, or CSS parser
-engines. Material 3 support lives in `@color-scheme-tokens/source-material3`, which imports core only through the generic
-source contract.
+`buildTokenSet()` is the adapter runner. It calls one or more `TokenSource` objects in array order, composes their graph
+material before caller fragments, validates the result, and compiles the selected tokens. The `sources` option is
+required and must be a non-empty array, even for a single source. The root package does not implement Material 3, Texel,
+conversion, image, or CSS parser engines. Material 3 support lives in `@color-scheme-tokens/source-material3`, which
+imports core only through the generic source contract.

@@ -134,7 +134,7 @@ const source = {
     return { ok: true as const, value: graph };
   },
 };
-buildTokenSet({ source });
+buildTokenSet({ sources: [source] });
 cssOptions.prefix?.toUpperCase();
 legacyCssOptions.prefix?.toUpperCase();
 color.colorSpace.toUpperCase();

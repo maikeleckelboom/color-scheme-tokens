@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+﻿import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import Ajv2020 from "ajv/dist/2020";
 import { describe, expect, test } from "vitest";
@@ -48,7 +48,7 @@ describe("material3Source", () => {
   });
 
   test("builds a public token set through core buildTokenSet", () => {
-    const built = unwrap(buildTokenSet({ source: material3Source({ sourceColor: "#6750a4" }) }));
+    const built = unwrap(buildTokenSet({ sources: [material3Source({ sourceColor: "#6750a4" })] }));
 
     expect(built.graph.tokens["material3.primary"]?.origin).toEqual({
       kind: "source",
@@ -126,11 +126,13 @@ describe("material3Source", () => {
     });
     const built = unwrap(
       buildTokenSet({
-        source: material3Source({
-          sourceColor: "#6750a4",
-          defaultVisibility: "internal",
-          extendedColors: [{ name: "success", color: "#2e7d32" }],
-        }),
+        sources: [
+          material3Source({
+            sourceColor: "#6750a4",
+            defaultVisibility: "internal",
+            extendedColors: [{ name: "success", color: "#2e7d32" }],
+          }),
+        ],
         fragments: [application],
       }),
     );
@@ -153,10 +155,12 @@ describe("material3Source", () => {
 
     const built = unwrap(
       buildTokenSet({
-        source: material3Source({
-          sourceColor: "#6750a4",
-          defaultVisibility: "internal",
-        }),
+        sources: [
+          material3Source({
+            sourceColor: "#6750a4",
+            defaultVisibility: "internal",
+          }),
+        ],
         fragments: [application],
       }),
     );

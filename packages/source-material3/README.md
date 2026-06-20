@@ -16,9 +16,11 @@ import { buildTokenSet } from "color-scheme-tokens";
 import { material3Source } from "@color-scheme-tokens/source-material3";
 
 const built = buildTokenSet({
-  source: material3Source({
-    sourceColor: "#6750a4",
-  }),
+  sources: [
+    material3Source({
+      sourceColor: "#6750a4",
+    }),
+  ],
 });
 
 if (!built.ok) {
@@ -51,10 +53,12 @@ import { buildTokenSet } from "color-scheme-tokens";
 import { material3Source } from "@color-scheme-tokens/source-material3";
 
 const built = buildTokenSet({
-  source: material3Source({
-    sourceColor: "#6750a4",
-    extendedColors: [{ name: "success", color: "#2e7d32" }],
-  }),
+  sources: [
+    material3Source({
+      sourceColor: "#6750a4",
+      extendedColors: [{ name: "success", color: "#2e7d32" }],
+    }),
+  ],
 });
 
 if (!built.ok) {
@@ -99,10 +103,12 @@ const application = defineTokenFragment<"light" | "dark">({
 });
 
 const built = buildTokenSet({
-  source: material3Source({
-    sourceColor: "#6750a4",
-    defaultVisibility: "internal",
-  }),
+  sources: [
+    material3Source({
+      sourceColor: "#6750a4",
+      defaultVisibility: "internal",
+    }),
+  ],
   fragments: [application],
 });
 

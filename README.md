@@ -119,10 +119,12 @@ const application = defineTokenFragment<"light" | "dark">({
 });
 
 const built = buildTokenSet({
-  source: material3Source({
-    sourceColor: "#6750a4",
-    defaultVisibility: "internal",
-  }),
+  sources: [
+    material3Source({
+      sourceColor: "#6750a4",
+      defaultVisibility: "internal",
+    }),
+  ],
   fragments: [application],
 });
 
@@ -136,8 +138,9 @@ if (!css.ok) {
 }
 ```
 
-`buildTokenSet()` is the runner that composes a source plus fragments, validates the returned graph, and produces a
-compiled `TokenSet`. The Material adapter supplies a real Material source; the root package stays engine-free.
+`buildTokenSet()` is the runner that composes one or more sources plus fragments, validates the returned graph material,
+and produces a compiled `TokenSet`. The Material adapter supplies a real Material source; the root package stays
+engine-free.
 
 `sourceColor` is the required Material source color used to generate the scheme. Material extended colors are exposed as
 `extendedColors`, with entries shaped as `{ name, color, harmonize? }`.
