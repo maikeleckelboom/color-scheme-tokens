@@ -1,0 +1,21 @@
+{
+  "$schema": "https://color-scheme-tokens.dev/schemas/token-graph.v1.schema.json",
+  "formatVersion": 1,
+  "modes": ["base"],
+  "defaultMode": "base",
+  "defaultVisibility": "public",
+  "tokens": {
+    "brand.primary": {
+      "description": "Primary brand color.",
+      "value": "#6750a4"
+    },
+    "surface.canvas": {
+      "value": {
+        "colorSpace": "srgb",
+        "r": 1,
+        "g": 1,
+        "b": 1
+      }
+    }
+  }
+}

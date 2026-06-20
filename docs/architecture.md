@@ -35,6 +35,9 @@ data.
 Compiled token sets are output artifacts. They contain resolved colors, selected tokens, origin metadata, and direct
 dependencies. Exporters consume compiled token sets only.
 
+The published JSON Schemas cover strict persisted graph input, strict fragment input, and serialized compiled token set
+output. They are not authoring-helper schemas and do not accept helper shorthand.
+
 ## Compilation
 
 Compilation validates first, then resolves selected tokens. The default selection is `public`; exact key selection and

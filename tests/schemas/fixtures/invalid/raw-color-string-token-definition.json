@@ -1,0 +1,9 @@
+{
+  "formatVersion": 1,
+  "modes": ["base"],
+  "defaultMode": "base",
+  "defaultVisibility": "public",
+  "tokens": {
+    "brand.primary": "#6750a4"
+  }
+}

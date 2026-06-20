@@ -63,10 +63,15 @@ definitions.
 Helper-only shorthand is intentionally not part of the strict wire format. Use `defineTokenGraph()` at authoring
 boundaries and `parseTokenGraph()` at persistence or untrusted-input boundaries.
 
+The schema subpaths validate strict persisted artifacts only: token graph input, token fragment input, and serialized
+compiled token set output. They intentionally reject helper-only shorthand such as raw token color strings, raw
+`{ ref }` token definitions, and mode records without `valueByMode`.
+
 ## Compiled Token Sets
 
 `compileTokenGraph()` returns a compiled token set with resolved colors, modes, token visibility, origin metadata, and
-direct dependency metadata. `serializeTokenSet()` serializes this compiled output in deterministic order.
+direct dependency metadata. `serializeTokenSet()` serializes this compiled output in deterministic order. Compiled JSON
+contains resolved color objects, not the original authored color strings.
 
 ## Adapter Sources
 

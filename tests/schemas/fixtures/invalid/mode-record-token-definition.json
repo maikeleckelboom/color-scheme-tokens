@@ -1,0 +1,12 @@
+{
+  "formatVersion": 1,
+  "modes": ["light", "dark"],
+  "defaultMode": "light",
+  "defaultVisibility": "public",
+  "tokens": {
+    "brand.primary": {
+      "light": "#6750a4",
+      "dark": "#d0bcff"
+    }
+  }
+}

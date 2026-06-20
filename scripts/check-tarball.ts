@@ -22,6 +22,11 @@ if (output === undefined) {
 }
 const tarball = join(packDirectory, basename(output));
 const files = execFileSync("tar", ["-tf", tarball], { encoding: "utf8" }).trim().split(/\r?\n/);
+const requiredSchemaFiles = new Set([
+  "package/schemas/compiled-token-set.v1.schema.json",
+  "package/schemas/token-fragment.v1.schema.json",
+  "package/schemas/token-graph.v1.schema.json",
+]);
 
 const denied = [
   /^package\/docs\//,
@@ -43,10 +48,15 @@ for (const file of files) {
       file === "package/CHANGELOG.md" ||
       file === "package/LICENSE" ||
       file.startsWith("package/dist/") ||
-      file.startsWith("package/schemas/")
+      requiredSchemaFiles.has(file)
     )
   ) {
     throw new Error(`File is not in the tarball allowlist: ${file}`);
+  }
+}
+for (const schemaFile of requiredSchemaFiles) {
+  if (!files.includes(schemaFile)) {
+    throw new Error(`Required schema is missing from tarball: ${schemaFile}`);
   }
 }
 

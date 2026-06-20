@@ -150,6 +150,9 @@ if (!parsed.ok) {
 Strict graph input spells out `formatVersion`, `modes`, `defaultMode`, `defaultVisibility`, and token definitions with
 `value` or `valueByMode`. It does not accept helper-only shorthand.
 
+The published JSON Schemas describe this strict graph shape, strict fragment input, and serialized compiled token sets.
+They do not describe `defineTokenGraph()` or `defineTokenFragment()` helper input.
+
 Compiled token sets are a third shape. They are produced by `compileTokenGraph()` or `buildTokenSet()` and contain
 resolved color values plus dependency and origin metadata for the selected tokens.
 

@@ -1,0 +1,10 @@
+{
+  "formatVersion": 1,
+  "modes": ["base"],
+  "defaultVisibility": "public",
+  "tokens": {
+    "brand.primary": {
+      "value": "#6750a4"
+    }
+  }
+}

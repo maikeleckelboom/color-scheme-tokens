@@ -76,6 +76,34 @@ for (const subpath of ["conversion", "sources/material3"]) {
 `,
 );
 writeFileSync(
+  join(consumerDirectory, "schema-subpaths.mjs"),
+  `
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+const expectedSchemas = new Map([
+  ["schemas/token-graph.v1.schema.json", "color-scheme-tokens token graph v1"],
+  ["schemas/token-fragment.v1.schema.json", "color-scheme-tokens token fragment v1"],
+  ["schemas/compiled-token-set.v1.schema.json", "color-scheme-tokens compiled token set v1"],
+]);
+
+for (const [subpath, title] of expectedSchemas) {
+  const packageSubpath = ${JSON.stringify(manifest.name)} + "/" + subpath;
+  const schema = require(packageSubpath);
+  if (schema?.$schema !== "https://json-schema.org/draft/2020-12/schema") {
+    throw new Error("schema artifact is missing the draft marker: " + subpath);
+  }
+  if (schema.title !== title) {
+    throw new Error("schema artifact title mismatch: " + subpath);
+  }
+  const resolved = require.resolve(packageSubpath).replaceAll("\\\\", "/");
+  if (!resolved.endsWith("/" + subpath)) {
+    throw new Error("schema subpath resolved outside expected artifact: " + resolved);
+  }
+}
+`,
+);
+writeFileSync(
   join(consumerDirectory, "types.ts"),
   `
 import {
@@ -110,7 +138,7 @@ if (compiled.ok) compiled.value.defaultMode.toUpperCase();
 );
 
 runPnpm(["install", "--ignore-scripts"], consumerDirectory);
-for (const script of ["root.mjs", "subpaths.mjs"]) {
+for (const script of ["root.mjs", "subpaths.mjs", "schema-subpaths.mjs"]) {
   run("node", [script], consumerDirectory);
 }
 run(

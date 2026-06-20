@@ -15,6 +15,7 @@
     "modes": {
       "type": "array",
       "minItems": 1,
+      "uniqueItems": true,
       "items": {
         "$ref": "#/$defs/segment"
       }
@@ -84,10 +85,7 @@
           "$ref": "#/$defs/expression"
         },
         "valueByMode": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/$defs/expression"
-          }
+          "$ref": "#/$defs/expressionByModeRecord"
         }
       },
       "oneOf": [
@@ -104,6 +102,16 @@
           }
         }
       ]
+    },
+    "expressionByModeRecord": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "$ref": "#/$defs/segment"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/expression"
+      }
     },
     "expression": {
       "anyOf": [

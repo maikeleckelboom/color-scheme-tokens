@@ -12,17 +12,17 @@
     "modes": {
       "type": "array",
       "minItems": 1,
+      "uniqueItems": true,
       "items": {
-        "type": "string",
-        "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+        "$ref": "token-graph.v1.schema.json#/$defs/segment"
       }
     },
     "defaultMode": {
-      "type": "string",
-      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+      "$ref": "token-graph.v1.schema.json#/$defs/segment"
     },
     "tokens": {
       "type": "object",
+      "minProperties": 1,
       "propertyNames": {
         "$ref": "token-graph.v1.schema.json#/$defs/tokenKey"
       },
@@ -36,8 +36,12 @@
           },
           "valueByMode": {
             "type": "object",
+            "minProperties": 1,
+            "propertyNames": {
+              "$ref": "token-graph.v1.schema.json#/$defs/segment"
+            },
             "additionalProperties": {
-              "$ref": "token-graph.v1.schema.json#/$defs/colorInput"
+              "$ref": "#/$defs/resolvedColor"
             }
           },
           "origin": {
@@ -61,7 +65,7 @@
                     "const": "fragment"
                   },
                   "id": {
-                    "type": "string"
+                    "$ref": "token-graph.v1.schema.json#/$defs/segment"
                   }
                 }
               },
@@ -74,7 +78,7 @@
                     "const": "source"
                   },
                   "id": {
-                    "type": "string"
+                    "$ref": "token-graph.v1.schema.json#/$defs/segment"
                   },
                   "sourceToken": {
                     "type": "string"
@@ -85,8 +89,13 @@
           },
           "dependenciesByMode": {
             "type": "object",
+            "minProperties": 1,
+            "propertyNames": {
+              "$ref": "token-graph.v1.schema.json#/$defs/segment"
+            },
             "additionalProperties": {
               "type": "array",
+              "uniqueItems": true,
               "items": {
                 "$ref": "token-graph.v1.schema.json#/$defs/tokenKey"
               }
@@ -109,6 +118,94 @@
           "extensions": {
             "$ref": "token-graph.v1.schema.json#/$defs/extensions"
           }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "resolvedColor": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/resolvedSrgbColor"
+        },
+        {
+          "$ref": "#/$defs/resolvedDisplayP3Color"
+        },
+        {
+          "$ref": "#/$defs/resolvedOklchColor"
+        }
+      ]
+    },
+    "resolvedSrgbColor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["colorSpace", "r", "g", "b", "alpha"],
+      "properties": {
+        "colorSpace": {
+          "const": "srgb"
+        },
+        "r": {
+          "type": "number"
+        },
+        "g": {
+          "type": "number"
+        },
+        "b": {
+          "type": "number"
+        },
+        "alpha": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "resolvedDisplayP3Color": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["colorSpace", "r", "g", "b", "alpha"],
+      "properties": {
+        "colorSpace": {
+          "const": "display-p3"
+        },
+        "r": {
+          "type": "number"
+        },
+        "g": {
+          "type": "number"
+        },
+        "b": {
+          "type": "number"
+        },
+        "alpha": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "resolvedOklchColor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["colorSpace", "l", "c", "h", "alpha"],
+      "properties": {
+        "colorSpace": {
+          "const": "oklch"
+        },
+        "l": {
+          "type": "number"
+        },
+        "c": {
+          "type": "number",
+          "minimum": 0
+        },
+        "h": {
+          "type": "number"
+        },
+        "alpha": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
         }
       }
     }

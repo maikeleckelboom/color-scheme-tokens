@@ -1,0 +1,14 @@
+{
+  "formatVersion": 1,
+  "modes": ["base"],
+  "defaultMode": "base",
+  "defaultVisibility": "public",
+  "tokens": {
+    "brand.primary": {
+      "value": "#6750a4"
+    },
+    "button.background": {
+      "ref": "brand.primary"
+    }
+  }
+}
