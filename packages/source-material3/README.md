@@ -12,10 +12,10 @@ pnpm add color-scheme-tokens @color-scheme-tokens/source-material3
 ## Usage
 
 ```ts
-import { buildTokenSet, defineTokenFragment, exportCssVariableBlocks } from "color-scheme-tokens";
+import { buildTokenSet, defineTokenLayer, exportCssVariableBlocks } from "color-scheme-tokens";
 import { material3Source } from "@color-scheme-tokens/source-material3";
 
-const application = defineTokenFragment<"light" | "dark">({
+const application = defineTokenLayer<"light" | "dark">({
   id: "application",
   defaultVisibility: "public",
   tokens: {
@@ -33,7 +33,7 @@ const built = buildTokenSet({
       defaultVisibility: "internal",
     }),
   ],
-  fragments: [application],
+  layers: [application],
 });
 
 if (!built.ok) {
@@ -107,10 +107,10 @@ Advanced key-color-driven scheme input remains future scope; this adapter does n
 Use `exportCssVariables()` when you want a stylesheet string instead of structured blocks.
 
 ```ts
-import { buildTokenSet, defineTokenFragment, exportCssVariables } from "color-scheme-tokens";
+import { buildTokenSet, defineTokenLayer, exportCssVariables } from "color-scheme-tokens";
 import { material3Source } from "@color-scheme-tokens/source-material3";
 
-const application = defineTokenFragment<"light" | "dark">({
+const application = defineTokenLayer<"light" | "dark">({
   id: "application",
   defaultVisibility: "public",
   tokens: {
@@ -128,7 +128,7 @@ const built = buildTokenSet({
       defaultVisibility: "internal",
     }),
   ],
-  fragments: [application],
+  layers: [application],
 });
 
 if (!built.ok) {
@@ -142,7 +142,8 @@ if (!css.ok) {
 ```
 
 Use `defaultVisibility: "internal"` when the Material roles should feed public application tokens without being exported
-as public tokens themselves.
+as public tokens themselves. Sources compose before layers, and later application layers can override Material source
+tokens or earlier layers by token key. This is token overlay behavior, not CSS cascade specificity or CSS `@layer`.
 
 Material 3 support lives in this adapter package. The root package does not import, export, document as required, or
 depend on the Material engine for manual token graphs.

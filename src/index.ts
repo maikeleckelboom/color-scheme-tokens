@@ -1,4 +1,4 @@
-export { defineTokenFragment, defineTokenGraph } from "./core/graph";
+export { defineTokenGraph, defineTokenLayer } from "./core/graph";
 export { parseTokenGraph } from "./core/parse-token-graph";
 export { parseColor } from "./core/color";
 export { compileTokenGraph } from "./core/compile-token-graph";
@@ -27,13 +27,13 @@ export type {
   ReferenceInput,
   TokenDefinitionAuthoringInput,
   TokenDefinitionInput,
-  TokenFragmentAuthoringInput,
-  TokenFragmentInput,
   TokenGraph,
   TokenGraphAuthoringInput,
   TokenGraphInput,
   TokenGraphIssue,
   TokenGraphToken,
+  TokenLayerAuthoringInput,
+  TokenLayerInput,
   TokenOrigin,
   TokenVisibility,
 } from "./core/graph";

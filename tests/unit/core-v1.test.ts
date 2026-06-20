@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   buildTokenSet,
   compileTokenGraph,
-  defineTokenFragment,
+  defineTokenLayer,
   defineTokenGraph,
   exportCssVariableBlocks,
   exportCssVariables,
@@ -142,27 +142,33 @@ describe("v1 graph and compiler", () => {
     expect(compiled.tokens["app.foreground"]?.dependenciesByMode.base).toEqual(["app.background"]);
   });
 
-  test("defines fragments with token-key string reference shorthand", () => {
-    const fragment = defineTokenFragment<"light" | "dark">({
+  test("defines layers with reference and metadata mode-key shorthands", () => {
+    const layer = defineTokenLayer<"light" | "dark">({
       id: "application",
       tokens: {
-        "app.background": "material3.surface",
+        "app.background": {
+          visibility: "public",
+          light: "#ffffff",
+          dark: "#141218",
+        },
         "app.foreground": {
-          valueByMode: {
-            light: "material3.on-surface",
-            dark: "#ffffff",
-          },
+          visibility: "public",
+          value: "material3.on-surface",
         },
       },
     });
 
-    expect(fragment.tokens).toEqual({
-      "app.background": { value: { ref: "material3.surface" } },
-      "app.foreground": {
+    expect(layer.tokens).toEqual({
+      "app.background": {
+        visibility: "public",
         valueByMode: {
-          light: { ref: "material3.on-surface" },
-          dark: "#ffffff",
+          light: "#ffffff",
+          dark: "#141218",
         },
+      },
+      "app.foreground": {
+        visibility: "public",
+        value: { ref: "material3.on-surface" },
       },
     });
   });
@@ -184,6 +190,32 @@ describe("v1 graph and compiler", () => {
     });
   });
 
+  test("strict parser rejects helper-only metadata mode-key shorthand", () => {
+    const parsed = parseTokenGraph({
+      formatVersion: 1,
+      modes: ["light", "dark"],
+      defaultMode: "light",
+      defaultVisibility: "public",
+      tokens: {
+        "app.background": {
+          visibility: "public",
+          light: "#ffffff",
+          dark: "#141218",
+        },
+      },
+    });
+    expect(parsed.ok).toBe(false);
+    if (parsed.ok) {
+      throw new Error("Expected helper-only shorthand to be rejected.");
+    }
+    expect(parsed.issues).toContainEqual(
+      expect.objectContaining({
+        code: "unknown-property",
+        path: "/tokens/app.background/dark",
+      }),
+    );
+  });
+
   test("rejects authoring-helper mode names that collide with token definition keys", () => {
     expect(() =>
       defineTokenGraph({
@@ -197,6 +229,14 @@ describe("v1 graph and compiler", () => {
         },
       }),
     ).toThrow("defineTokenGraph mode names cannot use token-definition keys: value.");
+
+    expect(() =>
+      defineTokenLayer({
+        id: "bad",
+        modes: ["value", "dark"],
+        tokens: {},
+      }),
+    ).toThrow("defineTokenLayer mode names cannot use token-definition keys: value.");
   });
 
   test("parses to an owned canonical graph", () => {
@@ -436,21 +476,8 @@ describe("v1 graph and compiler", () => {
     expect(compiled.tokens["brand.alias"]?.dependenciesByMode.base).toEqual(["brand.primary"]);
   });
 
-  test("reports duplicate fragments, exact-selection issues, and cycles", () => {
+  test("reports exact-selection issues and cycles", () => {
     const graph = makeGraph();
-    const fragment = defineTokenFragment({
-      formatVersion: 1,
-      id: "brand",
-      defaultVisibility: "public",
-      tokens: {
-        "app.action": { value: "#000" },
-      },
-    });
-    expect(compileTokenGraph({ ...graph, fragments: [fragment] })).toMatchObject({
-      ok: false,
-      issues: [{ code: "duplicate-token-key" }],
-    });
-
     expect(compileTokenGraph(graph, { selection: { keys: [] } })).toMatchObject({
       ok: false,
       issues: [{ code: "empty-selection" }],
@@ -474,6 +501,181 @@ describe("v1 graph and compiler", () => {
           code: "reference-cycle",
           cycle: ["a.one", "a.two"],
           path: "/tokens/a.one/value",
+        },
+      ],
+    });
+  });
+
+  test("strict layers are ordered overlays and later layers win", () => {
+    const parsed = unwrap(
+      parseTokenGraph({
+        formatVersion: 1,
+        modes: ["base"],
+        defaultMode: "base",
+        defaultVisibility: "public",
+        tokens: {
+          primary: { value: "#6750a4" },
+        },
+        layers: [
+          {
+            formatVersion: 1,
+            id: "base",
+            defaultVisibility: "public",
+            tokens: {
+              primary: { value: "#1455d9" },
+            },
+          },
+          {
+            formatVersion: 1,
+            id: "brand",
+            defaultVisibility: "public",
+            tokens: {
+              primary: { value: "#ff3b30" },
+            },
+          },
+        ],
+      }),
+    );
+
+    expect(parsed.tokens.primary?.origin).toEqual({ kind: "layer", id: "brand" });
+    expect(parsed.tokens.primary?.valueByMode.base).toEqual({
+      colorSpace: "srgb",
+      r: 1,
+      g: 0.23137254901960785,
+      b: 0.18823529411764706,
+      alpha: 1,
+    });
+  });
+
+  test("references resolve against final layer winners", () => {
+    const compiled = unwrap(
+      compileTokenGraph({
+        formatVersion: 1,
+        modes: ["base"],
+        defaultMode: "base",
+        defaultVisibility: "public",
+        tokens: {
+          primary: { value: "#6750a4" },
+          background: { value: { ref: "primary" } },
+        },
+        layers: [
+          {
+            formatVersion: 1,
+            id: "brand",
+            defaultVisibility: "public",
+            tokens: {
+              primary: { value: "#ff3b30" },
+            },
+          },
+        ],
+      }),
+    );
+
+    expect(compiled.tokens.background?.valueByMode.base).toEqual({
+      colorSpace: "srgb",
+      r: 1,
+      g: 0.23137254901960785,
+      b: 0.18823529411764706,
+      alpha: 1,
+    });
+    expect(compiled.tokens.background?.dependenciesByMode.base).toEqual(["primary"]);
+  });
+
+  test("reports layer id diagnostics with layer JSON Pointer paths", () => {
+    expect(
+      parseTokenGraph({
+        formatVersion: 1,
+        modes: ["base"],
+        defaultMode: "base",
+        defaultVisibility: "public",
+        tokens: {},
+        layers: [
+          {
+            formatVersion: 1,
+            id: "Application",
+            defaultVisibility: "public",
+            tokens: {},
+          },
+          {
+            formatVersion: 1,
+            id: "brand",
+            defaultVisibility: "public",
+            tokens: {},
+          },
+          {
+            formatVersion: 1,
+            id: "brand",
+            defaultVisibility: "public",
+            tokens: {},
+          },
+        ],
+      }),
+    ).toMatchObject({
+      ok: false,
+      issues: [
+        { code: "invalid-layer-id", path: "/layers/0/id", layerId: "Application" },
+        {
+          code: "duplicate-layer-id",
+          path: "/layers/2/id",
+          layerId: "brand",
+          firstPath: "/layers/1/id",
+        },
+      ],
+    });
+  });
+
+  test("missing refs and circular refs are detected after layering", () => {
+    expect(
+      parseTokenGraph({
+        formatVersion: 1,
+        modes: ["base"],
+        defaultMode: "base",
+        defaultVisibility: "public",
+        tokens: {},
+        layers: [
+          {
+            formatVersion: 1,
+            id: "application",
+            defaultVisibility: "public",
+            tokens: {
+              primary: { value: { ref: "missing.primary" } },
+            },
+          },
+        ],
+      }),
+    ).toMatchObject({
+      ok: false,
+      issues: [{ code: "unknown-reference", path: "/layers/0/tokens/primary/value" }],
+    });
+
+    expect(
+      parseTokenGraph({
+        formatVersion: 1,
+        modes: ["base"],
+        defaultMode: "base",
+        defaultVisibility: "public",
+        tokens: {
+          "a.one": { value: "#ffffff" },
+          "a.two": { value: { ref: "a.one" } },
+        },
+        layers: [
+          {
+            formatVersion: 1,
+            id: "cycle",
+            defaultVisibility: "public",
+            tokens: {
+              "a.one": { value: { ref: "a.two" } },
+            },
+          },
+        ],
+      }),
+    ).toMatchObject({
+      ok: false,
+      issues: [
+        {
+          code: "reference-cycle",
+          cycle: ["a.one", "a.two"],
+          path: "/layers/0/tokens/a.one/value",
         },
       ],
     });
@@ -508,7 +710,52 @@ describe("v1 graph and compiler", () => {
 });
 
 describe("v1 sources", () => {
-  test("buildTokenSet accepts one source through sources and composes caller fragments", () => {
+  test("buildTokenSet accepts layer-only token overlays without sources", () => {
+    const base = defineTokenLayer({
+      id: "base",
+      tokens: {
+        background: "#ffffff",
+        foreground: "#111111",
+        primary: "#6750a4",
+      },
+    });
+    const brand = defineTokenLayer({
+      id: "brand",
+      tokens: {
+        primary: "#ff3b30",
+      },
+    });
+
+    const value = unwrap(buildTokenSet({ layers: [base, brand] }));
+
+    expect(Object.keys(value.compiled.tokens)).toEqual(["background", "foreground", "primary"]);
+    expect(value.graph.tokens.primary?.origin).toEqual({ kind: "layer", id: "brand" });
+    expect(value.compiled.tokens.primary?.valueByMode.base).toEqual({
+      colorSpace: "srgb",
+      r: 1,
+      g: 0.23137254901960785,
+      b: 0.18823529411764706,
+      alpha: 1,
+    });
+  });
+
+  test("buildTokenSet accepts source-only usage without layers", () => {
+    const source = fixedSource(
+      "brand",
+      defineTokenGraph({
+        tokens: {
+          primary: "#6750a4",
+        },
+      }),
+    );
+
+    const value = unwrap(buildTokenSet({ sources: [source] }));
+
+    expect(Object.keys(value.compiled.tokens)).toEqual(["primary"]);
+    expect(value.graph.tokens.primary?.origin).toEqual({ kind: "source", id: "brand" });
+  });
+
+  test("buildTokenSet accepts one source through sources and composes caller layers", () => {
     let calls = 0;
     interface CompanyIssue extends Issue<"missing-company-primary"> {}
     const source: TokenSource<CompanyIssue> = {
@@ -535,7 +782,7 @@ describe("v1 sources", () => {
       },
     };
 
-    const app = defineTokenFragment({
+    const app = defineTokenLayer({
       formatVersion: 1,
       id: "application",
       defaultVisibility: "public",
@@ -544,7 +791,7 @@ describe("v1 sources", () => {
       },
     });
 
-    const value = unwrap(buildTokenSet({ sources: [source], fragments: [app] }));
+    const value = unwrap(buildTokenSet({ sources: [source], layers: [app] }));
     expect(calls).toBe(1);
     expect(Object.keys(value.compiled.tokens)).toEqual(["app.action"]);
     expect(value.graph.tokens["company.primary"]?.origin).toEqual({
@@ -552,8 +799,37 @@ describe("v1 sources", () => {
       id: "company",
     });
     expect(value.graph.tokens["app.action"]?.origin).toEqual({
-      kind: "fragment",
+      kind: "layer",
       id: "application",
+    });
+  });
+
+  test("buildTokenSet lets layers override source tokens", () => {
+    const source = fixedSource(
+      "material",
+      defineTokenGraph({
+        tokens: {
+          primary: "#6750a4",
+          background: "primary",
+        },
+      }),
+    );
+    const layer = defineTokenLayer({
+      id: "brand",
+      tokens: {
+        primary: "#ff3b30",
+      },
+    });
+
+    const value = unwrap(buildTokenSet({ sources: [source], layers: [layer] }));
+
+    expect(value.graph.tokens.primary?.origin).toEqual({ kind: "layer", id: "brand" });
+    expect(value.compiled.tokens.background?.valueByMode.base).toEqual({
+      colorSpace: "srgb",
+      r: 1,
+      g: 0.23137254901960785,
+      b: 0.18823529411764706,
+      alpha: 1,
     });
   });
 
@@ -624,7 +900,7 @@ describe("v1 sources", () => {
     );
     const invalidTokens = strictSourceGraph("bad.tokens", { tokens: [] });
     const missingTokens = withoutProperty(strictSourceGraph("bad.missing-tokens"), "tokens");
-    const invalidFragments = strictSourceGraph("bad.fragments", { fragments: {} });
+    const invalidLayers = strictSourceGraph("bad.layers", { layers: {} });
 
     const scenarios = [
       {
@@ -672,8 +948,8 @@ describe("v1 sources", () => {
         issue: { code: "unknown-property", path: "/sources/1/unexpected" },
       },
       {
-        graph: invalidFragments,
-        issue: { code: "invalid-object", path: "/sources/1/fragments" },
+        graph: invalidLayers,
+        issue: { code: "invalid-object", path: "/sources/1/layers" },
       },
     ] as const;
 
@@ -817,7 +1093,7 @@ describe("v1 sources", () => {
     expect(Object.keys(value.compiled.tokens)).toEqual(["semantic.action"]);
   });
 
-  test("buildTokenSet composes caller fragments after all sources", () => {
+  test("buildTokenSet composes caller layers after all sources", () => {
     const palette: TokenSource = {
       id: "palette",
       build(): Result<TokenGraphInput, Issue> {
@@ -846,7 +1122,7 @@ describe("v1 sources", () => {
         };
       },
     };
-    const app = defineTokenFragment({
+    const app = defineTokenLayer({
       id: "application",
       defaultVisibility: "public",
       tokens: {
@@ -854,11 +1130,11 @@ describe("v1 sources", () => {
       },
     });
 
-    const value = unwrap(buildTokenSet({ sources: [palette, semantic], fragments: [app] }));
+    const value = unwrap(buildTokenSet({ sources: [palette, semantic], layers: [app] }));
 
     expect(Object.keys(value.compiled.tokens)).toEqual(["app.action"]);
     expect(value.graph.tokens["app.action"]?.origin).toEqual({
-      kind: "fragment",
+      kind: "layer",
       id: "application",
     });
   });
@@ -890,14 +1166,33 @@ describe("v1 sources", () => {
     });
   });
 
-  test("buildTokenSet rejects missing, empty, and singular source options", () => {
+  test("buildTokenSet rejects missing, empty, and singular contributor options", () => {
     expect(buildTokenSet({} as never)).toMatchObject({
       ok: false,
-      issues: [{ code: "invalid-build-options", path: "/sources" }],
+      issues: [
+        {
+          code: "invalid-build-options",
+          message: "buildTokenSet requires at least one source or layer.",
+        },
+      ],
     });
     expect(buildTokenSet({ sources: [] } as never)).toMatchObject({
       ok: false,
-      issues: [{ code: "invalid-build-options", path: "/sources" }],
+      issues: [
+        {
+          code: "invalid-build-options",
+          message: "buildTokenSet requires at least one source or layer.",
+        },
+      ],
+    });
+    expect(buildTokenSet({ sources: [], layers: [] } as never)).toMatchObject({
+      ok: false,
+      issues: [
+        {
+          code: "invalid-build-options",
+          message: "buildTokenSet requires at least one source or layer.",
+        },
+      ],
     });
     expect(
       buildTokenSet({
@@ -909,6 +1204,16 @@ describe("v1 sources", () => {
     ).toMatchObject({
       ok: false,
       issues: [{ code: "invalid-build-options", message: "Unknown build option: source." }],
+    });
+    const oldContributorOption = `frag${"ments"}`;
+    expect(buildTokenSet({ [oldContributorOption]: [] } as never)).toMatchObject({
+      ok: false,
+      issues: [
+        {
+          code: "invalid-build-options",
+          message: `Unknown build option: ${oldContributorOption}.`,
+        },
+      ],
     });
   });
 

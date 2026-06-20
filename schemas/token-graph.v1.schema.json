@@ -29,10 +29,10 @@
     "tokens": {
       "$ref": "#/$defs/tokenRecord"
     },
-    "fragments": {
+    "layers": {
       "type": "array",
       "items": {
-        "$ref": "token-fragment.v1.schema.json"
+        "$ref": "token-layer.v1.schema.json"
       }
     }
   },

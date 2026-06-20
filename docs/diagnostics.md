@@ -17,6 +17,8 @@ changing the machine contract.
 - Parse boundaries and option validators that accept `unknown` do not throw for malformed unknown input.
 - Diagnostics are deterministic across object insertion order.
 - Paths point at the narrowest stable input location the parser can identify.
+- Layer diagnostics use layer vocabulary and `/layers/...` JSON Pointer paths, including `invalid-layer-id` and
+  `duplicate-layer-id`.
 - Unknown-value descriptions are bounded and avoid user-code coercion.
 - Internal thrown errors are reserved for impossible library states, not normal input failure.
 - Adapter-specific issue codes are owned by adapter packages. `buildTokenSet()` may surface adapter issues, but adapters

@@ -18,8 +18,8 @@ describe("package boundary", () => {
     expect(Object.keys(root).sort()).toEqual([
       "buildTokenSet",
       "compileTokenGraph",
-      "defineTokenFragment",
       "defineTokenGraph",
+      "defineTokenLayer",
       "exportCssVariableBlocks",
       "exportCssVariables",
       "formatCssColor",
@@ -27,6 +27,7 @@ describe("package boundary", () => {
       "parseTokenGraph",
       "serializeTokenSet",
     ]);
+    expect(root).not.toHaveProperty(`defineToken${"Frag"}${"ment"}`);
   });
 
   test("package exports expose only root, schemas, and package metadata", () => {
@@ -35,8 +36,8 @@ describe("package boundary", () => {
       ".",
       "./package.json",
       "./schemas/compiled-token-set.v1.schema.json",
-      "./schemas/token-fragment.v1.schema.json",
       "./schemas/token-graph.v1.schema.json",
+      "./schemas/token-layer.v1.schema.json",
     ]);
   });
 

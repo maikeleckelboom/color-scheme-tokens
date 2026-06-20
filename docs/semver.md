@@ -8,7 +8,7 @@ These are versioned contracts:
 
 - root runtime exports;
 - package subpath exports;
-- graph, fragment, and compiled JSON formats;
+- graph, layer, and compiled JSON formats;
 - public TypeScript types;
 - `Issue.code` values;
 - JSON Pointer path semantics;

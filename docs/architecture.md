@@ -29,14 +29,14 @@ helper input or strict graph input
   -> serialize compiled JSON or export CSS
 ```
 
-`defineTokenGraph()` and `defineTokenFragment()` are authoring helpers for ordinary package use. They may fill safe
+`defineTokenGraph()` and `defineTokenLayer()` are authoring helpers for ordinary package use. They may fill safe
 defaults and normalize JSON-safe shorthand. `parseTokenGraph()` remains the strict boundary for persisted wire-format
 data.
 
 Compiled token sets are output artifacts. They contain resolved colors, selected tokens, origin metadata, and direct
 dependencies. Exporters consume compiled token sets only.
 
-The published JSON Schemas cover strict persisted graph input, strict fragment input, and serialized compiled token set
+The published JSON Schemas cover strict persisted graph input, strict layer input, and serialized compiled token set
 output. They are not authoring-helper schemas and do not accept helper shorthand.
 
 ## Compilation
@@ -59,9 +59,16 @@ core dependency graph.
 
 ## Sources
 
-`buildTokenSet()` runs one or more `TokenSource` objects in array order, composes their graph material before caller
-fragments, validates the composed strict graph input, and compiles the selected token set. This is the core integration
-point for adapter packages.
+`buildTokenSet()` composes source and layer graph contributors before compilation. Sources are generated or external
+graph-material providers. Layers are ordered named authored token overlays.
+
+Sources compose first in array order. Duplicate token keys across sources are invalid. Layers compose after sources in
+array order. Later layers override earlier layers by token key, and layers may override source tokens. References,
+missing-reference validation, and circular-reference validation run after the final source/layer graph has been composed.
+Winning token origin metadata points at the winning source or layer.
+
+Layer composition is intentionally simpler than CSS cascade behavior. It has no selector specificity, no `!important`, no
+implicit CSS `@layer` behavior, no DOM behavior, and no runtime style injection helpers.
 
 Adapter packages may depend on engines. Core exposes the interface but does not provide Material 3, Texel, conversion, or
 image-backed behavior. The first source adapter is `@color-scheme-tokens/source-material3`; it lives outside the root

@@ -36,7 +36,7 @@
       "import": "./dist/index.js"
     },
     "./schemas/token-graph.v1.schema.json": "./schemas/token-graph.v1.schema.json",
-    "./schemas/token-fragment.v1.schema.json": "./schemas/token-fragment.v1.schema.json",
+    "./schemas/token-layer.v1.schema.json": "./schemas/token-layer.v1.schema.json",
     "./schemas/compiled-token-set.v1.schema.json": "./schemas/compiled-token-set.v1.schema.json",
     "./package.json": "./package.json"
   },

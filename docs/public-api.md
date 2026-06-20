@@ -5,7 +5,7 @@ The root API is intentionally small and explicit.
 ## Runtime Exports
 
 - `defineTokenGraph`
-- `defineTokenFragment`
+- `defineTokenLayer`
 - `parseTokenGraph`
 - `parseColor`
 - `compileTokenGraph`
@@ -21,7 +21,7 @@ The package exports only:
 
 - `.`
 - `./schemas/token-graph.v1.schema.json`
-- `./schemas/token-fragment.v1.schema.json`
+- `./schemas/token-layer.v1.schema.json`
 - `./schemas/compiled-token-set.v1.schema.json`
 - `./package.json`
 
@@ -54,7 +54,7 @@ does not hard-code framework presets or browser mutation behavior.
 
 ## Authoring Helpers
 
-`defineTokenGraph()` and `defineTokenFragment()` are ergonomic authoring helpers. They default `formatVersion` to `1` and
+`defineTokenGraph()` and `defineTokenLayer()` are ergonomic authoring helpers. They default `formatVersion` to `1` and
 `defaultVisibility` to `public`. `defineTokenGraph()` also defaults to one `base` mode when `modes` is omitted.
 
 `base` is the single ordinary mode for simple graphs. It is not a generated scheme, Material role set, or hidden
@@ -64,8 +64,10 @@ Token shorthands are normalized by the helpers:
 
 - `"token.key": "#ffffff"` becomes `{ value: "#ffffff" }`;
 - `"token.key": "other.token"` becomes `{ value: { ref: "other.token" } }`;
+- `"token.key": { visibility: "public", value: "other.token" }` becomes a public reference token;
 - `"token.key": { ref: "other.token" }` becomes `{ value: { ref: "other.token" } }`;
-- mode records such as `{ light: "#fff", dark: "#000" }` become `valueByMode` when modes are declared.
+- metadata plus mode records such as `{ visibility: "public", light: "#fff", dark: "#000" }` become strict
+  per-mode values when modes are declared.
 
 Supported color literals remain color values. Token-key-shaped non-color strings become references. This shorthand is
 helper-only and is not accepted by `parseTokenGraph()`.
@@ -82,7 +84,7 @@ definitions.
 Helper-only shorthand is intentionally not part of the strict wire format. Use `defineTokenGraph()` at authoring
 boundaries and `parseTokenGraph()` at persistence or untrusted-input boundaries.
 
-The schema subpaths validate strict persisted artifacts only: token graph input, token fragment input, and serialized
+The schema subpaths validate strict persisted artifacts only: token graph input, token layer input, and serialized
 compiled token set output. They intentionally reject helper-only shorthand such as raw token color strings, raw
 `{ ref }` token definitions, and mode records without `valueByMode`.
 
@@ -97,8 +99,16 @@ contains resolved color objects, not the original authored color strings.
 `TokenSource` is structural. Core accepts a safe source object with a valid string `id` and callable `build`, permits
 extra adapter metadata, and invokes `build()` with the original source object as `this`.
 
-`buildTokenSet()` is the adapter runner. It calls one or more `TokenSource` objects in array order, composes their graph
-material before caller fragments, validates the result, and returns `{ graph, compiled }`. The `sources` option is
-required and must be a non-empty array, even for a single source. The root package does not implement Material 3, Texel,
-conversion, image, or CSS parser engines. Material 3 support lives in `@color-scheme-tokens/source-material3`, which
-imports core only through the generic source contract.
+`buildTokenSet()` is the adapter runner and layer composer. It accepts source-only, layer-only, and source-plus-layer
+input. `sources` and `layers` are both optional fields, but at least one of them must be present and non-empty.
+
+Sources compose first in array order. Duplicate token keys across sources are invalid. Layers compose after sources as
+ordered authored token overlays. Later layers win by token key, and a layer may override a source token. References,
+missing-reference checks, and circular-reference checks run after final source/layer composition. Winning token origin
+metadata points at the winning source or layer.
+
+Layer composition is not CSS cascade behavior. Core does not implement selector specificity, `!important`, CSS `@layer`,
+DOM mutation, or runtime style injection.
+
+The root package does not implement Material 3, Texel, conversion, image, or CSS parser engines. Material 3 support lives
+in `@color-scheme-tokens/source-material3`, which imports core only through the generic source contract.

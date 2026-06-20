@@ -27,8 +27,8 @@ const tarball = join(packDirectory, basename(output));
 const files = execFileSync("tar", ["-tf", tarball], { encoding: "utf8" }).trim().split(/\r?\n/);
 const requiredSchemaFiles = new Set([
   "package/schemas/compiled-token-set.v1.schema.json",
-  "package/schemas/token-fragment.v1.schema.json",
   "package/schemas/token-graph.v1.schema.json",
+  "package/schemas/token-layer.v1.schema.json",
 ]);
 
 const denied = [

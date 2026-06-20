@@ -62,7 +62,7 @@
                 "required": ["kind", "id"],
                 "properties": {
                   "kind": {
-                    "const": "fragment"
+                    "const": "layer"
                   },
                   "id": {
                     "$ref": "token-graph.v1.schema.json#/$defs/segment"

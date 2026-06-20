@@ -29,7 +29,7 @@ export type TokenDefinitionInput<Mode extends string = string> = {
     }
 );
 
-export interface TokenFragmentInput<Mode extends string = string> {
+export interface TokenLayerInput<Mode extends string = string> {
   readonly $schema?: string;
   readonly formatVersion: 1;
   readonly id: string;
@@ -44,19 +44,32 @@ export interface TokenGraphInput<Mode extends string = string> {
   readonly defaultMode: Mode;
   readonly defaultVisibility: TokenVisibility;
   readonly tokens: Readonly<Record<string, TokenDefinitionInput<Mode>>>;
-  readonly fragments?: readonly TokenFragmentInput<Mode>[];
+  readonly layers?: readonly TokenLayerInput<Mode>[];
 }
+
+type TokenDefinitionMetadataAuthoringInput = {
+  readonly visibility?: TokenVisibility;
+  readonly description?: string;
+  readonly deprecated?: boolean | string;
+  readonly extensions?: Readonly<Record<string, JsonValue>>;
+};
+
+type TokenDefinitionModeAuthoringInput<Mode extends string> = string extends Mode
+  ? TokenDefinitionMetadataAuthoringInput & Readonly<Record<string, unknown>>
+  : TokenDefinitionMetadataAuthoringInput & Readonly<Partial<Record<Mode, ColorExpressionInput>>>;
 
 export type TokenDefinitionAuthoringInput<Mode extends string = string> =
   | TokenDefinitionInput<Mode>
   | ColorExpressionInput
-  | Readonly<Record<Mode, ColorExpressionInput>>;
+  | Readonly<Record<Mode, ColorExpressionInput>>
+  | TokenDefinitionModeAuthoringInput<Mode>;
 
-export interface TokenFragmentAuthoringInput<Mode extends string = string> {
+export interface TokenLayerAuthoringInput<Mode extends string = string> {
   readonly $schema?: string;
   readonly formatVersion?: 1;
   readonly id: string;
   readonly defaultVisibility?: TokenVisibility;
+  readonly modes?: readonly [Mode, ...Mode[]];
   readonly tokens: Readonly<Record<string, TokenDefinitionAuthoringInput<Mode>>>;
 }
 
@@ -68,7 +81,7 @@ export type TokenGraphAuthoringInput<Mode extends string = string> =
       readonly defaultMode?: never;
       readonly defaultVisibility?: TokenVisibility;
       readonly tokens: Readonly<Record<string, TokenDefinitionAuthoringInput<"base">>>;
-      readonly fragments?: readonly TokenFragmentInput<"base">[];
+      readonly layers?: readonly TokenLayerInput<"base">[];
     }
   | {
       readonly $schema?: string;
@@ -77,7 +90,7 @@ export type TokenGraphAuthoringInput<Mode extends string = string> =
       readonly defaultMode: Mode;
       readonly defaultVisibility?: TokenVisibility;
       readonly tokens: Readonly<Record<string, TokenDefinitionAuthoringInput<Mode>>>;
-      readonly fragments?: readonly TokenFragmentInput<Mode>[];
+      readonly layers?: readonly TokenLayerInput<Mode>[];
     };
 
 export type TokenOrigin =
@@ -85,7 +98,7 @@ export type TokenOrigin =
       readonly kind: "graph";
     }
   | {
-      readonly kind: "fragment";
+      readonly kind: "layer";
       readonly id: string;
     }
   | {
@@ -124,8 +137,8 @@ export type TokenGraphIssue =
       | "duplicate-mode-key"
       | "default-mode-not-found"
       | "invalid-default-visibility"
-      | "invalid-fragment-id"
-      | "duplicate-fragment-id"
+      | "invalid-layer-id"
+      | "duplicate-layer-id"
       | "invalid-token-key"
       | "duplicate-token-key"
       | "invalid-visibility"
@@ -144,7 +157,7 @@ export type TokenGraphIssue =
     > & {
       readonly key?: string;
       readonly mode?: string;
-      readonly fragmentId?: string;
+      readonly layerId?: string;
       readonly firstPath?: string;
       readonly cycle?: readonly string[];
     });
@@ -158,7 +171,7 @@ export function defineTokenGraph<
   readonly defaultMode?: never;
   readonly defaultVisibility?: TokenVisibility;
   readonly tokens: Tokens;
-  readonly fragments?: readonly TokenFragmentInput<"base">[];
+  readonly layers?: readonly TokenLayerInput<"base">[];
 }): TokenGraphInput<"base">;
 export function defineTokenGraph<
   const Modes extends readonly [string, ...string[]],
@@ -172,11 +185,11 @@ export function defineTokenGraph<
   readonly defaultMode: Modes[number];
   readonly defaultVisibility?: TokenVisibility;
   readonly tokens: Tokens;
-  readonly fragments?: readonly TokenFragmentInput<NoInfer<Modes[number]>>[];
+  readonly layers?: readonly TokenLayerInput<NoInfer<Modes[number]>>[];
 }): TokenGraphInput<Modes[number]>;
 export function defineTokenGraph(input: TokenGraphAuthoringInput): TokenGraphInput {
   const modes = "modes" in input && input.modes !== undefined ? input.modes : ["base"];
-  assertHelperModesCanUseShorthand(modes);
+  assertHelperModesCanUseShorthand(modes, "defineTokenGraph");
   const defaultMode =
     "defaultMode" in input && input.defaultMode !== undefined ? input.defaultMode : modes[0];
   return {
@@ -186,23 +199,23 @@ export function defineTokenGraph(input: TokenGraphAuthoringInput): TokenGraphInp
     defaultMode,
     defaultVisibility: input.defaultVisibility ?? "public",
     tokens: normalizeTokenRecord(input.tokens, modes),
-    ...(input.fragments === undefined ? {} : { fragments: input.fragments }),
+    ...(input.layers === undefined ? {} : { layers: input.layers }),
   };
 }
 
-export function defineTokenFragment<const Mode extends string = string>(input: {
-  readonly $schema?: string;
-  readonly formatVersion?: 1;
-  readonly id: string;
-  readonly defaultVisibility?: TokenVisibility;
-  readonly tokens: Readonly<Record<string, TokenDefinitionAuthoringInput<Mode>>>;
-}): TokenFragmentInput<Mode> {
+export function defineTokenLayer<const Mode extends string = string>(
+  input: TokenLayerAuthoringInput<Mode>,
+): TokenLayerInput<Mode> {
+  const modes = input.modes;
+  if (modes !== undefined) {
+    assertHelperModesCanUseShorthand(modes, "defineTokenLayer");
+  }
   return {
     ...(input.$schema === undefined ? {} : { $schema: input.$schema }),
     formatVersion: input.formatVersion ?? 1,
     id: input.id,
     defaultVisibility: input.defaultVisibility ?? "public",
-    tokens: normalizeTokenRecord(input.tokens, undefined) as Readonly<
+    tokens: normalizeTokenRecord(input.tokens, modes) as Readonly<
       Record<string, TokenDefinitionInput<Mode>>
     >,
   };
@@ -242,8 +255,8 @@ function normalizeTokenDefinition(
   input: TokenDefinitionAuthoringInput | undefined,
   modes: readonly string[] | undefined,
 ): TokenDefinitionInput {
-  if (isTokenDefinitionInput(input)) {
-    return normalizeExplicitTokenDefinition(input);
+  if (isTokenDefinitionObject(input)) {
+    return normalizeObjectTokenDefinition(input);
   }
 
   if (modes !== undefined && isModeValueRecord(input, modes)) {
@@ -253,15 +266,53 @@ function normalizeTokenDefinition(
   return { value: normalizeColorExpression(input as ColorExpressionInput) };
 }
 
-function normalizeExplicitTokenDefinition(input: TokenDefinitionInput): TokenDefinitionInput {
+function normalizeObjectTokenDefinition(
+  input: TokenDefinitionMetadataAuthoringInput &
+    Partial<TokenDefinitionInput> &
+    Readonly<Record<string, unknown>>,
+): TokenDefinitionInput {
+  const entries = readPlainRecord(input, {
+    code: "invalid-token-definition",
+    message: "Token definition probes must be plain data.",
+  });
+  if (!entries.ok) {
+    return input as TokenDefinitionInput;
+  }
+
+  const modeEntries = entries.value.filter((entry) => !tokenDefinitionKeys.has(entry.key));
+  if (modeEntries.length > 0 && ("value" in input || "valueByMode" in input)) {
+    throw new RangeError(
+      "Token definition shorthand cannot combine value or valueByMode with mode keys.",
+    );
+  }
+
+  const metadata = tokenDefinitionMetadata(input);
   if ("value" in input && input.value !== undefined) {
-    return { ...input, value: normalizeColorExpression(input.value) };
+    return { ...metadata, value: normalizeColorExpression(input.value as ColorExpressionInput) };
   }
   const valueByMode = "valueByMode" in input ? input.valueByMode : undefined;
   if (valueByMode === undefined) {
-    return input;
+    if (modeEntries.length === 0) {
+      return metadata as TokenDefinitionInput;
+    }
+    const modeValues: Record<string, ColorExpressionInput> = {};
+    for (const entry of modeEntries) {
+      defineRecordValue(modeValues, entry.key, entry.value as ColorExpressionInput);
+    }
+    return { ...metadata, valueByMode: normalizeModeValues(modeValues) };
   }
-  return { ...input, valueByMode: normalizeModeValues(valueByMode) };
+  return { ...metadata, valueByMode: normalizeModeValues(valueByMode) };
+}
+
+function tokenDefinitionMetadata(
+  input: TokenDefinitionMetadataAuthoringInput,
+): TokenDefinitionMetadataAuthoringInput {
+  return {
+    ...(input.visibility === undefined ? {} : { visibility: input.visibility }),
+    ...(input.description === undefined ? {} : { description: input.description }),
+    ...(input.deprecated === undefined ? {} : { deprecated: input.deprecated }),
+    ...(input.extensions === undefined ? {} : { extensions: input.extensions }),
+  };
 }
 
 function normalizeModeValues(
@@ -284,7 +335,7 @@ function normalizeColorExpression(input: ColorExpressionInput): ColorExpressionI
   return { ref: input };
 }
 
-function isTokenDefinitionInput(input: unknown): input is TokenDefinitionInput {
+function isTokenDefinitionObject(input: unknown): input is TokenDefinitionMetadataAuthoringInput {
   const entries = readPlainRecord(input, {
     code: "invalid-token-definition",
     message: "Token definition probes must be plain data.",
@@ -307,11 +358,11 @@ function isModeValueRecord(
   return entries.value.every((entry) => modeSet.has(entry.key));
 }
 
-function assertHelperModesCanUseShorthand(modes: readonly string[]): void {
+function assertHelperModesCanUseShorthand(modes: readonly string[], helperName: string): void {
   const reserved = modes.filter((mode) => tokenDefinitionKeys.has(mode));
   if (reserved.length > 0) {
     throw new RangeError(
-      `defineTokenGraph mode names cannot use token-definition keys: ${reserved.join(", ")}.`,
+      `${helperName} mode names cannot use token-definition keys: ${reserved.join(", ")}.`,
     );
   }
 }

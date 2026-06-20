@@ -276,8 +276,8 @@ function cloneOrigin(origin: TokenGraphToken["origin"]): TokenGraphToken["origin
   if (origin.kind === "graph") {
     return { kind: "graph" };
   }
-  if (origin.kind === "fragment") {
-    return { kind: "fragment", id: origin.id };
+  if (origin.kind === "layer") {
+    return { kind: "layer", id: origin.id };
   }
   return {
     kind: "source",

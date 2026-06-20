@@ -53,7 +53,7 @@ function canonicalTokenSet(tokenSet: CompiledTokenSet): unknown {
 function canonicalOrigin(origin: CompiledTokenSet["tokens"][string]["origin"]): unknown {
   const output: Record<string, unknown> = {};
   defineRecordValue(output, "kind", origin.kind);
-  if (origin.kind === "fragment" || origin.kind === "source") {
+  if (origin.kind === "layer" || origin.kind === "source") {
     defineRecordValue(output, "id", origin.id);
   }
   if (origin.kind === "source" && origin.sourceToken !== undefined) {

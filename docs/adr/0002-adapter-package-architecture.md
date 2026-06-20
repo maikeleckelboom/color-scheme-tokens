@@ -7,7 +7,7 @@ Accepted. Implemented by the first source adapter package in Slice 4.
 ## Context
 
 ADR 0001 keeps `color-scheme-tokens` as the dependency-light core package. Slice 2 made the JSON Schemas strict core
-artifacts for persisted graph input, fragment input, and compiled token-set output.
+artifacts for persisted graph input, layer input, and compiled token-set output.
 
 Future optional capabilities need real engines without moving those engines into core. The first likely capabilities are
 Material 3 source generation and Texel-backed conversion, but this decision must hold for future source and conversion
@@ -54,7 +54,8 @@ needs a reproducible implementation at runtime.
 
 ## Source Adapter Shape
 
-A source adapter creates a `TokenSource` for `buildTokenSet({ sources })`. The minimum package root surface is:
+A source adapter creates a `TokenSource` for `buildTokenSet({ sources })`. Applications can compose authored token
+layers after source output with `buildTokenSet({ sources, layers })`. The minimum package root surface is:
 
 - a factory named after the capability, for example `material3Source(input)`;
 - JSON-safe public input types, for example `Material3SourceInput`;
@@ -77,7 +78,7 @@ surface is:
 - JSON-safe input and output types owned by the adapter;
 - adapter issue types returned through `Result`.
 
-Conversion output may be a package-specific JSON-safe value, strict `TokenGraphInput`, strict `TokenFragmentInput`, or a
+Conversion output may be a package-specific JSON-safe value, strict `TokenGraphInput`, strict `TokenLayerInput`, or a
 core compiled token-set artifact, depending on the package role. If conversion output is a core artifact, consumers pass
 that artifact back to core parse, compile, serialize, or export functions explicitly.
 
@@ -95,7 +96,7 @@ payloads and paths must stay JSON-safe.
 Core schema subpaths remain strict core artifacts only. They do not describe adapter helper input.
 
 Adapter input schemas are optional package-owned artifacts. If shipped, they live under the adapter package and describe
-adapter inputs only. Adapter outputs that claim to be core graph, fragment, or compiled artifacts must validate against
+adapter inputs only. Adapter outputs that claim to be core graph, layer, or compiled artifacts must validate against
 the matching core schema and parser behavior.
 
 ## Release Obligations

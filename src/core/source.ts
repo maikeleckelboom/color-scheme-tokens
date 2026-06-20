@@ -1,10 +1,10 @@
 import type { CompileTokenGraphIssue, CompiledTokenSet, TokenSelection } from "./compiled-types";
 import { compileParsedTokenGraph, parseCompileSelection } from "./compile-token-graph";
 import type {
-  TokenFragmentInput,
   TokenGraph,
   TokenGraphInput,
   TokenGraphIssue,
+  TokenLayerInput,
   TokenVisibility,
 } from "./graph";
 import { isSingleSegmentIdentifier } from "./identifiers";
@@ -17,11 +17,9 @@ export interface TokenSource<I extends Issue = Issue> {
   build(): Result<TokenGraphInput, I>;
 }
 
-type NonEmptyReadonlyArray<Value> = readonly [Value, ...Value[]];
-
 export interface BuildTokenSetOptions<I extends Issue = Issue> {
-  readonly sources: NonEmptyReadonlyArray<TokenSource<I>>;
-  readonly fragments?: readonly TokenFragmentInput[];
+  readonly sources?: readonly TokenSource<I>[];
+  readonly layers?: readonly TokenLayerInput[];
   readonly selection?: TokenSelection;
 }
 
@@ -63,19 +61,16 @@ export function buildTokenSet<I extends Issue>(
     sourceResults.push({ source, graph: sourceResult.value, sourceIndex });
   }
 
-  const composed = composeSourceGraphs(
-    sourceResults as unknown as NonEmptyReadonlyArray<BuiltSourceGraph>,
-    parsedOptions.value.fragments,
-  );
+  const composed = composeSourceGraphs(sourceResults, parsedOptions.value.layers);
   if (!composed.ok) {
     return composed as Result<never, I | BuildTokenSetIssue>;
   }
-  const callerFragmentIds = collectCallerFragmentIds(parsedOptions.value.fragments);
+  const callerLayerIds = collectCallerLayerIds(parsedOptions.value.layers);
   return buildFromComposedGraph(
     composed.value.graph,
     composed.value.tokenSourceIds,
-    composed.value.fragmentSourceIds,
-    callerFragmentIds,
+    composed.value.layerSourceIds,
+    callerLayerIds,
     parsedOptions.value.selection,
   ) as Result<BuildTokenSetValue, I | BuildTokenSetIssue>;
 }
@@ -83,14 +78,14 @@ export function buildTokenSet<I extends Issue>(
 function buildFromComposedGraph(
   graphInput: unknown,
   tokenSourceIds: ReadonlyMap<string, string>,
-  fragmentSourceIds: ReadonlyMap<string, string>,
-  callerFragmentIds: ReadonlySet<string>,
+  layerSourceIds: ReadonlyMap<string, string>,
+  callerLayerIds: ReadonlySet<string>,
   selection: TokenSelection | undefined,
 ): Result<BuildTokenSetValue, BuildTokenSetIssue> {
   const parsedGraph = parseTokenGraphInternal(graphInput, {
-    callerFragmentIds,
+    callerLayerIds,
     tokenSourceIds,
-    fragmentSourceIds,
+    layerSourceIds,
   });
   if (!parsedGraph.ok) {
     return parsedGraph;
@@ -119,8 +114,8 @@ function buildFromComposedGraph(
 }
 
 interface ParsedBuildOptions<I extends Issue> {
-  readonly sources: NonEmptyReadonlyArray<TokenSource<I>>;
-  readonly fragments?: readonly TokenFragmentInput[];
+  readonly sources: readonly TokenSource<I>[];
+  readonly layers?: readonly TokenLayerInput[];
   readonly selection?: TokenSelection;
 }
 
@@ -136,7 +131,7 @@ function parseBuildOptions<I extends Issue>(
   }
 
   for (const entry of entries.value) {
-    if (entry.key !== "sources" && entry.key !== "fragments" && entry.key !== "selection") {
+    if (entry.key !== "sources" && entry.key !== "layers" && entry.key !== "selection") {
       return {
         ok: false,
         issues: [{ code: "invalid-build-options", message: `Unknown build option: ${entry.key}.` }],
@@ -149,11 +144,22 @@ function parseBuildOptions<I extends Issue>(
   if (!sources.ok) {
     return sources;
   }
-  const fragments = record.get("fragments");
-  if (fragments !== undefined && !Array.isArray(fragments)) {
+  const layers = record.get("layers");
+  if (layers !== undefined && !Array.isArray(layers)) {
     return {
       ok: false,
-      issues: [{ code: "invalid-build-options", message: "fragments must be an array." }],
+      issues: [{ code: "invalid-build-options", message: "layers must be an array." }],
+    };
+  }
+  if (sources.value.length === 0 && (layers === undefined || layers.length === 0)) {
+    return {
+      ok: false,
+      issues: [
+        {
+          code: "invalid-build-options",
+          message: "buildTokenSet requires at least one source or layer.",
+        },
+      ],
     };
   }
 
@@ -161,7 +167,7 @@ function parseBuildOptions<I extends Issue>(
     ok: true,
     value: {
       sources: sources.value,
-      ...(fragments === undefined ? {} : { fragments: fragments as readonly TokenFragmentInput[] }),
+      ...(layers === undefined ? {} : { layers: layers as readonly TokenLayerInput[] }),
       ...(record.has("selection") ? { selection: record.get("selection") as TokenSelection } : {}),
     },
   };
@@ -169,26 +175,17 @@ function parseBuildOptions<I extends Issue>(
 
 function parseSources<I extends Issue>(
   input: unknown,
-): Result<NonEmptyReadonlyArray<TokenSource<I>>, BuildTokenSetIssue> {
+): Result<readonly TokenSource<I>[], BuildTokenSetIssue> {
+  if (input === undefined) {
+    return { ok: true, value: [] };
+  }
   if (!Array.isArray(input)) {
     return {
       ok: false,
       issues: [
         {
           code: "invalid-build-options",
-          message: "sources must be a non-empty array.",
-          path: "/sources",
-        },
-      ],
-    };
-  }
-  if (input.length === 0) {
-    return {
-      ok: false,
-      issues: [
-        {
-          code: "invalid-build-options",
-          message: "sources must contain at least one source.",
+          message: "sources must be an array.",
           path: "/sources",
         },
       ],
@@ -223,7 +220,7 @@ function parseSources<I extends Issue>(
     sources.push(source.value);
   }
 
-  return { ok: true, value: [sources[0] as TokenSource<I>, ...sources.slice(1)] };
+  return { ok: true, value: sources };
 }
 
 function parseSource<I extends Issue>(
@@ -400,12 +397,12 @@ interface BuiltSourceGraph<I extends Issue = Issue> {
 interface ComposedSourceGraphs {
   readonly graph: unknown;
   readonly tokenSourceIds: ReadonlyMap<string, string>;
-  readonly fragmentSourceIds: ReadonlyMap<string, string>;
+  readonly layerSourceIds: ReadonlyMap<string, string>;
 }
 
 function composeSourceGraphs(
-  sources: NonEmptyReadonlyArray<BuiltSourceGraph>,
-  fragments: readonly TokenFragmentInput[] | undefined,
+  sources: readonly BuiltSourceGraph[],
+  layers: readonly TokenLayerInput[] | undefined,
 ): Result<ComposedSourceGraphs, BuildTokenSetIssue> {
   const sourceGraphs: SourceGraphParts[] = [];
   for (const source of sources) {
@@ -415,27 +412,36 @@ function composeSourceGraphs(
     }
     sourceGraphs.push(sourceGraph.value);
   }
-  const first = sourceGraphs[0] as SourceGraphParts;
 
   const output: Record<string, unknown> = {};
-  if (first.schema !== undefined) {
-    defineRecordValue(output, "$schema", first.schema);
+  const first = sourceGraphs[0];
+  if (first === undefined) {
+    defineRecordValue(output, "formatVersion", 1);
+    defineRecordValue(output, "modes", ["base"]);
+    defineRecordValue(output, "defaultMode", "base");
+    defineRecordValue(output, "defaultVisibility", "public");
+  } else {
+    if (first.schema !== undefined) {
+      defineRecordValue(output, "$schema", first.schema);
+    }
+    defineRecordValue(output, "formatVersion", first.formatVersion);
+    defineRecordValue(output, "modes", first.modes);
+    defineRecordValue(output, "defaultMode", first.defaultMode);
+    defineRecordValue(output, "defaultVisibility", first.defaultVisibility);
   }
-  defineRecordValue(output, "formatVersion", first.formatVersion);
-  defineRecordValue(output, "modes", first.modes);
-  defineRecordValue(output, "defaultMode", first.defaultMode);
-  defineRecordValue(output, "defaultVisibility", first.defaultVisibility);
 
   const tokens: Record<string, unknown> = {};
   const tokenSourceIds = new Map<string, string>();
-  const fragmentSourceIds = new Map<string, string>();
+  const layerSourceIds = new Map<string, string>();
   const firstTokenPaths = new Map<string, string>();
-  const composedFragments: unknown[] = [];
+  const composedLayers: unknown[] = [];
 
   for (const sourceGraph of sourceGraphs) {
-    const modeMatch = validateSourceModes(first, sourceGraph);
-    if (!modeMatch.ok) {
-      return modeMatch;
+    if (first !== undefined) {
+      const modeMatch = validateSourceModes(first, sourceGraph);
+      if (!modeMatch.ok) {
+        return modeMatch;
+      }
     }
 
     const addedTokens = appendSourceTokens(tokens, tokenSourceIds, firstTokenPaths, sourceGraph);
@@ -443,23 +449,23 @@ function composeSourceGraphs(
       return addedTokens;
     }
 
-    if (sourceGraph.fragments !== undefined) {
-      for (const fragment of sourceGraph.fragments) {
-        const fragmentId = readFragmentId(fragment);
-        if (fragmentId !== undefined && !fragmentSourceIds.has(fragmentId)) {
-          fragmentSourceIds.set(fragmentId, sourceGraph.sourceId);
+    if (sourceGraph.layers !== undefined) {
+      for (const layer of sourceGraph.layers) {
+        const layerId = readLayerId(layer);
+        if (layerId !== undefined && !layerSourceIds.has(layerId)) {
+          layerSourceIds.set(layerId, sourceGraph.sourceId);
         }
-        composedFragments.push(fragment);
+        composedLayers.push(layer);
       }
     }
   }
 
   defineRecordValue(output, "tokens", tokens);
-  if (fragments !== undefined) {
-    composedFragments.push(...fragments);
+  if (layers !== undefined) {
+    composedLayers.push(...layers);
   }
-  if (composedFragments.length > 0) {
-    defineRecordValue(output, "fragments", composedFragments);
+  if (composedLayers.length > 0) {
+    defineRecordValue(output, "layers", composedLayers);
   }
 
   return {
@@ -467,7 +473,7 @@ function composeSourceGraphs(
     value: {
       graph: output,
       tokenSourceIds,
-      fragmentSourceIds,
+      layerSourceIds,
     },
   };
 }
@@ -478,7 +484,7 @@ interface RawSourceGraphParts {
   readonly schema?: unknown;
   readonly defaultVisibility: unknown;
   readonly tokens: unknown;
-  readonly fragments?: readonly unknown[];
+  readonly layers?: readonly unknown[];
 }
 
 interface SourceGraphParts extends RawSourceGraphParts {
@@ -529,15 +535,15 @@ function readSourceGraph(
     return entries as Result<never, BuildTokenSetIssue>;
   }
   const record = new Map(entries.value.map((entry) => [entry.key, entry.value]));
-  const fragments = record.get("fragments");
-  if (fragments !== undefined && !Array.isArray(fragments)) {
+  const layers = record.get("layers");
+  if (layers !== undefined && !Array.isArray(layers)) {
     return {
       ok: false,
       issues: [
         {
           code: "invalid-source-result",
-          message: "Source graph fragments must be an array.",
-          path: `${sourcePath}/fragments`,
+          message: "Source graph layers must be an array.",
+          path: `${sourcePath}/layers`,
           sourceId: source.source.id,
           sourceIndex: source.sourceIndex,
         },
@@ -553,7 +559,7 @@ function readSourceGraph(
       ...(record.has("$schema") ? { schema: record.get("$schema") } : {}),
       defaultVisibility: record.get("defaultVisibility"),
       tokens: record.get("tokens"),
-      ...(fragments === undefined ? {} : { fragments }),
+      ...(layers === undefined ? {} : { layers }),
     },
   };
 }
@@ -692,10 +698,10 @@ function withDefaultVisibility(token: unknown, defaultVisibility: unknown): unkn
   return output;
 }
 
-function readFragmentId(fragment: unknown): string | undefined {
-  const entries = readPlainRecord(fragment, {
+function readLayerId(layer: unknown): string | undefined {
+  const entries = readPlainRecord(layer, {
     code: "invalid-build-options",
-    message: "Fragment must be a plain object.",
+    message: "Layer must be a plain object.",
   });
   if (!entries.ok) {
     return undefined;
@@ -704,17 +710,17 @@ function readFragmentId(fragment: unknown): string | undefined {
   return typeof id === "string" ? id : undefined;
 }
 
-function collectCallerFragmentIds(
-  fragments: readonly TokenFragmentInput[] | undefined,
+function collectCallerLayerIds(
+  layers: readonly TokenLayerInput[] | undefined,
 ): ReadonlySet<string> {
   const ids = new Set<string>();
-  if (fragments === undefined) {
+  if (layers === undefined) {
     return ids;
   }
-  for (const fragment of fragments) {
-    const entries = readPlainRecord(fragment, {
+  for (const layer of layers) {
+    const entries = readPlainRecord(layer, {
       code: "invalid-build-options",
-      message: "Fragment must be a plain object.",
+      message: "Layer must be a plain object.",
     });
     if (!entries.ok) {
       continue;

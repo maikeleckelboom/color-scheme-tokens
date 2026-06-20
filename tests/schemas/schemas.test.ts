@@ -8,7 +8,7 @@ const schemaDirectory = join(process.cwd(), "schemas");
 const fixtureDirectory = join(process.cwd(), "tests", "schemas", "fixtures");
 
 const graphSchema = readJsonObject(join(schemaDirectory, "token-graph.v1.schema.json"));
-const fragmentSchema = readJsonObject(join(schemaDirectory, "token-fragment.v1.schema.json"));
+const layerSchema = readJsonObject(join(schemaDirectory, "token-layer.v1.schema.json"));
 const compiledSchema = readJsonObject(join(schemaDirectory, "compiled-token-set.v1.schema.json"));
 
 const strictGraphFixtureFiles = [
@@ -41,19 +41,33 @@ describe("JSON Schemas", () => {
     },
   );
 
-  test("fragment input validates and parses when embedded in a graph", () => {
+  test("layer input validates and parses when embedded in a graph", () => {
     const ajv = createAjv();
     const graph = readFixtureObject("valid", "multi-mode-strict-graph.json");
-    const fragment = readFixtureObject("valid", "token-fragment.json");
-    const graphWithFragment = { ...graph, fragments: [fragment] };
+    const layer = readFixtureObject("valid", "token-layer.json");
+    const graphWithLayer = { ...graph, layers: [layer] };
 
-    expectSchemaValid(ajv, fragmentSchema, fragment, "token-fragment.json");
-    expectSchemaValid(ajv, graphSchema, graphWithFragment, "graph with fragment");
+    expectSchemaValid(ajv, layerSchema, layer, "token-layer.json");
+    expectSchemaValid(ajv, graphSchema, graphWithLayer, "graph with layer");
 
-    const parsed = expectParseTokenGraphOk(graphWithFragment, "graph with fragment");
+    const parsed = expectParseTokenGraphOk(graphWithLayer, "graph with layer");
     expect(parsed.tokens["card.background"]?.origin).toEqual({
-      kind: "fragment",
+      kind: "layer",
       id: "application",
+    });
+  });
+
+  test("strict graph schema and parser reject old layer collection field", () => {
+    const ajv = createAjv();
+    const graph = readFixtureObject("valid", "multi-mode-strict-graph.json");
+    const layer = readFixtureObject("valid", "token-layer.json");
+    const oldField = `frag${"ments"}`;
+    const graphWithOldField = { ...graph, [oldField]: [layer] };
+
+    expectSchemaInvalid(ajv, graphSchema, graphWithOldField, "graph with old layer collection");
+    expect(parseTokenGraph(graphWithOldField)).toMatchObject({
+      ok: false,
+      issues: [{ code: "unknown-property", path: `/${oldField}` }],
     });
   });
 
@@ -116,7 +130,7 @@ describe("JSON Schemas", () => {
 function createAjv(): Ajv2020 {
   return new Ajv2020({
     allErrors: true,
-    schemas: [graphSchema, fragmentSchema, compiledSchema],
+    schemas: [graphSchema, layerSchema, compiledSchema],
   });
 }
 

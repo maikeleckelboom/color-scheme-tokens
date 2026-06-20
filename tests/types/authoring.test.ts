@@ -1,6 +1,6 @@
 import {
   buildTokenSet,
-  defineTokenFragment,
+  defineTokenLayer,
   defineTokenGraph,
   exportCssVariableBlocks,
   type CssVariableBlock,
@@ -8,8 +8,14 @@ import {
   type Issue,
   type Result,
   type TokenGraphInput,
+  type TokenLayerInput,
   type TokenSource,
 } from "../../src";
+
+type RootModule = typeof import("../../src");
+type RemovedLayerHelperName = `defineToken${"Frag"}${"ment"}`;
+// @ts-expect-error old token layer helper is not exported.
+export type RemovedLayerHelper = RootModule[RemovedLayerHelperName];
 
 const simpleGraph = defineTokenGraph({
   tokens: {
@@ -32,17 +38,25 @@ const built = buildTokenSet({ sources: [source] });
 if (built.ok) {
   built.value.compiled.defaultMode.toUpperCase();
   // @ts-expect-error buildTokenSet returns compiled, not tokenSet.
-  built.value.tokenSet.defaultMode.toUpperCase();
+  built.value["tokenSet"].defaultMode.toUpperCase();
 }
 
 // @ts-expect-error source is not a buildTokenSet option.
 buildTokenSet({ source });
 
-// @ts-expect-error sources is required.
-buildTokenSet({});
+const emptyBuild = buildTokenSet({});
+if (!emptyBuild.ok) {
+  emptyBuild.issues[0]?.code.toUpperCase();
+}
 
-// @ts-expect-error sources must be a non-empty array.
-buildTokenSet({ sources: [] });
+const emptyContributorBuild = buildTokenSet({ sources: [], layers: [] });
+if (!emptyContributorBuild.ok) {
+  emptyContributorBuild.issues[0]?.code.toUpperCase();
+}
+
+const oldContributorOption = `frag${"ments"}`;
+// @ts-expect-error old contributor option is not accepted.
+buildTokenSet({ [oldContributorOption]: [] });
 
 const graph = defineTokenGraph({
   modes: ["light", "dark"],
@@ -58,13 +72,20 @@ const graph = defineTokenGraph({
 const typedGraph = graph satisfies TokenGraphInput<"light" | "dark">;
 typedGraph.defaultMode.toUpperCase();
 
-defineTokenFragment({
+const layer = defineTokenLayer({
   id: "brand",
   tokens: {
     "brand.primary": "#6750a4",
     "brand.on-primary": "brand.primary",
   },
 });
+const typedLayer = layer satisfies TokenLayerInput;
+typedLayer.id.toUpperCase();
+
+const layerBuilt = buildTokenSet({ layers: [layer] });
+if (layerBuilt.ok) {
+  layerBuilt.value.compiled.defaultMode.toUpperCase();
+}
 
 const cssOptions: ExportCssVariablesOptions = { prefix: "theme" };
 cssOptions.prefix?.toUpperCase();

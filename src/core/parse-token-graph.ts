@@ -23,9 +23,9 @@ import { IssueCollector, type Result } from "./result";
 
 interface ParseContext {
   readonly sourceId?: string;
-  readonly callerFragmentIds?: ReadonlySet<string>;
+  readonly callerLayerIds?: ReadonlySet<string>;
   readonly tokenSourceIds?: ReadonlyMap<string, string>;
-  readonly fragmentSourceIds?: ReadonlyMap<string, string>;
+  readonly layerSourceIds?: ReadonlyMap<string, string>;
   readonly skipReferenceValidation?: boolean;
 }
 
@@ -52,10 +52,10 @@ const topLevelKeys = new Set([
   "defaultMode",
   "defaultVisibility",
   "tokens",
-  "fragments",
+  "layers",
 ]);
 
-const fragmentKeys = new Set(["$schema", "formatVersion", "id", "defaultVisibility", "tokens"]);
+const layerKeys = new Set(["$schema", "formatVersion", "id", "defaultVisibility", "tokens"]);
 const tokenKeys = new Set([
   "visibility",
   "description",
@@ -116,8 +116,8 @@ export function parseTokenGraphInternal(
     collector,
   );
 
-  const declarations: TokenDeclaration[] = [];
-  const firstTokenPaths = new Map<string, string>();
+  const declarations = new Map<string, TokenDeclaration>();
+  const graphTokenPaths = new Map<string, string>();
   const validModes = canonicalModes ?? [];
 
   const tokensInput = graphRecord.get("tokens");
@@ -135,35 +135,34 @@ export function parseTokenGraphInternal(
       originForKey: (key) => directOrigin(context, key),
       collector,
       declarations,
-      firstTokenPaths,
+      firstTokenPaths: graphTokenPaths,
     });
   }
 
-  const fragmentIds = new Map<string, string>();
-  const fragmentsInput = graphRecord.get("fragments");
-  if (fragmentsInput !== undefined) {
-    if (!Array.isArray(fragmentsInput)) {
+  const layerIds = new Map<string, string>();
+  const layersInput = graphRecord.get("layers");
+  if (layersInput !== undefined) {
+    if (!Array.isArray(layersInput)) {
       collector.add({
         code: "invalid-object",
-        message: "fragments must be an array.",
-        path: pointer("fragments"),
+        message: "layers must be an array.",
+        path: pointer("layers"),
       });
     } else {
-      for (const [index, fragmentInput] of fragmentsInput.entries()) {
-        parseFragment(fragmentInput, index, {
+      for (const [index, layerInput] of layersInput.entries()) {
+        parseLayer(layerInput, index, {
           context,
           modes: validModes,
           collector,
           declarations,
-          firstTokenPaths,
-          fragmentIds,
+          layerIds,
         });
       }
     }
   }
 
   const tokenMap = new Map(
-    declarations.map((declaration) => [declaration.key, declaration.token] as const),
+    [...declarations.values()].map((declaration) => [declaration.key, declaration.token] as const),
   );
   if (context.skipReferenceValidation !== true) {
     validateReferences(tokenMap, validModes, collector);
@@ -189,7 +188,7 @@ export function parseTokenGraphInternal(
       modes: canonicalModes as readonly [string, ...string[]],
       defaultMode,
       tokens: sortedRecord(
-        declarations.map(
+        [...declarations.values()].map(
           (declaration) => [declaration.key, toPublicToken(declaration.token)] as const,
         ),
       ),
@@ -300,7 +299,7 @@ function parseTokenRecord(
     readonly defaultVisibility: TokenVisibility;
     readonly originForKey: (key: string) => TokenOrigin;
     readonly collector: IssueCollector<TokenGraphIssue>;
-    readonly declarations: TokenDeclaration[];
+    readonly declarations: Map<string, TokenDeclaration>;
     readonly firstTokenPaths: Map<string, string>;
   },
 ): void {
@@ -351,39 +350,38 @@ function parseTokenRecord(
     }
 
     options.firstTokenPaths.set(entry.key, tokenPath);
-    options.declarations.push({ key: entry.key, path: tokenPath, token });
+    options.declarations.set(entry.key, { key: entry.key, path: tokenPath, token });
   }
 }
 
-function parseFragment(
+function parseLayer(
   input: unknown,
   index: number,
   options: {
     readonly context: ParseContext;
     readonly modes: readonly string[];
     readonly collector: IssueCollector<TokenGraphIssue>;
-    readonly declarations: TokenDeclaration[];
-    readonly firstTokenPaths: Map<string, string>;
-    readonly fragmentIds: Map<string, string>;
+    readonly declarations: Map<string, TokenDeclaration>;
+    readonly layerIds: Map<string, string>;
   },
 ): void {
-  const path = pointer("fragments", index);
+  const path = pointer("layers", index);
   const entries = readPlainRecord(input, {
     code: "invalid-object",
-    message: "Fragment must be a plain object.",
+    message: "Layer must be a plain object.",
     path,
   });
   if (!entries.ok) {
     options.collector.addMany(entries.issues as readonly TokenGraphIssue[]);
     return;
   }
-  rejectUnknownKeys(entries.value, fragmentKeys, path, options.collector);
+  rejectUnknownKeys(entries.value, layerKeys, path, options.collector);
 
   const record = new Map(entries.value.map((entry) => [entry.key, entry.value]));
   if (record.get("formatVersion") !== 1) {
     options.collector.add({
       code: "invalid-format-version",
-      message: "Fragment formatVersion must be numeric 1.",
+      message: "Layer formatVersion must be numeric 1.",
       path: `${path}/formatVersion`,
     });
   }
@@ -398,26 +396,26 @@ function parseFragment(
   }
 
   const id = record.get("id");
-  const fragmentId = typeof id === "string" && isSingleSegmentIdentifier(id) ? id : undefined;
-  if (fragmentId === undefined) {
+  const layerId = typeof id === "string" && isSingleSegmentIdentifier(id) ? id : undefined;
+  if (layerId === undefined) {
     options.collector.add({
-      code: "invalid-fragment-id",
-      message: "Fragment id must be a lower-kebab single segment.",
+      code: "invalid-layer-id",
+      message: "Layer id must be a lower-kebab single segment.",
       path: `${path}/id`,
-      ...(typeof id === "string" ? { fragmentId: id } : {}),
+      ...(typeof id === "string" ? { layerId: id } : {}),
     });
   } else {
-    const firstPath = options.fragmentIds.get(fragmentId);
+    const firstPath = options.layerIds.get(layerId);
     if (firstPath !== undefined) {
       options.collector.add({
-        code: "duplicate-fragment-id",
-        message: `Duplicate fragment id: ${fragmentId}.`,
+        code: "duplicate-layer-id",
+        message: `Duplicate layer id: ${layerId}.`,
         path: `${path}/id`,
-        fragmentId,
+        layerId,
         firstPath,
       });
     } else {
-      options.fragmentIds.set(fragmentId, `${path}/id`);
+      options.layerIds.set(layerId, `${path}/id`);
     }
   }
 
@@ -431,22 +429,23 @@ function parseFragment(
   if (tokens === undefined) {
     options.collector.add({
       code: "missing-property",
-      message: "Fragment requires tokens.",
+      message: "Layer requires tokens.",
       path: `${path}/tokens`,
     });
   }
-  if (fragmentId === undefined || defaultVisibility === undefined || tokens === undefined) {
+  if (layerId === undefined || defaultVisibility === undefined || tokens === undefined) {
     return;
   }
 
+  const layerTokenPaths = new Map<string, string>();
   parseTokenRecord(tokens, {
     path: `${path}/tokens`,
     modes: options.modes,
     defaultVisibility,
-    originForKey: () => fragmentOrigin(fragmentId, options.context),
+    originForKey: () => layerOrigin(layerId, options.context),
     collector: options.collector,
     declarations: options.declarations,
-    firstTokenPaths: options.firstTokenPaths,
+    firstTokenPaths: layerTokenPaths,
   });
 }
 
@@ -851,15 +850,15 @@ function directOrigin(context: ParseContext, tokenKey: string): TokenOrigin {
   return sourceId === undefined ? { kind: "graph" } : { kind: "source", id: sourceId };
 }
 
-function fragmentOrigin(fragmentId: string, context: ParseContext): TokenOrigin {
-  const sourceId = context.fragmentSourceIds?.get(fragmentId);
+function layerOrigin(layerId: string, context: ParseContext): TokenOrigin {
+  const sourceId = context.layerSourceIds?.get(layerId);
   if (sourceId !== undefined) {
     return { kind: "source", id: sourceId };
   }
-  if (context.sourceId !== undefined && !context.callerFragmentIds?.has(fragmentId)) {
+  if (context.sourceId !== undefined && !context.callerLayerIds?.has(layerId)) {
     return { kind: "source", id: context.sourceId };
   }
-  return { kind: "fragment", id: fragmentId };
+  return { kind: "layer", id: layerId };
 }
 
 function cloneExpression(expression: ColorExpression): ColorExpression {

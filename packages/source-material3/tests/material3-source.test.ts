@@ -4,7 +4,7 @@ import Ajv2020 from "ajv/dist/2020";
 import { describe, expect, test } from "vitest";
 import {
   buildTokenSet,
-  defineTokenFragment,
+  defineTokenLayer,
   parseTokenGraph,
   type Issue,
   type Result,
@@ -117,7 +117,7 @@ describe("material3Source", () => {
   });
 
   test("applies defaultVisibility to extended color tokens", () => {
-    const application = defineTokenFragment<"light" | "dark">({
+    const application = defineTokenLayer<"light" | "dark">({
       id: "application",
       defaultVisibility: "public",
       tokens: {
@@ -133,7 +133,7 @@ describe("material3Source", () => {
             extendedColors: [{ name: "success", color: "#2e7d32" }],
           }),
         ],
-        fragments: [application],
+        layers: [application],
       }),
     );
 
@@ -142,8 +142,8 @@ describe("material3Source", () => {
     expect(built.compiled.tokens["app.success"]).toBeDefined();
   });
 
-  test("composes adapter output with caller fragments", () => {
-    const application = defineTokenFragment<"light" | "dark">({
+  test("composes adapter output with caller layers", () => {
+    const application = defineTokenLayer<"light" | "dark">({
       id: "application",
       defaultVisibility: "public",
       tokens: {
@@ -161,7 +161,7 @@ describe("material3Source", () => {
             defaultVisibility: "internal",
           }),
         ],
-        fragments: [application],
+        layers: [application],
       }),
     );
 
@@ -172,7 +172,7 @@ describe("material3Source", () => {
     ]);
     expect(built.graph.tokens["material3.primary"]?.visibility).toBe("internal");
     expect(built.graph.tokens["app.action"]?.origin).toEqual({
-      kind: "fragment",
+      kind: "layer",
       id: "application",
     });
   });
@@ -507,7 +507,7 @@ function createAjv(): Ajv2020 {
     allErrors: true,
     schemas: [
       readRootSchema("token-graph.v1.schema.json"),
-      readRootSchema("token-fragment.v1.schema.json"),
+      readRootSchema("token-layer.v1.schema.json"),
       readRootSchema("compiled-token-set.v1.schema.json"),
     ],
   });

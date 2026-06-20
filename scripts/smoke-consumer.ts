@@ -41,14 +41,14 @@ writeJson(join(consumerDirectory, "tsconfig.json"), {
 writeFileSync(
   join(consumerDirectory, "root.mjs"),
   `
-import { compileTokenGraph, defineTokenGraph, exportCssVariableBlocks, exportCssVariables } from ${JSON.stringify(manifest.name)};
+import { buildTokenSet, compileTokenGraph, defineTokenGraph, defineTokenLayer, exportCssVariableBlocks, exportCssVariables } from ${JSON.stringify(manifest.name)};
 
 const graph = defineTokenGraph({
   tokens: {
-    background: { value: "#ffffff" },
-    foreground: { value: "#111111" },
-    primary: { value: "#6750a4" },
-    "primary-foreground": { value: "#ffffff" },
+    background: "#ffffff",
+    foreground: "#111111",
+    primary: "#6750a4",
+    "primary-foreground": "#ffffff",
   },
 });
 const compiled = compileTokenGraph(graph);
@@ -62,6 +62,11 @@ if (declarations?.["--background"] !== "#ffffff") throw new Error("structured CS
 if (Object.keys(declarations ?? {}).some((name) => name.startsWith("--undefined-") || name.startsWith("---"))) {
   throw new Error("unprefixed export produced a malformed custom property");
 }
+const base = defineTokenLayer({ id: "base", tokens: { primary: "#6750a4" } });
+const brand = defineTokenLayer({ id: "brand", tokens: { primary: "#ff3b30" } });
+const built = buildTokenSet({ layers: [base, brand] });
+if (!built.ok) throw new Error(JSON.stringify(built.issues));
+if (built.value.graph.tokens.primary?.origin?.kind !== "layer") throw new Error("layer-only origin failed");
 `,
 );
 writeFileSync(
@@ -93,7 +98,7 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const expectedSchemas = new Map([
   ["schemas/token-graph.v1.schema.json", "color-scheme-tokens token graph v1"],
-  ["schemas/token-fragment.v1.schema.json", "color-scheme-tokens token fragment v1"],
+  ["schemas/token-layer.v1.schema.json", "color-scheme-tokens token layer v1"],
   ["schemas/compiled-token-set.v1.schema.json", "color-scheme-tokens compiled token set v1"],
 ]);
 
@@ -119,6 +124,7 @@ writeFileSync(
 import {
   buildTokenSet,
   compileTokenGraph,
+  defineTokenLayer,
   defineTokenGraph,
   exportCssVariableBlocks,
   type CssVariableBlock,
@@ -128,10 +134,15 @@ import {
   type Issue,
   type Result,
   type TokenGraphInput,
+  type TokenLayerInput,
 } from ${JSON.stringify(manifest.name)};
 
 const graph: TokenGraphInput<"base"> = defineTokenGraph({
   tokens: { "app.background": "#ffffff", "app.foreground": "app.background" },
+});
+const layer: TokenLayerInput = defineTokenLayer({
+  id: "brand",
+  tokens: { "brand.primary": "#6750a4" },
 });
 const compiled: Result<CompiledTokenSet, Issue> = compileTokenGraph(graph);
 const cssOptions: ExportCssVariablesOptions = { prefix: "theme" };
@@ -149,12 +160,14 @@ const source = {
   },
 };
 const built = buildTokenSet({ sources: [source] });
+const layerBuilt = buildTokenSet({ layers: [layer] });
 cssOptions.prefix?.toUpperCase();
 legacyCssOptions.prefix?.toUpperCase();
 cssBlock?.declarations["--background"]?.toUpperCase();
 color.colorSpace.toUpperCase();
 if (compiled.ok) compiled.value.defaultMode.toUpperCase();
 if (built.ok) built.value.compiled.defaultMode.toUpperCase();
+if (layerBuilt.ok) layerBuilt.value.compiled.defaultMode.toUpperCase();
 `,
 );
 

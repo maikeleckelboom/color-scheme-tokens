@@ -39,10 +39,10 @@ writeJson(join(consumerDirectory, "tsconfig.json"), {
 writeFileSync(
   join(consumerDirectory, "material3.mjs"),
   `
-import { buildTokenSet, defineTokenFragment } from "color-scheme-tokens";
+import { buildTokenSet, defineTokenLayer } from "color-scheme-tokens";
 import { material3Source } from "@color-scheme-tokens/source-material3";
 
-const application = defineTokenFragment({
+const application = defineTokenLayer({
   id: "application",
   defaultVisibility: "public",
   tokens: {
@@ -60,11 +60,11 @@ const built = buildTokenSet({
       extendedColors: [{ name: "success", color: "#2e7d32" }],
     }),
   ],
-  fragments: [application],
+  layers: [application],
 });
 
 if (!built.ok) throw new Error(JSON.stringify(built.issues));
-if (!("app.background" in built.value.compiled.tokens)) throw new Error("adapter fragment composition failed");
+if (!("app.background" in built.value.compiled.tokens)) throw new Error("adapter layer composition failed");
 if (!("app.success" in built.value.compiled.tokens)) throw new Error("adapter extended color composition failed");
 if (built.value.graph.tokens["material3.primary"]?.origin?.kind !== "source") {
   throw new Error("adapter source origin was not preserved");

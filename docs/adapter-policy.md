@@ -9,7 +9,8 @@ a real engine-backed capability is ready.
 
 ## Source Adapters
 
-Source adapters create `TokenSource` objects for `buildTokenSet({ sources })`.
+Source adapters create `TokenSource` objects for `buildTokenSet({ sources })`. Applications may add authored layers with
+`buildTokenSet({ sources, layers })`; those layers compose after source output and may override source tokens.
 
 ```ts
 interface TokenSource<I extends Issue = Issue> {
@@ -65,7 +66,7 @@ Conversion adapters are separate operations, not `TokenSource` objects by defaul
 functions such as `convertWithTexel(input)` and return `Result` with adapter-owned issues.
 
 Conversion output may be package-specific JSON-safe data or an explicit core artifact. If it claims to be a core graph,
-fragment, or compiled token set, it must satisfy the matching core parser and schema contract.
+layer, or compiled token set, it must satisfy the matching core parser and schema contract.
 
 ## Dependency Rules
 

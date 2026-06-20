@@ -68,25 +68,21 @@ const graph = defineTokenGraph({
     },
     background: {
       visibility: "public",
-      valueByMode: {
-        light: "#ffffff",
-        dark: "#141218",
-      },
+      light: "#ffffff",
+      dark: "#141218",
     },
     foreground: {
       visibility: "public",
-      valueByMode: {
-        light: "#111111",
-        dark: "#f5eff7",
-      },
+      light: "#111111",
+      dark: "#f5eff7",
     },
     primary: {
       visibility: "public",
-      value: { ref: "brand.primary" },
+      value: "brand.primary",
     },
     "primary-foreground": {
       visibility: "public",
-      value: { ref: "brand.on-primary" },
+      value: "brand.on-primary",
     },
   },
 });
@@ -154,6 +150,43 @@ console.log(blocks.value[0]?.declarations["--background"]);
 Omit `prefix` to emit custom properties such as `--background`, `--foreground`, `--primary`, and
 `--primary-foreground`. Pass `prefix: "color"` to emit names such as `--color-background`.
 
+## Layered Token Sets
+
+Use layers when a product needs ordered authored overlays. Sources are optional; a layer-only build does not need an
+empty sources array.
+
+```ts
+import { buildTokenSet, defineTokenLayer } from "color-scheme-tokens";
+
+const base = defineTokenLayer({
+  id: "base",
+  tokens: {
+    background: "#ffffff",
+    foreground: "#111111",
+    primary: "#6750a4",
+  },
+});
+
+const brand = defineTokenLayer({
+  id: "brand",
+  tokens: {
+    primary: "#ff3b30",
+  },
+});
+
+const built = buildTokenSet({
+  layers: [base, brand],
+});
+
+if (!built.ok) {
+  throw new Error(JSON.stringify(built.issues, null, 2));
+}
+```
+
+Layers are ordered token overlays. Sources compose first, layers compose after sources, and later layers win by token
+key. This is deterministic token composition, not CSS cascade behavior: there is no selector specificity, `!important`,
+CSS `@layer`, DOM mutation, or style injection.
+
 ## Optional Material 3
 
 Material 3 output is provided by `@color-scheme-tokens/source-material3`, not by the root package.
@@ -163,10 +196,10 @@ pnpm add color-scheme-tokens @color-scheme-tokens/source-material3
 ```
 
 ```ts
-import { buildTokenSet, defineTokenFragment, exportCssVariables } from "color-scheme-tokens";
+import { buildTokenSet, defineTokenLayer, exportCssVariables } from "color-scheme-tokens";
 import { material3Source } from "@color-scheme-tokens/source-material3";
 
-const application = defineTokenFragment<"light" | "dark">({
+const application = defineTokenLayer<"light" | "dark">({
   id: "application",
   defaultVisibility: "public",
   tokens: {
@@ -184,7 +217,7 @@ const built = buildTokenSet({
       defaultVisibility: "internal",
     }),
   ],
-  fragments: [application],
+  layers: [application],
 });
 
 if (!built.ok) {
@@ -199,9 +232,9 @@ if (!css.ok) {
 console.log(css.value);
 ```
 
-`buildTokenSet()` is the runner that composes one or more sources plus fragments, validates the returned graph material,
-and produces `built.value.compiled`. The Material adapter supplies a real Material source; the root package stays
-engine-free.
+`buildTokenSet()` is the runner that composes sources and layers, validates the composed graph material, and produces
+`built.value.compiled`. At least one source or layer is required. Source-only, layer-only, and source-plus-layer builds
+are all valid. The Material adapter supplies a real Material source; the root package stays engine-free.
 
 `sourceColor` is the required Material source color used to generate the scheme. Material extended colors are exposed as
 `extendedColors`, with entries shaped as `{ name, color, harmonize? }`.
@@ -242,7 +275,9 @@ resolved colors, modes, token visibility, origin metadata, and direct dependency
 
 - a color string such as `"#6750a4"`;
 - a token-key string reference such as `"brand.primary"`;
+- a token object reference such as `{ visibility: "public", value: "brand.primary" }`;
 - an explicit reference such as `{ ref: "brand.primary" }`;
+- metadata plus mode keys such as `{ visibility: "public", light: "#fff", dark: "#000" }`;
 - mode records such as `{ light: "#fff", dark: "#000" }` when modes are declared.
 
 The helper fills safe defaults and returns strict graph input. `parseTokenGraph()` is the persisted wire-format boundary
@@ -271,8 +306,8 @@ if (!parsed.ok) {
 Strict graph input spells out `formatVersion`, `modes`, `defaultMode`, `defaultVisibility`, and token definitions with
 `value` or `valueByMode`. It does not accept helper-only shorthand.
 
-The published JSON Schemas describe this strict graph shape, strict fragment input, and serialized compiled token sets.
-They do not describe `defineTokenGraph()` or `defineTokenFragment()` helper input.
+The published JSON Schemas describe this strict graph shape, strict layer input, and serialized compiled token sets.
+They do not describe `defineTokenGraph()` or `defineTokenLayer()` helper input.
 
 Compiled token sets are a third shape. They are produced by `compileTokenGraph()` or `buildTokenSet()` and contain
 resolved color values plus dependency and origin metadata for the selected tokens.
