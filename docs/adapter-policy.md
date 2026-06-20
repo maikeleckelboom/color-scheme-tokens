@@ -24,6 +24,41 @@ members and invokes `build()` with the original source object as the receiver.
 Source adapter factories should use plain names such as `material3Source(input)`. They return strict core graph input and
 report recoverable failures with adapter-owned issue types.
 
+For a minimal fixed source, the implementation can be structural:
+
+```ts
+import {
+  defineTokenGraph,
+  type Result,
+  type TokenGraphInput,
+  type TokenSource,
+} from "color-scheme-tokens";
+
+const staticSource: TokenSource = {
+  id: "static",
+  build(): Result<TokenGraphInput<"light" | "dark">> {
+    return {
+      ok: true,
+      value: defineTokenGraph({
+        modes: ["light", "dark"],
+        defaultMode: "light",
+        defaultVisibility: "internal",
+        tokens: {
+          "static.primary": {
+            light: "#6750a4",
+            dark: "#d0bcff",
+          },
+        },
+      }),
+    };
+  },
+};
+```
+
+This example is intentionally static: it demonstrates the source contract without implying that adapter authoring is a
+branding-specific workflow. Engine-backed adapters should keep parsing, engine calls, and adapter-owned issue types inside
+their own packages.
+
 ## Conversion Adapters
 
 Conversion adapters are separate operations, not `TokenSource` objects by default. They should export verb-based

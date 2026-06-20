@@ -2,12 +2,15 @@
 
 Dependency-light color token graphs for TypeScript and JavaScript applications.
 
-The primary core workflow is simple: define a manual token graph, compile it, and export CSS custom properties. Material
-3, Texel, image extraction, browser canvas, CSS parser engines, and color-conversion engines are not part of the root
-package and are not required for hand-authored colors.
+Use the root package when you want to author color tokens, compile a selected token set, serialize deterministic JSON, or
+export CSS custom properties. Optional engines such as Material 3 live in adapter packages; hand-authored tokens do not
+load those dependencies.
 
-The first public release line is `0.x`: the package is intended for real use, but the public contract can still change
-before `1.0.0`.
+## Install
+
+```bash
+pnpm add color-scheme-tokens
+```
 
 ## Quick Start
 
@@ -38,32 +41,8 @@ console.log(css.value);
 With no `modes` field, `defineTokenGraph()` creates one mode named `base`. In a single-mode graph, `base` means "the one
 ordinary value for this token." It is not a Material role, generated palette, light mode, or dark mode.
 
-The default CSS export uses `:root` for the default mode, so the graph above emits one block of variables. Directly
-authored tokens default to `public`, and compilation defaults to `selection: "public"`.
-
-## Serialize the Compiled Set
-
-```ts
-import { compileTokenGraph, defineTokenGraph, serializeTokenSet } from "color-scheme-tokens";
-
-const graph = defineTokenGraph({
-  tokens: {
-    "brand.primary": "#6750a4",
-    "surface.canvas": "#ffffff",
-  },
-});
-
-const compiled = compileTokenGraph(graph);
-if (!compiled.ok) {
-  throw new Error(JSON.stringify(compiled.issues, null, 2));
-}
-
-const json = serializeTokenSet(compiled.value);
-console.log(json);
-```
-
-`serializeTokenSet()` serializes the compiled output, not the authoring input. The output is deterministic and includes
-resolved colors, modes, token visibility, origin metadata, and direct dependency metadata.
+The default CSS export uses `:root` for the default mode. Directly authored tokens default to `public`, and compilation
+defaults to `selection: "public"`.
 
 ## Light and Dark Values
 
@@ -114,8 +93,84 @@ exporter receives only the selected compiled tokens and writes variables for tha
 To export every token, compile with `compileTokenGraph(graph, { selection: "all" })`. To export a named subset, compile
 with `compileTokenGraph(graph, { selection: { keys: ["button.background"] } })`.
 
-The default CSS selectors are `:root` for the default mode and `:root[data-color-scheme="dark"]` for the dark mode. You
-can pass `scope` and `modeSelectors` when your app uses classes or exact selectors instead.
+The default CSS selectors are `:root` for the default mode and `:root[data-color-scheme="dark"]` for the dark mode. Pass
+`scope` and `modeSelectors` when your app uses classes or exact selectors instead.
+
+## Optional Material 3
+
+Material 3 output is provided by `@color-scheme-tokens/source-material3`, not by the root package.
+
+```bash
+pnpm add color-scheme-tokens @color-scheme-tokens/source-material3
+```
+
+```ts
+import { buildTokenSet, defineTokenFragment, exportCssVariables } from "color-scheme-tokens";
+import { material3Source } from "@color-scheme-tokens/source-material3";
+
+const application = defineTokenFragment<"light" | "dark">({
+  id: "application",
+  defaultVisibility: "public",
+  tokens: {
+    "app.background": { ref: "material3.surface" },
+    "app.foreground": { ref: "material3.on-surface" },
+    "app.action": { ref: "material3.primary" },
+  },
+});
+
+const built = buildTokenSet({
+  source: material3Source({
+    sourceColor: "#6750a4",
+    defaultVisibility: "internal",
+  }),
+  fragments: [application],
+});
+
+if (!built.ok) {
+  throw new Error(JSON.stringify(built.issues, null, 2));
+}
+
+const css = exportCssVariables(built.value.tokenSet, { prefix: "color" });
+if (!css.ok) {
+  throw new Error(JSON.stringify(css.issues, null, 2));
+}
+```
+
+`buildTokenSet()` is the runner that composes a source plus fragments, validates the returned graph, and produces a
+compiled `TokenSet`. The Material adapter supplies a real Material source; the root package stays engine-free.
+
+`sourceColor` is the required Material source color used to generate the scheme. Material extended colors are exposed as
+`extendedColors`, with entries shaped as `{ name, color, harmonize? }`.
+
+The adapter emits strict `light` and `dark` graph tokens under the `material3` namespace by default, such as
+`material3.primary`, `material3.on-primary`, and `material3.primary-container`.
+
+See [`@color-scheme-tokens/source-material3`](./packages/source-material3/README.md) for adapter-specific options and
+composition examples.
+
+## Serialize the Compiled Set
+
+```ts
+import { compileTokenGraph, defineTokenGraph, serializeTokenSet } from "color-scheme-tokens";
+
+const graph = defineTokenGraph({
+  tokens: {
+    "brand.primary": "#6750a4",
+    "surface.canvas": "#ffffff",
+  },
+});
+
+const compiled = compileTokenGraph(graph);
+if (!compiled.ok) {
+  throw new Error(JSON.stringify(compiled.issues, null, 2));
+}
+
+const json = serializeTokenSet(compiled.value);
+console.log(json);
+```
+
+`serializeTokenSet()` serializes the compiled output, not the authoring input. The output is deterministic and includes
+resolved colors, modes, token visibility, origin metadata, and direct dependency metadata.
 
 ## Helper Input and Strict Input
 
@@ -157,121 +212,10 @@ They do not describe `defineTokenGraph()` or `defineTokenFragment()` helper inpu
 Compiled token sets are a third shape. They are produced by `compileTokenGraph()` or `buildTokenSet()` and contain
 resolved color values plus dependency and origin metadata for the selected tokens.
 
-## Adapter Runner
+## More Docs
 
-`buildTokenSet()` is the core runner for adapter packages. Core supplies the structural `TokenSource` interface, calls a
-source, composes caller fragments, validates the returned graph, and compiles the selected tokens.
-
-```ts
-import {
-  buildTokenSet,
-  defineTokenFragment,
-  defineTokenGraph,
-  type Issue,
-  type Result,
-  type TokenGraphInput,
-  type TokenSource,
-} from "color-scheme-tokens";
-
-interface BrandIssue extends Issue<"missing-brand-primary"> {}
-
-function brandSource(primary?: string): TokenSource<BrandIssue> {
-  return {
-    id: "brand",
-    build(): Result<TokenGraphInput<"light" | "dark">, BrandIssue> {
-      if (primary === undefined) {
-        return {
-          ok: false,
-          issues: [
-            {
-              code: "missing-brand-primary",
-              message: "Primary color is required.",
-            },
-          ],
-        };
-      }
-
-      return {
-        ok: true,
-        value: defineTokenGraph({
-          modes: ["light", "dark"],
-          defaultMode: "light",
-          defaultVisibility: "internal",
-          tokens: {
-            "brand.primary": {
-              light: primary,
-              dark: "#d0bcff",
-            },
-          },
-        }),
-      };
-    },
-  };
-}
-
-const application = defineTokenFragment<"light" | "dark">({
-  id: "application",
-  defaultVisibility: "public",
-  tokens: {
-    "button.background": { ref: "brand.primary" },
-  },
-});
-
-const built = buildTokenSet({
-  source: brandSource("#6750a4"),
-  fragments: [application],
-});
-
-if (!built.ok) {
-  throw new Error(JSON.stringify(built.issues, null, 2));
-}
-```
-
-Engine-backed behavior belongs in separate packages, for example `@color-scheme-tokens/source-material3` or future
-`@color-scheme-tokens/conversion-texel` packages. Material 3 support uses a real Material algorithm through that adapter
-boundary, not an approximation inside core. The adapter package model is documented in
-[`docs/adapter-policy.md`](./docs/adapter-policy.md).
-
-## Material 3 Adapter
-
-Manual token graphs require only `color-scheme-tokens`. Material 3 users install the root package plus the source
-adapter:
-
-```bash
-pnpm add color-scheme-tokens @color-scheme-tokens/source-material3
-```
-
-```ts
-import { buildTokenSet } from "color-scheme-tokens";
-import { material3Source } from "@color-scheme-tokens/source-material3";
-
-const built = buildTokenSet({
-  source: material3Source({
-    sourceColor: "#6750a4",
-  }),
-});
-
-if (!built.ok) {
-  throw new Error(JSON.stringify(built.issues, null, 2));
-}
-```
-
-The adapter emits strict `light` and `dark` graph tokens under the `material3` namespace by default, such as
-`material3.primary`, `material3.on-primary`, and `material3.primary-container`. The root package does not import or
-depend on Material Design.
-
-`sourceColor` is the required Material source color used to generate the scheme. Some Material tooling calls this a seed
-color; this package keeps the field name `sourceColor` and does not accept `color`, `seed`, or `source` aliases. Material
-extended colors are adapter-owned behavior exposed as `extendedColors`; they are not part of the root core package.
-
-## Development
-
-```bash
-pnpm install --frozen-lockfile
-pnpm validate
-pnpm release:check
-```
-
-`release:check` builds both packages, validates runtime/type surfaces, checks schemas and docs examples, installs packed
-tarballs into clean consumers, and checks tarball contents. Publishing, tagging, and release creation are separate
-owner-controlled steps.
+- [Public API](./docs/public-api.md)
+- [Diagnostics](./docs/diagnostics.md)
+- [Architecture](./docs/architecture.md)
+- [Adapter policy](./docs/adapter-policy.md)
+- [Semver](./docs/semver.md)
