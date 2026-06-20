@@ -148,6 +148,63 @@ console.log(blocks.value[0]?.declarations["--background"]);
 Omit `prefix` to emit custom properties such as `--background`, `--foreground`, `--primary`, and
 `--primary-foreground`. Pass `prefix: "color"` to emit names such as `--color-background`.
 
+## Tailwind v4
+
+`scheme-tokens` owns authored token names and runtime CSS variables. Tailwind owns the `@theme` namespace it needs to
+generate utilities. Keep those contracts separate: export stable runtime variables from `scheme-tokens`, then map the
+color tokens your app wants Tailwind to expose.
+
+Step 1: compile and export runtime CSS variables.
+
+```ts
+import { compileTokenGraph, defineTokens, exportCssVariables } from "scheme-tokens";
+
+const graph = defineTokens({
+  background: "#ffffff",
+  foreground: "#111111",
+  primary: "#6750a4",
+  "primary-foreground": "#ffffff",
+});
+
+const compiled = compileTokenGraph(graph);
+if (!compiled.ok) {
+  throw new Error(JSON.stringify(compiled.issues, null, 2));
+}
+
+const css = exportCssVariables(compiled.value);
+if (!css.ok) {
+  throw new Error(JSON.stringify(css.issues, null, 2));
+}
+
+console.log(css.value);
+```
+
+Step 2: load the generated runtime CSS in your app.
+
+```css
+:root {
+  --background: #ffffff;
+  --foreground: #111111;
+  --primary: #6750a4;
+  --primary-foreground: #ffffff;
+}
+```
+
+Step 3: map those runtime variables into Tailwind's color contract explicitly.
+
+```css
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+}
+```
+
+Tailwind utilities now use Tailwind's `--color-*` theme variables, while the runtime variables from `scheme-tokens`
+remain authored, stable, and unprefixed. Do not derive Tailwind colors by blindly remapping every exported declaration;
+keep the mapping to the color tokens that are part of your app's Tailwind contract.
+
 ## Layered Schemes
 
 Use layers when a product needs ordered authored overlays. Sources are optional; a layer-only build does not need an

@@ -165,6 +165,9 @@ for (const manifest of manifests) {
   if (dts.includes("invalid-variable-prefix") || !dts.includes("invalid-css-prefix")) {
     throw new Error(`${manifest.name} declaration exposes a stale CSS prefix issue code`);
   }
+  if (/import\(["'][^)]+["']\)\./.test(dts)) {
+    throw new Error(`${manifest.name} declaration exposes inline type imports`);
+  }
 }
 
 const rootBundle = readFileSync(join(root, "dist/index.js"), "utf8");

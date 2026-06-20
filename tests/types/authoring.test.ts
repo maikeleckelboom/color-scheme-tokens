@@ -13,8 +13,9 @@ import {
   type TokenLayerInput,
   type TokenSource,
 } from "../../src";
+import type * as Root from "../../src";
 
-type RootModule = typeof import("../../src");
+type RootModule = typeof Root;
 type RemovedLayerHelperName = `defineToken${"Frag"}${"ment"}`;
 // @ts-expect-error old token layer helper is not exported.
 export type RemovedLayerHelper = RootModule[RemovedLayerHelperName];

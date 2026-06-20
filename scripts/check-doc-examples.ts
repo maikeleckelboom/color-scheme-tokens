@@ -25,6 +25,7 @@ const adapterManifest = JSON.parse(
 ) as PackageManifest;
 const readme = readFileSync(join(repoRoot, "README.md"), "utf8");
 assertNoRemovedPublicNames();
+assertTailwindRecipe(readme);
 
 const blocks: string[] = [];
 for (const match of readme.matchAll(/```ts\n([\s\S]*?)```/g)) {
@@ -143,6 +144,28 @@ function assertNoRemovedPublicNames(): void {
         throw new Error(`Public docs or package metadata contain a removed name in ${file}`);
       }
     }
+  }
+}
+
+function assertTailwindRecipe(readmeText: string): void {
+  const requiredSnippets = [
+    "## Tailwind v4",
+    ":root {\n  --background:",
+    "--primary-foreground:",
+    "@theme inline",
+    "--color-background: var(--background);",
+    "--color-foreground: var(--foreground);",
+    "--color-primary: var(--primary);",
+    "--color-primary-foreground: var(--primary-foreground);",
+    "Do not derive Tailwind colors by blindly remapping every exported declaration",
+  ] as const;
+  for (const snippet of requiredSnippets) {
+    if (!readmeText.includes(snippet)) {
+      throw new Error(`README Tailwind v4 recipe is missing: ${snippet}`);
+    }
+  }
+  if (readmeText.includes('exportCssVariables(compiled.value, { prefix: "color" })')) {
+    throw new Error("README must not teach Tailwind by prefixing runtime CSS variables");
   }
 }
 

@@ -53,10 +53,20 @@ const compiled = compileTokenGraph(graph);
 if (!compiled.ok) throw new Error(JSON.stringify(compiled.issues));
 const css = exportCssVariables(compiled.value);
 if (!css.ok || !css.value.includes("--background: #ffffff;")) throw new Error("root workflow failed");
+if (css.value.includes("--color-background") || css.value.includes("--scheme-background")) {
+  throw new Error("default CSS export must use authored runtime token names");
+}
+const prefixedCss = exportCssVariables(compiled.value, { prefix: "color" });
+if (!prefixedCss.ok || !prefixedCss.value.includes("--color-background: #ffffff;")) {
+  throw new Error("explicit CSS prefix export failed");
+}
 const blocks = exportCssVariableBlocks(compiled.value);
 if (!blocks.ok) throw new Error(JSON.stringify(blocks.issues));
 const declarations = blocks.value[0]?.declarations;
 if (declarations?.["--background"] !== "#ffffff") throw new Error("structured CSS export failed");
+if (declarations?.["--color-background"] !== undefined || declarations?.["--scheme-background"] !== undefined) {
+  throw new Error("structured CSS export must be unprefixed by default");
+}
 if (Object.keys(declarations ?? {}).some((name) => name.startsWith("--undefined-") || name.startsWith("---"))) {
   throw new Error("unprefixed export produced a malformed custom property");
 }

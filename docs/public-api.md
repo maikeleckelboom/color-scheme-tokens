@@ -53,6 +53,34 @@ custom renderers.
 External CSS variable contracts can be supported by authoring matching token keys and exporting without a prefix. Core
 does not hard-code framework presets or browser mutation behavior.
 
+## Tailwind v4 Boundary
+
+Tailwind v4 integration is a CSS mapping step, not a root-package target exporter. `scheme-tokens` emits authored
+runtime variables by default:
+
+```css
+:root {
+  --background: #ffffff;
+  --foreground: #111111;
+  --primary: #6750a4;
+  --primary-foreground: #ffffff;
+}
+```
+
+Tailwind's `--color-*` names belong in Tailwind's `@theme` contract:
+
+```css
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+}
+```
+
+Use an explicit color token list for this mapping. Do not derive Tailwind theme colors by blindly converting every CSS
+variable declaration to `--color-*`, and do not treat `--color-*` as the default `scheme-tokens` runtime namespace.
+
 ## Token Keys
 
 Core token keys use one canonical internal language: dot-separated lower-kebab identifier segments.

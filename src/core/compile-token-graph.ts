@@ -2,6 +2,7 @@ import { cloneColor, type ColorValue } from "./color";
 import type { ColorExpression, TokenGraph, TokenGraphIssue, TokenGraphToken } from "./graph";
 import type {
   CompileTokenGraphIssue,
+  CompileTokenGraphOptions,
   CompiledToken,
   CompiledScheme,
   TokenSelection,
@@ -25,7 +26,7 @@ interface ResolvedNode {
 
 export function compileTokenGraph(
   input: unknown,
-  options?: import("./compiled-types").CompileTokenGraphOptions,
+  options?: CompileTokenGraphOptions,
 ): Result<CompiledScheme, TokenGraphIssue | CompileTokenGraphIssue> {
   const parsed = parseTokenGraphInternal(input, {});
   if (!parsed.ok) {
@@ -88,7 +89,7 @@ export function compileParsedTokenGraph(
 
 export function parseCompileSelection(
   graph: TokenGraph,
-  options: import("./compiled-types").CompileTokenGraphOptions | undefined,
+  options: CompileTokenGraphOptions | undefined,
 ): Result<TokenSelection, CompileTokenGraphIssue> {
   if (options === undefined) {
     return { ok: true, value: "public" };

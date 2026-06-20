@@ -1,6 +1,6 @@
 import type { ColorValue } from "./color";
 import type { TokenGraphIssue, TokenOrigin, TokenVisibility } from "./graph";
-import type { Issue } from "./result";
+import type { Issue, Result } from "./result";
 import type { JsonValue } from "./json";
 
 export type TokenSelection =
@@ -43,7 +43,7 @@ export interface CompiledScheme {
   readonly tokens: Readonly<Record<string, CompiledToken>>;
 }
 
-export type CompileTokenGraphResult = import("./result").Result<
+export type CompileTokenGraphResult = Result<
   CompiledScheme,
   TokenGraphIssue | CompileTokenGraphIssue
 >;

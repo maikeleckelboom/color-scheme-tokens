@@ -387,7 +387,8 @@ describe("v1 graph and compiler", () => {
       ),
     );
 
-    expect(exportCssVariables(compiled)).toEqual({
+    const defaultCss = exportCssVariables(compiled);
+    expect(defaultCss).toEqual({
       ok: true,
       value:
         ":root {\n" +
@@ -398,6 +399,8 @@ describe("v1 graph and compiler", () => {
         "  --primary-foreground: #ffffff;\n" +
         "}\n",
     });
+    expect(unwrap(defaultCss)).not.toContain("--color-");
+    expect(unwrap(defaultCss)).not.toContain("--scheme-");
     expect(exportCssVariables(compiled, { prefix: "" })).toEqual(exportCssVariables(compiled));
     expect(exportCssVariables(compiled, { prefix: "color" })).toEqual({
       ok: true,
