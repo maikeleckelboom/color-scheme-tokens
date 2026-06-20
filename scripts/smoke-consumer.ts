@@ -122,7 +122,11 @@ const graph: TokenGraphInput<"base"> = defineTokenGraph({
   tokens: { "app.background": { value: "#ffffff" } },
 });
 const compiled: Result<CompiledTokenSet, Issue> = compileTokenGraph(graph);
-const cssOptions: ExportCssVariablesOptions = { variablePrefix: "theme" };
+const cssOptions: ExportCssVariablesOptions = { prefix: "theme" };
+const legacyCssOptions: ExportCssVariablesOptions = {
+  // @ts-expect-error variablePrefix is not part of the public CSS export options.
+  variablePrefix: "theme",
+};
 const color: ColorValue = { colorSpace: "srgb", r: 1, g: 1, b: 1, alpha: 1 };
 const source = {
   id: "brand",
@@ -131,7 +135,8 @@ const source = {
   },
 };
 buildTokenSet({ source });
-cssOptions.variablePrefix?.toUpperCase();
+cssOptions.prefix?.toUpperCase();
+legacyCssOptions.prefix?.toUpperCase();
 color.colorSpace.toUpperCase();
 if (compiled.ok) compiled.value.defaultMode.toUpperCase();
 `,

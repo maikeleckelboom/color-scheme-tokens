@@ -26,7 +26,7 @@ if (!compiled.ok) {
   throw new Error(JSON.stringify(compiled.issues, null, 2));
 }
 
-const css = exportCssVariables(compiled.value, { variablePrefix: "color" });
+const css = exportCssVariables(compiled.value, { prefix: "color" });
 if (!css.ok) {
   throw new Error(JSON.stringify(css.issues, null, 2));
 }
@@ -98,7 +98,7 @@ if (!compiled.ok) {
   throw new Error(JSON.stringify(compiled.issues, null, 2));
 }
 
-const css = exportCssVariables(compiled.value, { variablePrefix: "color" });
+const css = exportCssVariables(compiled.value, { prefix: "color" });
 if (!css.ok) {
   throw new Error(JSON.stringify(css.issues, null, 2));
 }

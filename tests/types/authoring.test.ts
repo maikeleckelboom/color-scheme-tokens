@@ -1,4 +1,9 @@
-import { defineTokenFragment, defineTokenGraph, type TokenGraphInput } from "../../src";
+import {
+  defineTokenFragment,
+  defineTokenGraph,
+  type ExportCssVariablesOptions,
+  type TokenGraphInput,
+} from "../../src";
 
 const simpleGraph = defineTokenGraph({
   tokens: {
@@ -30,6 +35,15 @@ defineTokenFragment({
     "brand.primary": "#6750a4",
   },
 });
+
+const cssOptions: ExportCssVariablesOptions = { prefix: "theme" };
+cssOptions.prefix?.toUpperCase();
+
+const legacyCssOptions: ExportCssVariablesOptions = {
+  // @ts-expect-error variablePrefix is not part of the public CSS export options.
+  variablePrefix: "theme",
+};
+legacyCssOptions.prefix?.toUpperCase();
 
 defineTokenGraph({
   modes: ["light", "dark"],

@@ -37,6 +37,9 @@ For manual custom colors:
 `compileTokenGraph()` defaults to `selection: "public"`. The CSS exporter emits variables for the compiled token set it
 receives; it does not apply visibility filtering itself.
 
+`exportCssVariables()` accepts `prefix` when callers need namespaced custom properties such as
+`--color--brand--primary`.
+
 ## Authoring Helpers
 
 `defineTokenGraph()` and `defineTokenFragment()` are ergonomic authoring helpers. They default `formatVersion` to `1` and

@@ -30,7 +30,7 @@ export type CssModeSelectors =
     };
 
 export interface ExportCssVariablesOptions {
-  readonly variablePrefix?: string;
+  readonly prefix?: string;
   readonly scope?: CssScope;
   readonly modeSelectors?: CssModeSelectors;
   readonly format?: "pretty" | "compact";
@@ -65,7 +65,7 @@ export function exportCssVariables(
   const blocks = tokenSet.modes.map((mode) => {
     const declarations = tokenKeys.map((key) => {
       const value = tokenSet.tokens[key]?.valueByMode[mode];
-      return `${cssVariableName(key, parsed.value.variablePrefix)}:${parsed.value.compact ? "" : " "}${formatCssColor(value as never)};`;
+      return `${cssVariableName(key, parsed.value.prefix)}:${parsed.value.compact ? "" : " "}${formatCssColor(value as never)};`;
     });
     return parsed.value.compact
       ? `${parsed.value.selectors[mode]}{${declarations.join("")}}`
@@ -83,7 +83,7 @@ export function exportCssVariables(
 }
 
 interface ParsedCssOptions {
-  readonly variablePrefix?: string;
+  readonly prefix?: string;
   readonly selectors: Readonly<Record<string, string>>;
   readonly compact: boolean;
 }
@@ -105,7 +105,7 @@ function parseOptions(
 
   for (const entry of entries.value) {
     if (
-      entry.key !== "variablePrefix" &&
+      entry.key !== "prefix" &&
       entry.key !== "scope" &&
       entry.key !== "modeSelectors" &&
       entry.key !== "format"
@@ -118,17 +118,14 @@ function parseOptions(
   }
 
   const record = new Map(entries.value.map((entry) => [entry.key, entry.value]));
-  const variablePrefix = record.get("variablePrefix");
-  if (
-    variablePrefix !== undefined &&
-    (typeof variablePrefix !== "string" || !isSingleSegmentIdentifier(variablePrefix))
-  ) {
+  const prefix = record.get("prefix");
+  if (prefix !== undefined && (typeof prefix !== "string" || !isSingleSegmentIdentifier(prefix))) {
     return {
       ok: false,
       issues: [
         {
           code: "invalid-variable-prefix",
-          message: "variablePrefix must be a lower-kebab single segment.",
+          message: "prefix must be a lower-kebab single segment.",
         },
       ],
     };
@@ -151,7 +148,7 @@ function parseOptions(
   return {
     ok: true,
     value: {
-      ...(typeof variablePrefix === "string" ? { variablePrefix } : {}),
+      ...(typeof prefix === "string" ? { prefix } : {}),
       selectors: selectors.value,
       compact: format === "compact",
     },

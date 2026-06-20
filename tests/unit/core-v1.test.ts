@@ -148,7 +148,7 @@ describe("v1 graph and compiler", () => {
     expect(Object.keys(compiled.tokens)).toEqual(["app.action", "app.action-text"]);
     expect(compiled.tokens["app.action"]?.dependenciesByMode.light).toEqual(["brand.primary"]);
 
-    const css = exportCssVariables(compiled, { variablePrefix: "theme" });
+    const css = exportCssVariables(compiled, { prefix: "theme" });
     expect(css).toEqual({
       ok: true,
       value:
@@ -164,6 +164,16 @@ describe("v1 graph and compiler", () => {
 
     expect(serializeTokenSet(compiled)).toContain('"formatVersion": 1');
     expect(serializeTokenSet(compiled).endsWith("\n")).toBe(true);
+  });
+
+  test("rejects the removed CSS variablePrefix option at runtime", () => {
+    const compiled = unwrap(compileTokenGraph(makeGraph()));
+    const oldOptions: unknown = { variablePrefix: "theme" };
+
+    expect(exportCssVariables(compiled, oldOptions as never)).toEqual({
+      ok: false,
+      issues: [{ code: "invalid-css-options", message: "Unknown CSS option: variablePrefix." }],
+    });
   });
 
   test("stores direct dependencies without expanding transitive chains", () => {
