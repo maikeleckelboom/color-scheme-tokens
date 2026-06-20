@@ -27,7 +27,7 @@ export const material3Platforms = ["phone", "watch"] as const;
 export type Material3Variant = (typeof material3Variants)[number];
 export type Material3SpecVersion = (typeof material3SpecVersions)[number];
 export type Material3Platform = (typeof material3Platforms)[number];
-export type Material3SourceColorsInput = string | readonly [string, ...string[]];
+export type Material3SourceColorsInput = string | readonly string[];
 
 export interface Material3PaletteOverridesInput {
   readonly primary?: string;
@@ -55,6 +55,8 @@ export interface Material3Input {
   readonly extendedColors?: readonly Material3ExtendedColorInput[];
   readonly paletteTones?: true | readonly number[];
 }
+
+export type Material3GenerationOptions = Omit<Material3Input, "sourceColors">;
 
 export interface Material3IntegrationOptions {
   readonly id?: string;
@@ -142,6 +144,7 @@ export type Material3Issue =
   | (Issue<"material3-engine-failed"> & {
       readonly enginePackage: typeof MATERIAL3_ENGINE_PACKAGE;
       readonly engineVersion: typeof MATERIAL3_ENGINE_VERSION;
+      readonly causeMessage?: string;
     });
 
 export interface Material3ExtendedColor {
@@ -213,12 +216,32 @@ const paletteKeys = new Set<Material3PaletteName>([
   "error",
 ]);
 
+interface NormalizedMaterial3Arguments {
+  readonly input: Material3Input;
+  readonly options: unknown;
+}
+
 export function material3(
   input: Material3Input,
   options?: Material3IntegrationOptions,
+): TokenSource<Material3Issue>;
+export function material3(
+  sourceColors: Material3SourceColorsInput,
+  generationOptions?: Material3GenerationOptions,
+  integrationOptions?: Material3IntegrationOptions,
+): TokenSource<Material3Issue>;
+export function material3(
+  inputOrSourceColors: Material3Input | Material3SourceColorsInput,
+  optionsOrGenerationOptions?: Material3IntegrationOptions | Material3GenerationOptions,
+  integrationOptions?: Material3IntegrationOptions,
 ): TokenSource<Material3Issue> {
-  const parsedInput = parseMaterial3Input(input);
-  const parsedOptions = parseMaterial3IntegrationOptions(options);
+  const normalized = normalizeMaterial3Arguments(
+    inputOrSourceColors,
+    optionsOrGenerationOptions,
+    integrationOptions,
+  );
+  const parsedInput = parseMaterial3Input(normalized.input);
+  const parsedOptions = parseMaterial3IntegrationOptions(normalized.options);
 
   return {
     id: parsedOptions.sourceId,
@@ -254,18 +277,44 @@ export function material3(
             paletteTones: parsedInput.paletteTones,
           }),
         };
-      } catch {
+      } catch (cause) {
         return fail([
           {
             code: "material3-engine-failed",
             message: "The Material 3 engine failed while generating a token graph.",
             enginePackage: MATERIAL3_ENGINE_PACKAGE,
             engineVersion: MATERIAL3_ENGINE_VERSION,
+            ...describeCaughtCause(cause),
           },
         ]);
       }
     },
   };
+}
+
+function normalizeMaterial3Arguments(
+  inputOrSourceColors: Material3Input | Material3SourceColorsInput,
+  optionsOrGenerationOptions: Material3IntegrationOptions | Material3GenerationOptions | undefined,
+  integrationOptions: Material3IntegrationOptions | undefined,
+): NormalizedMaterial3Arguments {
+  if (isSourceColorsShorthand(inputOrSourceColors)) {
+    return {
+      input: {
+        sourceColors: inputOrSourceColors,
+        ...optionsOrGenerationOptions,
+      },
+      options: integrationOptions,
+    };
+  }
+
+  return {
+    input: inputOrSourceColors,
+    options: optionsOrGenerationOptions,
+  };
+}
+
+function isSourceColorsShorthand(input: unknown): input is Material3SourceColorsInput {
+  return typeof input === "string" || Array.isArray(input);
 }
 
 function parseMaterial3Input(input: unknown): ParsedMaterial3Input {
@@ -925,6 +974,24 @@ function parseHexColor(
 
 function jsonPointerSegment(segment: string): string {
   return segment.replaceAll("~", "~0").replaceAll("/", "~1");
+}
+
+function describeCaughtCause(cause: unknown): { readonly causeMessage?: string } {
+  if (cause instanceof Error) {
+    try {
+      return { causeMessage: truncateCauseMessage(cause.message || cause.name || "Error") };
+    } catch {
+      return { causeMessage: "Error" };
+    }
+  }
+  if (typeof cause === "string") {
+    return { causeMessage: truncateCauseMessage(cause) };
+  }
+  return { causeMessage: describeUnknown(cause) };
+}
+
+function truncateCauseMessage(message: string): string {
+  return message.length <= 240 ? message : `${message.slice(0, 237)}...`;
 }
 
 function fail(issues: readonly Material3Issue[]): Result<never, Material3Issue> {

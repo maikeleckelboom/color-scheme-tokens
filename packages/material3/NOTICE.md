@@ -8,8 +8,8 @@ dynamic scheme behavior that is present on main but not yet available in the pub
 
 - Repository: https://github.com/material-foundation/material-color-utilities
 - Upstream commit: `6fd88eb3e95ba1d457842e2a2bf847d06b3a018a`
-- Copied surface: TypeScript HCT, tonal palettes, blend, contrast, dynamic color, dynamic scheme variants including CMF,
-  spec delegates, platform support, and string/color utilities required by `@scheme-tokens/material3`.
+- Copied surface: TypeScript HCT, tonal palettes, harmonization, contrast, dynamic color, dynamic scheme variants
+  including CMF, spec delegates, platform support, and string/color utilities required by `@scheme-tokens/material3`.
 - License: Apache License, Version 2.0
 - Copyright: Google LLC, as stated in the copied file headers.
 

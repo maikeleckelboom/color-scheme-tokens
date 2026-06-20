@@ -25,17 +25,7 @@ const application = defineTokenLayer<"light" | "dark">({
   },
 });
 
-const built = buildScheme(
-  material3(
-    {
-      sourceColors: "#6750a4",
-    },
-    {
-      defaultVisibility: "internal",
-    },
-  ),
-  { layers: [application] },
-);
+const built = buildScheme(material3("#6750a4"), { layers: [application] });
 
 if (!built.ok) {
   throw new Error(JSON.stringify(built.issues, null, 2));
@@ -61,9 +51,14 @@ material3.primary-container
 
 ## Material Input
 
-`material3(input, options?)` separates Material generation input from scheme-token integration policy.
+`sourceColors` is the canonical Material source-color field. `material3("#6750a4")` is shorthand for
+`material3({ sourceColors: "#6750a4" })` and is the ordinary one-color path:
 
-The first argument owns Material generation:
+```ts
+material3("#6750a4");
+```
+
+Use the object form when you want explicit Material generation input:
 
 ```ts
 material3({
@@ -71,21 +66,18 @@ material3({
 });
 ```
 
-`sourceColors` is required. It accepts a strict opaque `#rrggbb` string for the common one-brand-color case, or a
-non-empty readonly array for official multi-source generation paths:
+`sourceColors` is required in the object form. It accepts a strict opaque `#rrggbb` string for the common
+one-brand-color case, or an array for official multi-source generation paths. Empty arrays fail at runtime validation:
 
 ```ts
-material3({
-  sourceColors: ["#6750a4", "#00a88f"],
-  variant: "cmf",
-  specVersion: "2026",
-});
+material3(["#6750a4", "#00a88f"], { variant: "cmf", specVersion: "2026" });
 ```
 
-The first color is the primary source color. Additional colors are passed to upstream `sourceColorHcts`; they are not
-silently reduced to the first color.
+The first color is the primary source color. Additional colors are passed to the official multi-source Material
+generation path in array order; they are not silently reduced to the first color.
 
-The optional second argument owns integration policy:
+`material3(input, options?)` separates Material generation input from scheme-token integration policy. With object input,
+the optional second argument owns integration policy:
 
 ```ts
 material3(
@@ -99,7 +91,15 @@ material3(
 );
 ```
 
-`id` and `defaultVisibility` are rejected in the first argument.
+With shorthand input, the optional second argument owns Material generation options and the optional third argument owns
+integration policy:
+
+```ts
+material3("#6750a4", { variant: "expressive" }, { defaultVisibility: "internal" });
+```
+
+`id` and `defaultVisibility` are integration options, not Material generation input. They are rejected in object input
+and in the shorthand generation-options position.
 
 ## Dynamic Controls
 
@@ -112,8 +112,8 @@ The adapter supports the official engine controls available in the vendored Mate
 - `platform`: `phone`, `watch`, default `phone`.
 
 The default variant is `tonal-spot`. CMF is official 2026 behavior, so `variant: "cmf"` requires
-`specVersion: "2026"`. The upstream CMF constructor accepts one or more source colors; a second color influences the
-multi-source CMF output but is not required by the current official implementation.
+`specVersion: "2026"`. The official CMF path accepts one or more source colors; a second color influences multi-source
+CMF output but is not required by the current official implementation.
 
 ```ts
 material3({
@@ -182,6 +182,13 @@ Extended color roles use the official custom color group behavior: harmonization
 extended color entry and primary source color. They are not claimed to respond to every dynamic scheme control when the
 upstream custom color algorithm does not define that behavior.
 
+## Optional Material Roles
+
+Role tokens are emitted only when the selected official Material spec exposes the role for both light and dark schemes.
+Newer roles such as `primary-dim`, `secondary-dim`, `tertiary-dim`, and `error-dim` can therefore differ by
+`specVersion`. The adapter preserves that upstream surface instead of pretending every spec version has identical role
+keys.
+
 ## Palette Tone Tokens
 
 `paletteTones` is opt-in to avoid bloating the base graph.
@@ -222,26 +229,15 @@ const built = buildScheme(
     {
       sourceColors: ["#6750a4", "#00a88f"],
       variant: "cmf",
-      contrastLevel: 0.5,
       specVersion: "2026",
-      platform: "phone",
-      palettes: {
-        primary: "#6750a4",
-        secondary: "#006a60",
-        tertiary: "#7d5260",
-        neutral: "#605d62",
-        neutralVariant: "#605d66",
-        error: "#ba1a1a",
-      },
+      contrastLevel: 0.5,
       extendedColors: [
         {
           name: "success",
           color: "#2e7d32",
           harmonize: true,
-          description: "Positive state color",
         },
       ],
-      paletteTones: [0, 40, 90, 100],
     },
     {
       defaultVisibility: "internal",
@@ -266,8 +262,8 @@ Light and dark are graph modes in `scheme-tokens`, and layers are the extension 
 ## Engine Provenance
 
 The published npm package `@material/material-color-utilities@0.4.0` does not expose the latest official main-branch
-surface required here, including `sourceColorHcts`, `SpecVersion` `2026`, `Variant.CMF`, and `SchemeCmf`. This adapter
-therefore vendors a minimal official TypeScript snapshot from
+surface required here, including the 2026 spec, CMF variant, CMF scheme, and official multi-source generation behavior.
+This adapter therefore vendors a minimal official TypeScript snapshot from
 `material-foundation/material-color-utilities@6fd88eb3e95ba1d457842e2a2bf847d06b3a018a`.
 
 The vendored files live under `src/vendor/material-color-utilities`, keep their Apache-2.0 license headers, and are not

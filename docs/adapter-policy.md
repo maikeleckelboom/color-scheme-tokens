@@ -238,12 +238,18 @@ Every adapter must prove before release:
 
 - `@scheme-tokens/material3` creates a `TokenSource` from Material 3 generation input and emits `light` / `dark` graph
   tokens under a lower-kebab source id namespace.
-- `sourceColors` is the canonical public source-color input. It accepts one strict `#rrggbb` string or a non-empty array
-  of strict `#rrggbb` strings, and the array form maps to official upstream `sourceColorHcts` behavior.
-- `variant`, `contrastLevel`, `specVersion`, `platform`, `palettes`, `extendedColors`, and `paletteTones` belong in the
-  first `material3()` argument. `id` and `defaultVisibility` belong in the optional second argument.
+- `sourceColors` is the canonical public source-color input. `material3("#6750a4")` is shorthand for
+  `material3({ sourceColors: "#6750a4" })`. The canonical field accepts one strict `#rrggbb` string or an array of
+  strict `#rrggbb` strings, and the array form maps to official upstream multi-source behavior while preserving order.
+  Empty arrays fail at runtime validation.
+- With object input, `variant`, `contrastLevel`, `specVersion`, `platform`, `palettes`, `extendedColors`, and
+  `paletteTones` belong in the first `material3()` argument. `id` and `defaultVisibility` belong in the optional second
+  argument. With shorthand input, the second argument is Material generation options and the third argument is integration
+  options.
 - Material extended colors are adapter-owned behavior exposed as `extendedColors`, with entries shaped as
   `{ name, color, harmonize?, description? }`. Engine-specific option names stay internal.
+- Material role keys can differ by official `specVersion`; newer optional roles are emitted only when the selected
+  upstream spec exposes them.
 - The adapter vendors a pinned official Material Color Utilities TypeScript snapshot when the published npm package lags
   the required official main-branch behavior. Vendored internals remain package-private and must preserve upstream
   license provenance.

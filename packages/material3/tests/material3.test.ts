@@ -56,7 +56,7 @@ describe("material3", () => {
   });
 
   test("creates a structural TokenSource with tested defaults", () => {
-    const source = material3({ sourceColors: "#6750a4" });
+    const source = material3("#6750a4");
     const graph = unwrap(source.build());
     const explicitDefaultGraph = unwrap(
       material3({
@@ -81,6 +81,61 @@ describe("material3", () => {
       false,
     );
     expect(parseTokenGraph(graph).ok).toBe(true);
+  });
+
+  test("matches sourceColors shorthand to canonical object input", () => {
+    const shorthand = unwrap(material3("#6750a4").build());
+    const object = unwrap(material3({ sourceColors: "#6750a4" }).build());
+
+    expect(extractGraphTokenValues(shorthand)).toEqual(extractGraphTokenValues(object));
+  });
+
+  test("matches one-item sourceColors array shorthand to scalar shorthand", () => {
+    const scalar = unwrap(material3("#6750a4").build());
+    const array = unwrap(material3(["#6750a4"]).build());
+
+    expect(extractGraphTokenValues(array)).toEqual(extractGraphTokenValues(scalar));
+  });
+
+  test("matches shorthand generation options to canonical object input", () => {
+    const shorthand = unwrap(material3("#6750a4", { variant: "expressive" }).build());
+    const object = unwrap(material3({ sourceColors: "#6750a4", variant: "expressive" }).build());
+
+    expect(extractGraphTokenValues(shorthand)).toEqual(extractGraphTokenValues(object));
+  });
+
+  test("matches shorthand generation and integration options to canonical object input", () => {
+    const shorthand = material3(
+      "#6750a4",
+      { variant: "expressive" },
+      { defaultVisibility: "internal" },
+    );
+    const object = material3(
+      { sourceColors: "#6750a4", variant: "expressive" },
+      { defaultVisibility: "internal" },
+    );
+    const shorthandGraph = unwrap(shorthand.build());
+    const objectGraph = unwrap(object.build());
+
+    expect(shorthand.id).toBe(object.id);
+    expect(shorthandGraph.defaultVisibility).toBe("internal");
+    expect(extractGraphTokenValues(shorthandGraph)).toEqual(extractGraphTokenValues(objectGraph));
+  });
+
+  test("rejects integration options in shorthand generation options position", () => {
+    const result = material3("#6750a4", {
+      defaultVisibility: "internal",
+    } as unknown as Material3Input).build();
+
+    expectIssueCodes(result, ["material3-invalid-input"]);
+    expect(expectIssuePaths(result)).toContain("/defaultVisibility");
+  });
+
+  test("rejects generation options in shorthand integration options position", () => {
+    const result = material3("#6750a4", {}, { variant: "expressive" } as never).build();
+
+    expectIssueCodes(result, ["material3-invalid-input"]);
+    expect(expectIssuePaths(result)).toContain("/variant");
   });
 
   test("matches scalar sourceColors to a one-item sourceColors array", () => {
@@ -180,6 +235,17 @@ describe("material3", () => {
     expect(expectIssuePaths(result)).toEqual(expect.arrayContaining(["/id", "/defaultVisibility"]));
   });
 
+  test("rejects integration options in Material 3 generation input", () => {
+    for (const generationOptions of [{ id: "material3" }, { defaultVisibility: "internal" }]) {
+      const result = material3("#6750a4", generationOptions as unknown as Material3Input).build();
+
+      expectIssueCodes(result, ["material3-invalid-input"]);
+      expect(expectIssuePaths(result)).toContain(
+        "id" in generationOptions ? "/id" : "/defaultVisibility",
+      );
+    }
+  });
+
   test("builds every supported dynamic variant", () => {
     for (const variant of material3Variants) {
       const graph = unwrap(
@@ -207,7 +273,7 @@ describe("material3", () => {
     expect(extractGraphTokenValues(vibrant)).not.toEqual(extractGraphTokenValues(tonalSpot));
   });
 
-  test("uses official CMF behavior for 2026 sourceColorHcts", () => {
+  test("uses official CMF behavior for 2026 multi-source input", () => {
     const single = unwrap(
       material3({ sourceColors: "#6750a4", variant: "cmf", specVersion: "2026" }).build(),
     );
@@ -469,9 +535,15 @@ describe("material3", () => {
 
   test("keeps the adapter engine vendored and package-owned", () => {
     const manifest = readJsonObject(join(process.cwd(), "package.json"));
+    const notice = readFileSync(join(process.cwd(), "NOTICE.md"), "utf8");
+    const apacheLicense = readFileSync(join(process.cwd(), "LICENSE-APACHE-2.0"), "utf8");
 
     expect(manifest.version).toBe("0.1.0");
     expect(manifest.private).toBeUndefined();
+    expect(manifest.license).toBe("MIT AND Apache-2.0");
+    expect(manifest.files).toEqual(
+      expect.arrayContaining(["NOTICE.md", "LICENSE", "LICENSE-APACHE-2.0"]),
+    );
     expect(manifest.publishConfig).toEqual({ access: "public" });
     expect(manifest.dependencies).toBeUndefined();
     expect(manifest.peerDependencies).toEqual({
@@ -481,6 +553,10 @@ describe("material3", () => {
       "scheme-tokens": "workspace:*",
     });
     expect(JSON.stringify(manifest)).not.toContain("@material/material-color-utilities");
+    expect(notice).toContain("material-foundation/material-color-utilities");
+    expect(notice).toContain("6fd88eb3e95ba1d457842e2a2bf847d06b3a018a");
+    expect(notice).toContain("Apache License, Version 2.0");
+    expect(apacheLicense).toContain("TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION");
   });
 });
 

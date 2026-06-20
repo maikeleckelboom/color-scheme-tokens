@@ -7,6 +7,7 @@ export {
 
 export type {
   Material3ExtendedColorInput,
+  Material3GenerationOptions,
   Material3Input,
   Material3IntegrationOptions,
   Material3Issue,

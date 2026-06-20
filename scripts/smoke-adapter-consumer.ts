@@ -54,10 +54,8 @@ const application = defineTokenLayer({
 
 const built = buildScheme(
   material3(
-    {
-      sourceColors: "#6750a4",
-      extendedColors: [{ name: "success", color: "#2e7d32" }],
-    },
+    "#6750a4",
+    { extendedColors: [{ name: "success", color: "#2e7d32" }] },
     { defaultVisibility: "internal" },
   ),
   { layers: [application], selection: "all" },
@@ -101,7 +99,7 @@ const adapterEntryUrl = await import.meta.resolve("@scheme-tokens/material3");
 const adapterBundle = readFileSync(new URL(adapterEntryUrl), "utf8");
 if (
   !adapterBundle.includes("src/vendor/material-color-utilities") ||
-  !adapterBundle.includes("sourceColorHcts")
+  !adapterBundle.includes("SchemeCmf")
 ) {
   throw new Error("adapter did not bundle the vendored Material engine surface");
 }

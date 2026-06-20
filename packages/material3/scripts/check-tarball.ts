@@ -9,8 +9,10 @@ interface PackageManifest {
   readonly devDependencies?: Readonly<Record<string, string>>;
   readonly peerDependencies?: Readonly<Record<string, string>>;
   readonly files: readonly string[];
+  readonly license?: string;
   readonly private?: boolean;
   readonly publishConfig?: Readonly<Record<string, string>>;
+  readonly scripts?: Readonly<Record<string, string>>;
   readonly version: string;
 }
 
@@ -47,6 +49,7 @@ for (const file of files) {
       file === "package/README.md" ||
       file === "package/NOTICE.md" ||
       file === "package/LICENSE" ||
+      file === "package/LICENSE-APACHE-2.0" ||
       file.startsWith("package/dist/")
     )
   ) {
@@ -72,6 +75,16 @@ if (!manifest.files.includes("dist")) {
 if (!manifest.files.includes("NOTICE.md")) {
   throw new Error("adapter package files must include third-party notices for bundled engine code");
 }
+if (!manifest.files.includes("LICENSE-APACHE-2.0")) {
+  throw new Error(
+    "adapter package files must include Apache-2.0 license text for bundled engine code",
+  );
+}
+if (manifest.license !== "MIT AND Apache-2.0") {
+  throw new Error(
+    "adapter package license must disclose owned MIT code plus bundled Apache-2.0 code",
+  );
+}
 const noticeText = readFileSync(join(packageRoot, "NOTICE.md"), "utf8");
 if (
   !noticeText.includes("material-foundation/material-color-utilities") ||
@@ -80,6 +93,14 @@ if (
   !noticeText.includes("Google LLC")
 ) {
   throw new Error("adapter third-party notice must cover the vendored Material engine");
+}
+const apacheLicenseText = readFileSync(join(packageRoot, "LICENSE-APACHE-2.0"), "utf8");
+if (
+  !apacheLicenseText.includes("Apache License") ||
+  !apacheLicenseText.includes("Version 2.0, January 2004") ||
+  !apacheLicenseText.includes("TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION")
+) {
+  throw new Error("adapter Apache license file must contain the full Apache-2.0 license text");
 }
 if (manifest.dependencies?.["@material/material-color-utilities"] !== undefined) {
   throw new Error("adapter package must not depend on the lagging npm Material engine");
@@ -93,6 +114,13 @@ if (manifest.peerDependencies?.["scheme-tokens"] !== "^0.1.0") {
 if (manifest.devDependencies?.["scheme-tokens"] !== "workspace:*") {
   throw new Error("adapter package must use scheme-tokens as a workspace dev dependency");
 }
+for (const scriptName of ["lint", "format", "format:fix"]) {
+  if (!manifest.scripts?.[scriptName]?.includes("src/vendor/material-color-utilities/**")) {
+    throw new Error(
+      `adapter ${scriptName} script must intentionally exclude vendored Material source`,
+    );
+  }
+}
 if (
   JSON.stringify(manifest.dependencies ?? {}).includes("workspace:") ||
   JSON.stringify(manifest.peerDependencies ?? {}).includes("workspace:")
@@ -102,11 +130,15 @@ if (
 
 const bundleText = readFileSync(join(packageRoot, "dist", "index.js"), "utf8");
 const sourceMapText = readFileSync(join(packageRoot, "dist", "index.js.map"), "utf8");
+const declarationText = readFileSync(join(packageRoot, "dist", "index.d.ts"), "utf8");
 if (!bundleText.includes("src/vendor/material-color-utilities")) {
   throw new Error("adapter bundle must inline the vendored Material engine");
 }
 if (!sourceMapText.includes("../src/vendor/material-color-utilities")) {
   throw new Error("adapter source map must preserve vendored Material engine provenance");
+}
+if (declarationText.includes("vendor/material-color-utilities")) {
+  throw new Error("adapter public declarations must not expose vendored Material internals");
 }
 
 function runPnpm(args: readonly string[], cwd: string): string {

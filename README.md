@@ -280,7 +280,7 @@ pnpm add scheme-tokens @scheme-tokens/material3
 import { buildScheme } from "scheme-tokens";
 import { material3 } from "@scheme-tokens/material3";
 
-const built = buildScheme(material3({ sourceColors: "#6750a4" }));
+const built = buildScheme(material3("#6750a4"));
 if (!built.ok) {
   throw new Error(JSON.stringify(built.issues, null, 2));
 }
@@ -332,11 +332,12 @@ convenience form, `buildScheme(material3(...), { layers })` resolves the Materia
 layer-only builds use the canonical options object. The Material adapter supplies a real Material 3 base scheme input;
 the root package stays engine-free.
 
-`sourceColors` is the required Material source-color input. It accepts a single `#rrggbb` string for the ordinary
-one-brand-color case or a non-empty array for official multi-source paths such as CMF. Material controls such as
-`variant`, `contrastLevel`, `specVersion`, `platform`, `palettes`, `extendedColors`, and `paletteTones` belong in the
-first `material3()` argument. Integration policy such as `id` and `defaultVisibility` belongs in the optional second
-argument.
+`sourceColors` is the canonical Material source-color field. `material3("#6750a4")` is shorthand for
+`material3({ sourceColors: "#6750a4" })`. The canonical field accepts a single `#rrggbb` string for the ordinary
+one-brand-color case or an array for official multi-source paths such as CMF; empty arrays fail at runtime validation.
+Material controls such as `variant`, `contrastLevel`, `specVersion`, `platform`, `palettes`, `extendedColors`, and
+`paletteTones` belong with Material generation input. Integration policy such as `id` and `defaultVisibility` belongs in
+integration options, not in Material generation input.
 
 The adapter emits strict `light` and `dark` graph tokens with adapter-owned keys such as `material3.primary`,
 `material3.on-primary`, and `material3.primary-container`.

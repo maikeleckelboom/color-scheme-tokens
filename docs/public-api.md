@@ -178,40 +178,40 @@ in `@scheme-tokens/material3`, which imports core only through the generic sourc
 
 ## Material 3 Adapter Package
 
-`@scheme-tokens/material3` exports the package-specific `material3(input, options?)` source helper. It is not a root
-subpath and it does not make the root package load Material engine code.
+`@scheme-tokens/material3` exports the package-specific `material3()` source helper. It is not a root subpath and it
+does not make the root package load Material engine code.
 
-The first argument is Material 3 generation input:
+The primary one-color API is shorthand for the canonical `sourceColors` field:
 
 ```ts
 import { material3 } from "@scheme-tokens/material3";
 
-const base = material3({
-  sourceColors: "#6750a4",
-  variant: "tonal-spot",
-  contrastLevel: 0,
-  specVersion: "2021",
-  platform: "phone",
-  palettes: {
-    primary: "#6750a4",
-  },
-  extendedColors: [
-    {
-      name: "success",
-      color: "#2e7d32",
-      harmonize: true,
-      description: "Positive state color",
-    },
-  ],
-  paletteTones: [40, 90],
-});
+const base = material3("#6750a4");
 ```
 
-`sourceColors` is required and accepts either a strict `#rrggbb` string or a non-empty readonly array of strict
-`#rrggbb` strings. The scalar form is the common one-color case; the array form maps to official upstream
-`sourceColorHcts` behavior for paths that use multiple source colors.
+`sourceColors` remains the canonical config field. `material3("#6750a4")` normalizes to
+`material3({ sourceColors: "#6750a4" })`. Object input owns Material 3 generation options:
 
-The optional second argument is scheme-token integration policy:
+```ts
+const generated = material3(
+  {
+    sourceColors: ["#6750a4", "#00a88f"],
+    variant: "cmf",
+    specVersion: "2026",
+    contrastLevel: 0.5,
+    extendedColors: [{ name: "success", color: "#2e7d32", harmonize: true }],
+  },
+  {
+    defaultVisibility: "internal",
+  },
+);
+```
+
+The canonical field accepts either a strict `#rrggbb` string or an array of strict `#rrggbb` strings. Empty arrays fail
+at runtime validation. The array form maps to official upstream multi-source behavior for paths that use multiple source
+colors, preserving source order.
+
+With object input, the optional second argument is scheme-token integration policy:
 
 ```ts
 const internalBase = material3(
@@ -227,8 +227,23 @@ const internalBase = material3(
 );
 ```
 
-`id` and `defaultVisibility` belong only in the second argument. Removed or older option names are rejected instead of
-being treated as aliases.
+With shorthand input, the optional second argument is Material 3 generation options and the optional third argument is
+integration policy:
+
+```ts
+const internalExpressiveBase = material3(
+  "#6750a4",
+  { variant: "expressive" },
+  { defaultVisibility: "internal" },
+);
+```
+
+`id` and `defaultVisibility` are integration options, not Material 3 generation input. `variant`, `contrastLevel`,
+`specVersion`, `platform`, `palettes`, `extendedColors`, and `paletteTones` are Material 3 generation options, not
+integration options. Removed or older option names are rejected instead of being treated as aliases.
+
+Some newer Material role keys, including dim roles, are emitted only when the selected official `specVersion` exposes
+them. Consumers should not assume every spec version has an identical role-key surface.
 
 The package also exports narrow UI-oriented values and types: `material3Variants`, `material3SpecVersions`,
 `material3Platforms`, `Material3Variant`, `Material3SpecVersion`, and `Material3Platform`.

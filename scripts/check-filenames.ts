@@ -1,4 +1,4 @@
-import { readdirSync, statSync } from "node:fs";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
 
 const checkedRoots = ["src", "tests", "scripts", "docs", "packages"] as const;
@@ -6,6 +6,7 @@ const conventionalNames = new Set([
   "AGENTS.md",
   "CHANGELOG.md",
   "LICENSE",
+  "LICENSE-APACHE-2.0",
   "NOTICE.md",
   "README.md",
   "index.ts",
@@ -32,6 +33,10 @@ if (failures.length > 0) {
 
 function checkDirectory(directory: string): void {
   if (directory === vendoredMaterialPath) {
+    const governanceFile = join(directory, "README.md");
+    if (!existsSync(governanceFile)) {
+      failures.push(`${directory} must document why vendored filenames are excluded`);
+    }
     return;
   }
 
