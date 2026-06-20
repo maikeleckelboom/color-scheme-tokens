@@ -5,7 +5,6 @@ import {
   defineTokenLayer,
   defineTokenGraph,
   defineTokens,
-  exportCssVarBlocks,
   exportCssVars,
   formatCssColor,
   parseColor,
@@ -357,15 +356,35 @@ describe("v1 graph and compiler", () => {
     const css = exportCssVars(compiled, { prefix: "theme" });
     expect(css).toEqual({
       ok: true,
-      value:
-        ":root {\n" +
-        "  --theme-app-action: #6750a4;\n" +
-        "  --theme-app-action-text: #ffffff;\n" +
-        "}\n\n" +
-        ':root[data-color-scheme="dark"] {\n' +
-        "  --theme-app-action: #d0bcff;\n" +
-        "  --theme-app-action-text: #381e72;\n" +
-        "}\n",
+      value: {
+        css:
+          ":root {\n" +
+          "  --theme-app-action: #6750a4;\n" +
+          "  --theme-app-action-text: #ffffff;\n" +
+          "}\n\n" +
+          ':root[data-color-scheme="dark"] {\n' +
+          "  --theme-app-action: #d0bcff;\n" +
+          "  --theme-app-action-text: #381e72;\n" +
+          "}\n",
+        blocks: [
+          {
+            mode: "light",
+            selector: ":root",
+            declarations: {
+              "--theme-app-action": "#6750a4",
+              "--theme-app-action-text": "#ffffff",
+            },
+          },
+          {
+            mode: "dark",
+            selector: ':root[data-color-scheme="dark"]',
+            declarations: {
+              "--theme-app-action": "#d0bcff",
+              "--theme-app-action-text": "#381e72",
+            },
+          },
+        ],
+      },
     });
 
     expect(serializeScheme(compiled)).toContain('"formatVersion": 1');
@@ -390,32 +409,62 @@ describe("v1 graph and compiler", () => {
     const defaultCss = exportCssVars(compiled);
     expect(defaultCss).toEqual({
       ok: true,
-      value:
-        ":root {\n" +
-        "  --background: #ffffff;\n" +
-        "  --foreground: #111111;\n" +
-        "  --material3-primary: #6750a4;\n" +
-        "  --primary: #6750a4;\n" +
-        "  --primary-foreground: #ffffff;\n" +
-        "}\n",
+      value: {
+        css:
+          ":root {\n" +
+          "  --background: #ffffff;\n" +
+          "  --foreground: #111111;\n" +
+          "  --material3-primary: #6750a4;\n" +
+          "  --primary: #6750a4;\n" +
+          "  --primary-foreground: #ffffff;\n" +
+          "}\n",
+        blocks: [
+          {
+            mode: "base",
+            selector: ":root",
+            declarations: {
+              "--background": "#ffffff",
+              "--foreground": "#111111",
+              "--material3-primary": "#6750a4",
+              "--primary": "#6750a4",
+              "--primary-foreground": "#ffffff",
+            },
+          },
+        ],
+      },
     });
-    expect(unwrap(defaultCss)).not.toContain("--color-");
-    expect(unwrap(defaultCss)).not.toContain("--scheme-");
+    expect(unwrap(defaultCss).css).not.toContain("--color-");
+    expect(unwrap(defaultCss).css).not.toContain("--scheme-");
     expect(exportCssVars(compiled, { prefix: "" })).toEqual(exportCssVars(compiled));
     expect(exportCssVars(compiled, { prefix: "color" })).toEqual({
       ok: true,
-      value:
-        ":root {\n" +
-        "  --color-background: #ffffff;\n" +
-        "  --color-foreground: #111111;\n" +
-        "  --color-material3-primary: #6750a4;\n" +
-        "  --color-primary: #6750a4;\n" +
-        "  --color-primary-foreground: #ffffff;\n" +
-        "}\n",
+      value: {
+        css:
+          ":root {\n" +
+          "  --color-background: #ffffff;\n" +
+          "  --color-foreground: #111111;\n" +
+          "  --color-material3-primary: #6750a4;\n" +
+          "  --color-primary: #6750a4;\n" +
+          "  --color-primary-foreground: #ffffff;\n" +
+          "}\n",
+        blocks: [
+          {
+            mode: "base",
+            selector: ":root",
+            declarations: {
+              "--color-background": "#ffffff",
+              "--color-foreground": "#111111",
+              "--color-material3-primary": "#6750a4",
+              "--color-primary": "#6750a4",
+              "--color-primary-foreground": "#ffffff",
+            },
+          },
+        ],
+      },
     });
   });
 
-  test("exports structured CSS variable blocks for single-mode schemes", () => {
+  test("exports CSS and structured variable blocks for single-mode schemes", () => {
     const compiled = unwrap(
       compileTokenGraph(
         defineTokenGraph({
@@ -427,32 +476,38 @@ describe("v1 graph and compiler", () => {
       ),
     );
 
-    expect(exportCssVarBlocks(compiled)).toEqual({
+    expect(exportCssVars(compiled)).toEqual({
       ok: true,
-      value: [
-        {
-          mode: "base",
-          selector: ":root",
-          declarations: {
-            "--background": "#ffffff",
-            "--foreground": "#111111",
+      value: {
+        css: ":root {\n  --background: #ffffff;\n  --foreground: #111111;\n}\n",
+        blocks: [
+          {
+            mode: "base",
+            selector: ":root",
+            declarations: {
+              "--background": "#ffffff",
+              "--foreground": "#111111",
+            },
           },
-        },
-      ],
+        ],
+      },
     });
-    expect(exportCssVarBlocks(compiled, { prefix: "" })).toEqual(exportCssVarBlocks(compiled));
-    expect(exportCssVarBlocks(compiled, { prefix: "color" })).toEqual({
+    expect(exportCssVars(compiled, { prefix: "" })).toEqual(exportCssVars(compiled));
+    expect(exportCssVars(compiled, { prefix: "color" })).toEqual({
       ok: true,
-      value: [
-        {
-          mode: "base",
-          selector: ":root",
-          declarations: {
-            "--color-background": "#ffffff",
-            "--color-foreground": "#111111",
+      value: {
+        css: ":root {\n  --color-background: #ffffff;\n  --color-foreground: #111111;\n}\n",
+        blocks: [
+          {
+            mode: "base",
+            selector: ":root",
+            declarations: {
+              "--color-background": "#ffffff",
+              "--color-foreground": "#111111",
+            },
           },
-        },
-      ],
+        ],
+      },
     });
   });
 
@@ -460,31 +515,42 @@ describe("v1 graph and compiler", () => {
     const compiled = unwrap(compileTokenGraph(makeGraph()));
 
     expect(
-      exportCssVarBlocks(compiled, {
+      exportCssVars(compiled, {
         prefix: "color",
         scope: { strategy: "selector", selector: ".preview" },
         modeSelectors: { strategy: "class", classPrefix: "theme-" },
       }),
     ).toEqual({
       ok: true,
-      value: [
-        {
-          mode: "light",
-          selector: ".preview",
-          declarations: {
-            "--color-app-action": "#6750a4",
-            "--color-app-action-text": "#ffffff",
+      value: {
+        css:
+          ".preview {\n" +
+          "  --color-app-action: #6750a4;\n" +
+          "  --color-app-action-text: #ffffff;\n" +
+          "}\n\n" +
+          ".preview.theme-dark {\n" +
+          "  --color-app-action: #d0bcff;\n" +
+          "  --color-app-action-text: #381e72;\n" +
+          "}\n",
+        blocks: [
+          {
+            mode: "light",
+            selector: ".preview",
+            declarations: {
+              "--color-app-action": "#6750a4",
+              "--color-app-action-text": "#ffffff",
+            },
           },
-        },
-        {
-          mode: "dark",
-          selector: ".preview.theme-dark",
-          declarations: {
-            "--color-app-action": "#d0bcff",
-            "--color-app-action-text": "#381e72",
+          {
+            mode: "dark",
+            selector: ".preview.theme-dark",
+            declarations: {
+              "--color-app-action": "#d0bcff",
+              "--color-app-action-text": "#381e72",
+            },
           },
-        },
-      ],
+        ],
+      },
     });
   });
 
@@ -500,11 +566,10 @@ describe("v1 graph and compiler", () => {
       },
     } as const;
 
-    const blocks = unwrap(exportCssVarBlocks(compiled, options));
-    const css = unwrap(exportCssVars(compiled, options));
+    const exported = unwrap(exportCssVars(compiled, options));
 
-    expect(blocks.map((block) => block.selector)).toEqual([":root", ".dark"]);
-    expect(css).toBe(
+    expect(exported.blocks.map((block) => block.selector)).toEqual([":root", ".dark"]);
+    expect(exported.css).toBe(
       ":root {\n" +
         "  --app-action: #6750a4;\n" +
         "  --app-action-text: #ffffff;\n" +
@@ -514,7 +579,7 @@ describe("v1 graph and compiler", () => {
         "  --app-action-text: #381e72;\n" +
         "}\n",
     );
-    expect(css).toContain(`${Object.keys(blocks[0]?.declarations ?? {})[0]}:`);
+    expect(exported.css).toContain(`${Object.keys(exported.blocks[0]?.declarations ?? {})[0]}:`);
   });
 
   test("rejects the removed CSS variablePrefix option at runtime", () => {
@@ -522,10 +587,6 @@ describe("v1 graph and compiler", () => {
     const oldOptions: unknown = { variablePrefix: "theme" };
 
     expect(exportCssVars(compiled, oldOptions as never)).toEqual({
-      ok: false,
-      issues: [{ code: "invalid-css-options", message: "Unknown CSS option: variablePrefix." }],
-    });
-    expect(exportCssVarBlocks(compiled, oldOptions as never)).toEqual({
       ok: false,
       issues: [{ code: "invalid-css-options", message: "Unknown CSS option: variablePrefix." }],
     });
@@ -544,7 +605,6 @@ describe("v1 graph and compiler", () => {
       ],
     } as const;
     expect(exportCssVars(compiled, { prefix: "Theme" })).toEqual(expected);
-    expect(exportCssVarBlocks(compiled, { prefix: "Theme" })).toEqual(expected);
   });
 
   test("stores direct dependencies without expanding transitive chains", () => {
@@ -877,17 +937,39 @@ describe("v1 sources", () => {
     });
     expect(exportCssVars(value)).toEqual({
       ok: true,
-      value:
-        ":root {\n" +
-        "  --background: #ffffff;\n" +
-        "  --foreground: #111111;\n" +
-        "  --primary: #6750a4;\n" +
-        "}\n\n" +
-        ':root[data-color-scheme="dark"] {\n' +
-        "  --background: #141218;\n" +
-        "  --foreground: #f5eff7;\n" +
-        "  --primary: #d0bcff;\n" +
-        "}\n",
+      value: {
+        css:
+          ":root {\n" +
+          "  --background: #ffffff;\n" +
+          "  --foreground: #111111;\n" +
+          "  --primary: #6750a4;\n" +
+          "}\n\n" +
+          ':root[data-color-scheme="dark"] {\n' +
+          "  --background: #141218;\n" +
+          "  --foreground: #f5eff7;\n" +
+          "  --primary: #d0bcff;\n" +
+          "}\n",
+        blocks: [
+          {
+            mode: "light",
+            selector: ":root",
+            declarations: {
+              "--background": "#ffffff",
+              "--foreground": "#111111",
+              "--primary": "#6750a4",
+            },
+          },
+          {
+            mode: "dark",
+            selector: ':root[data-color-scheme="dark"]',
+            declarations: {
+              "--background": "#141218",
+              "--foreground": "#f5eff7",
+              "--primary": "#d0bcff",
+            },
+          },
+        ],
+      },
     });
   });
 

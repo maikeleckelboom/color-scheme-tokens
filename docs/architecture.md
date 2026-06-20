@@ -69,10 +69,10 @@ token; it can be added later as an on-demand analyzer without bloating the defau
 Exporters consume compiled schemes only. They do not validate graphs, resolve references, load engines, mutate compiled
 schemes, or patch browser DOM state.
 
-The CSS exporter is dependency-free and uses a conservative selector validator. It can return either a stylesheet string
-or structured `{ mode, selector, declarations }` blocks for runtime preview surfaces and custom renderers. It supports
-the generated root, data-attribute, class, and simple exact-selector workflows without making a CSS parser part of the
-core dependency graph.
+The CSS exporter is dependency-free and uses a conservative selector validator. It returns a stylesheet string and
+structured `{ mode, selector, declarations }` blocks from the same export operation for runtime preview surfaces and
+custom renderers. It supports the generated root, data-attribute, class, and simple exact-selector workflows without
+making a CSS parser part of the core dependency graph.
 
 ## Base Inputs
 

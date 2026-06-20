@@ -7,9 +7,9 @@
 - Release the dependency-light `scheme-tokens` core package with explicit token graph contracts, strict graph
   parsing, token compilation, deterministic serialization, and `Result` / `Issue` diagnostics.
 - Publish strict JSON Schema artifacts for persisted token graphs, token layers, and serialized compiled schemes.
-- Support CSS variable export through `exportCssVars(..., { prefix })` for stylesheet strings and
-  `exportCssVarBlocks(..., { prefix })` for structured mode blocks; omitted or empty prefixes emit unprefixed custom
-  properties such as `--background`, and the removed `variablePrefix` option is not accepted.
+- Support CSS variable export through `exportCssVars(..., { prefix })`, returning both stylesheet text and structured
+  mode blocks from one `Result`; omitted or empty prefixes emit unprefixed custom properties such as `--background`, and
+  the removed `variablePrefix` option is not accepted.
 - Keep authoring helpers ergonomic with JSON-safe manual token graphs and token layers while preserving strict persisted
   input behavior.
 - Allow helper-only token-key string reference shorthand and metadata plus mode-key shorthand in `defineTokenGraph()` and

@@ -45,6 +45,10 @@ const removedPublicNames = [
   `Build${"Token"}${"Set"}Options`,
   `Build${"Token"}${"Set"}Value`,
   `Build${"Token"}${"Set"}Issue`,
+  `exportCss${"Var"}Blocks`,
+  `exportCss${"Variables"}`,
+  `exportCss${"Variable"}Blocks`,
+  `Css${"Variable"}Block`,
 ] as const;
 
 if (JSON.stringify(packageJson).includes(removedRootPackageName)) {
@@ -72,7 +76,6 @@ const manifests: readonly ApiManifest[] = [
       "defineTokenGraph",
       "defineTokenLayer",
       "defineTokens",
-      "exportCssVarBlocks",
       "exportCssVars",
       "formatCssColor",
       "parseColor",
@@ -118,7 +121,8 @@ const manifests: readonly ApiManifest[] = [
       "BuildSchemeOptions",
       "BuildSchemeSourceOptions",
       "BuildSchemeIssue",
-      "CssVariableBlock",
+      "CssVarBlock",
+      "CssVarsExport",
       "CssScope",
       "CssModeSelectors",
       "ExportCssVarsOptions",

@@ -34,7 +34,7 @@ if (!css.ok) {
   throw new Error(JSON.stringify(css.issues, null, 2));
 }
 
-console.log(css.value);
+console.log(css.value.css);
 ```
 
 With no `modes` field, `defineTokens()` creates one mode named `base`. In a single-mode graph, `base` means "the one
@@ -95,7 +95,7 @@ if (!css.ok) {
   throw new Error(JSON.stringify(css.issues, null, 2));
 }
 
-console.log(css.value);
+console.log(css.value.css);
 ```
 
 `defaultVisibility: "internal"` keeps source tokens out of the ordinary compiled scheme unless a token opts into
@@ -110,16 +110,12 @@ The default CSS selectors are `:root` for the default mode and `:root[data-color
 
 ## Runtime CSS Variables
 
-`exportCssVars()` returns a stylesheet string. `exportCssVarBlocks()` returns structured blocks for runtime
-application, previews, or custom renderers that should not parse CSS text.
+`exportCssVars()` returns a stylesheet string and structured blocks in one `Result`. Use `value.css` when you need
+serialized CSS, and use `value.blocks` for runtime application, previews, or custom renderers that should not parse CSS
+text.
 
 ```ts
-import {
-  compileTokenGraph,
-  defineTokenGraph,
-  exportCssVarBlocks,
-  exportCssVars,
-} from "scheme-tokens";
+import { compileTokenGraph, defineTokenGraph, exportCssVars } from "scheme-tokens";
 
 const graph = defineTokenGraph({
   tokens: {
@@ -135,14 +131,13 @@ if (!compiled.ok) {
   throw new Error(JSON.stringify(compiled.issues, null, 2));
 }
 
-const css = exportCssVars(compiled.value);
-const blocks = exportCssVarBlocks(compiled.value);
-if (!css.ok || !blocks.ok) {
-  throw new Error("CSS export failed");
+const exported = exportCssVars(compiled.value);
+if (!exported.ok) {
+  throw new Error(JSON.stringify(exported.issues, null, 2));
 }
 
-console.log(css.value);
-console.log(blocks.value[0]?.declarations["--background"]);
+console.log(exported.value.css);
+console.log(exported.value.blocks[0]?.declarations["--background"]);
 ```
 
 Omit `prefix` to emit custom properties such as `--background`, `--foreground`, `--primary`, and
@@ -176,7 +171,7 @@ if (!css.ok) {
   throw new Error(JSON.stringify(css.issues, null, 2));
 }
 
-console.log(css.value);
+console.log(css.value.css);
 ```
 
 Step 2: load the generated runtime CSS in your app.
@@ -324,7 +319,7 @@ if (!css.ok) {
   throw new Error(JSON.stringify(css.issues, null, 2));
 }
 
-console.log(css.value);
+console.log(css.value.css);
 ```
 
 `buildScheme()` is the runner that composes base inputs and layers, validates the composed graph material, and produces

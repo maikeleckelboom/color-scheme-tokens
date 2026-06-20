@@ -12,7 +12,7 @@ pnpm add scheme-tokens @scheme-tokens/material3
 ## Usage
 
 ```ts
-import { buildScheme, defineTokenLayer, exportCssVarBlocks } from "scheme-tokens";
+import { buildScheme, defineTokenLayer, exportCssVars } from "scheme-tokens";
 import { material3 } from "@scheme-tokens/material3";
 
 const application = defineTokenLayer<"light" | "dark">({
@@ -37,12 +37,12 @@ if (!built.ok) {
   throw new Error(JSON.stringify(built.issues, null, 2));
 }
 
-const blocks = exportCssVarBlocks(built.value);
-if (!blocks.ok) {
-  throw new Error(JSON.stringify(blocks.issues, null, 2));
+const exported = exportCssVars(built.value);
+if (!exported.ok) {
+  throw new Error(JSON.stringify(exported.issues, null, 2));
 }
 
-console.log(blocks.value[0]?.declarations["--primary"]);
+console.log(exported.value.blocks[0]?.declarations["--primary"]);
 ```
 
 The adapter emits strict graph input with `light` and `dark` modes. Raw Material roles use adapter-owned `material3.*`
@@ -99,7 +99,7 @@ Advanced key-color-driven scheme input remains future scope; this adapter does n
 
 ## Composition
 
-Use `exportCssVars()` when you want a stylesheet string instead of structured blocks.
+Use `exportCssVars()` when you want a stylesheet string and structured blocks from the same export operation.
 
 ```ts
 import { buildScheme, defineTokenLayer, exportCssVars } from "scheme-tokens";
@@ -131,6 +131,8 @@ const css = exportCssVars(built.value);
 if (!css.ok) {
   throw new Error(JSON.stringify(css.issues, null, 2));
 }
+
+console.log(css.value.css);
 ```
 
 Use `defaultVisibility: "internal"` when the Material roles should feed public application tokens without being exported

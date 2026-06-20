@@ -23,7 +23,7 @@ Planned package names:
 - `buildScheme()` for base-only, layer-only, base-plus-layer builds, and base-first convenience calls;
 - deterministic source/layer composition;
 - unprefixed CSS variable export by default;
-- structured CSS variable blocks through `exportCssVarBlocks()`;
+- structured CSS variable blocks through `exportCssVars().value.blocks`;
 - deterministic compiled-scheme serialization;
 - strict schema artifacts for core wire formats;
 - `@scheme-tokens/material3` as the first real source adapter.

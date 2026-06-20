@@ -41,7 +41,7 @@ writeJson(join(consumerDirectory, "tsconfig.json"), {
 writeFileSync(
   join(consumerDirectory, "root.mjs"),
   `
-import { buildScheme, compileTokenGraph, defineTokenGraph, defineTokenLayer, defineTokens, exportCssVarBlocks, exportCssVars } from ${JSON.stringify(manifest.name)};
+import { buildScheme, compileTokenGraph, defineTokenGraph, defineTokenLayer, defineTokens, exportCssVars } from ${JSON.stringify(manifest.name)};
 
 const graph = defineTokens({
   background: "#ffffff",
@@ -52,17 +52,15 @@ const graph = defineTokens({
 const compiled = compileTokenGraph(graph);
 if (!compiled.ok) throw new Error(JSON.stringify(compiled.issues));
 const css = exportCssVars(compiled.value);
-if (!css.ok || !css.value.includes("--background: #ffffff;")) throw new Error("root workflow failed");
-if (css.value.includes("--color-background") || css.value.includes("--scheme-background")) {
+if (!css.ok || !css.value.css.includes("--background: #ffffff;")) throw new Error("root workflow failed");
+if (css.value.css.includes("--color-background") || css.value.css.includes("--scheme-background")) {
   throw new Error("default CSS export must use authored runtime token names");
 }
 const prefixedCss = exportCssVars(compiled.value, { prefix: "color" });
-if (!prefixedCss.ok || !prefixedCss.value.includes("--color-background: #ffffff;")) {
+if (!prefixedCss.ok || !prefixedCss.value.css.includes("--color-background: #ffffff;")) {
   throw new Error("explicit CSS prefix export failed");
 }
-const blocks = exportCssVarBlocks(compiled.value);
-if (!blocks.ok) throw new Error(JSON.stringify(blocks.issues));
-const declarations = blocks.value[0]?.declarations;
+const declarations = css.value.blocks[0]?.declarations;
 if (declarations?.["--background"] !== "#ffffff") throw new Error("structured CSS export failed");
 if (declarations?.["--color-background"] !== undefined || declarations?.["--scheme-background"] !== undefined) {
   throw new Error("structured CSS export must be unprefixed by default");
@@ -154,9 +152,10 @@ import {
   defineTokenLayer,
   defineTokenGraph,
   defineTokens,
-  exportCssVarBlocks,
+  exportCssVars,
   type BuildSchemeSourceOptions,
-  type CssVariableBlock,
+  type CssVarBlock,
+  type CssVarsExport,
   type ColorValue,
   type CompiledScheme,
   type ExportCssVarsOptions,
@@ -184,8 +183,9 @@ const legacyCssOptions: ExportCssVarsOptions = {
   variablePrefix: "theme",
 };
 const color: ColorValue = { colorSpace: "srgb", r: 1, g: 1, b: 1, alpha: 1 };
-const blocks = exportCssVarBlocks({} as never);
-const cssBlock: CssVariableBlock | undefined = blocks.ok ? blocks.value[0] : undefined;
+const cssExport = exportCssVars({} as never);
+const exportedCss: CssVarsExport | undefined = cssExport.ok ? cssExport.value : undefined;
+const cssBlock: CssVarBlock | undefined = exportedCss?.blocks[0];
 const source = {
   id: "brand",
   build() {
@@ -207,6 +207,7 @@ const lightDarkBuilt = buildScheme({
 });
 cssOptions.prefix?.toUpperCase();
 legacyCssOptions.prefix?.toUpperCase();
+exportedCss?.css.toUpperCase();
 cssBlock?.declarations["--background"]?.toUpperCase();
 color.colorSpace.toUpperCase();
 if (compiled.ok) compiled.value.defaultMode.toUpperCase();

@@ -36,10 +36,15 @@ export interface ExportCssVarsOptions {
   readonly format?: "pretty" | "compact";
 }
 
-export interface CssVariableBlock {
+export interface CssVarBlock {
   readonly mode: string;
   readonly selector: string;
   readonly declarations: Readonly<Record<string, string>>;
+}
+
+export interface CssVarsExport {
+  readonly css: string;
+  readonly blocks: readonly CssVarBlock[];
 }
 
 export type ExportCssVarsIssue = Issue<
@@ -61,40 +66,26 @@ export type ExportCssVarsIssue = Issue<
 export function exportCssVars(
   scheme: CompiledScheme,
   options?: ExportCssVarsOptions,
-): Result<string, ExportCssVarsIssue> {
+): Result<CssVarsExport, ExportCssVarsIssue> {
   const parsed = parseOptions(scheme, options);
   if (!parsed.ok) {
     return parsed;
   }
 
-  const blocks = buildCssVariableBlocks(scheme, parsed.value);
+  const blocks = buildCssVarBlocks(scheme, parsed.value);
   return {
     ok: true,
-    value: parsed.value.compact
-      ? blocks.map((block) => formatBlock(block, true)).join("")
-      : `${blocks.map((block) => formatBlock(block, false)).join("\n\n")}\n`,
+    value: {
+      css: formatBlocks(blocks, parsed.value.compact),
+      blocks,
+    },
   };
 }
 
-export function exportCssVarBlocks(
-  scheme: CompiledScheme,
-  options?: ExportCssVarsOptions,
-): Result<readonly CssVariableBlock[], ExportCssVarsIssue> {
-  const parsed = parseOptions(scheme, options);
-  if (!parsed.ok) {
-    return parsed;
-  }
-
-  return {
-    ok: true,
-    value: buildCssVariableBlocks(scheme, parsed.value),
-  };
-}
-
-function buildCssVariableBlocks(
+function buildCssVarBlocks(
   scheme: CompiledScheme,
   options: ParsedCssOptions,
-): readonly CssVariableBlock[] {
+): readonly CssVarBlock[] {
   const tokenKeys = Object.keys(scheme.tokens).sort(compareCodeUnits);
   return scheme.modes.map((mode) => {
     const declarations: Record<string, string> = {};
@@ -110,7 +101,13 @@ function buildCssVariableBlocks(
   });
 }
 
-function formatBlock(block: CssVariableBlock, compact: boolean): string {
+function formatBlocks(blocks: readonly CssVarBlock[], compact: boolean): string {
+  return compact
+    ? blocks.map((block) => formatBlock(block, true)).join("")
+    : `${blocks.map((block) => formatBlock(block, false)).join("\n\n")}\n`;
+}
+
+function formatBlock(block: CssVarBlock, compact: boolean): string {
   const declarations = Object.entries(block.declarations).map(([name, value]) =>
     compact ? `${name}:${value};` : `  ${name}: ${value};`,
   );

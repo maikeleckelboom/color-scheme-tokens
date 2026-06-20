@@ -3,9 +3,10 @@ import {
   defineTokenLayer,
   defineTokenGraph,
   defineTokens,
-  exportCssVarBlocks,
+  exportCssVars,
   type BuildSchemeSourceOptions,
-  type CssVariableBlock,
+  type CssVarBlock,
+  type CssVarsExport,
   type ExportCssVarsOptions,
   type Issue,
   type Result,
@@ -25,6 +26,9 @@ export type RemovedBuildHelper = RootModule[RemovedBuildName];
 type RemovedCompiledName = `Compiled${"Token"}${"Set"}`;
 // @ts-expect-error old compiled type is not exported.
 export type RemovedCompiledType = RootModule[RemovedCompiledName];
+type RemovedCssBlockExporterName = `exportCss${"Var"}Blocks`;
+// @ts-expect-error old CSS block exporter is not exported.
+export type RemovedCssBlockExporter = RootModule[RemovedCssBlockExporterName];
 
 const simpleGraph = defineTokenGraph({
   tokens: {
@@ -188,9 +192,11 @@ if (multiModeLayerBuilt.ok) {
 
 const cssOptions: ExportCssVarsOptions = { prefix: "theme" };
 cssOptions.prefix?.toUpperCase();
-const cssBlocks = exportCssVarBlocks({} as never);
-if (cssBlocks.ok) {
-  const firstBlock: CssVariableBlock | undefined = cssBlocks.value[0];
+const cssExport = exportCssVars({} as never);
+if (cssExport.ok) {
+  const exported: CssVarsExport = cssExport.value;
+  const firstBlock: CssVarBlock | undefined = exported.blocks[0];
+  exported.css.toUpperCase();
   firstBlock?.selector.toUpperCase();
   firstBlock?.declarations["--background"]?.toUpperCase();
 }

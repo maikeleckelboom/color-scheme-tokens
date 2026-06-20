@@ -12,7 +12,6 @@ The root API is intentionally small and explicit.
 - `compileTokenGraph`
 - `buildScheme`
 - `exportCssVars`
-- `exportCssVarBlocks`
 - `serializeScheme`
 - `formatCssColor`
 
@@ -34,15 +33,15 @@ For manual colors:
 
 1. Use `defineTokens()` for simple token-record authoring, or `defineTokenGraph()` for full graph-shaped authoring.
 2. Use `compileTokenGraph()` to validate and resolve the selected tokens.
-3. Use `exportCssVars()` for CSS, `exportCssVarBlocks()` for structured declarations, or
-   `serializeScheme()` for deterministic compiled JSON.
+3. Use `exportCssVars()` for CSS and structured declarations, or `serializeScheme()` for deterministic compiled JSON.
 
 `compileTokenGraph()` defaults to `selection: "public"`. The CSS exporter emits variables for the compiled scheme it
 receives; it does not apply visibility filtering itself.
 
-`exportCssVars()` returns a CSS stylesheet string. `exportCssVarBlocks()` returns one structured block per
-compiled mode, preserving the CSS model as `{ mode, selector, declarations }` for runtime application, previews, or
-custom renderers.
+`exportCssVars()` returns one `Result` whose success value contains `css` and `blocks`. `css` is the serialized
+stylesheet string. `blocks` contains one structured block per compiled mode, preserving the CSS model as
+`{ mode, selector, declarations }` for runtime application, previews, or custom renderers. The stylesheet is formatted
+from the same blocks returned in `value.blocks`.
 
 `prefix` is optional. Omitting it, passing `undefined`, or passing `""` emits unprefixed custom properties such as
 `--background` and `--primary-foreground`. Passing `prefix: "color"` emits namespaced properties such as
