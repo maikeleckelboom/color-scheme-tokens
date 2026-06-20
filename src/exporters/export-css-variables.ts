@@ -38,7 +38,7 @@ export interface ExportCssVariablesOptions {
 
 export type ExportCssVariablesIssue = Issue<
   | "invalid-css-options"
-  | "invalid-variable-prefix"
+  | "invalid-css-prefix"
   | "invalid-scope"
   | "invalid-selector"
   | "invalid-data-attribute"
@@ -124,7 +124,7 @@ function parseOptions(
       ok: false,
       issues: [
         {
-          code: "invalid-variable-prefix",
+          code: "invalid-css-prefix",
           message: "prefix must be a lower-kebab single segment.",
         },
       ],

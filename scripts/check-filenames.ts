@@ -6,6 +6,7 @@ const conventionalNames = new Set([
   "AGENTS.md",
   "CHANGELOG.md",
   "LICENSE",
+  "NOTICE.md",
   "README.md",
   "index.ts",
   "package.json",

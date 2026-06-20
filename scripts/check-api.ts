@@ -130,6 +130,9 @@ for (const manifest of manifests) {
   ) {
     throw new Error(`${manifest.name} declaration leaks dependency types`);
   }
+  if (dts.includes("invalid-variable-prefix") || !dts.includes("invalid-css-prefix")) {
+    throw new Error(`${manifest.name} declaration exposes a stale CSS prefix issue code`);
+  }
 }
 
 const rootBundle = readFileSync(join(root, "dist/index.js"), "utf8");

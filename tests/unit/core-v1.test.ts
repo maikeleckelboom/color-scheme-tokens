@@ -176,6 +176,20 @@ describe("v1 graph and compiler", () => {
     });
   });
 
+  test("rejects invalid CSS prefixes with the release-safe issue code", () => {
+    const compiled = unwrap(compileTokenGraph(makeGraph()));
+
+    expect(exportCssVariables(compiled, { prefix: "Theme" })).toEqual({
+      ok: false,
+      issues: [
+        {
+          code: "invalid-css-prefix",
+          message: "prefix must be a lower-kebab single segment.",
+        },
+      ],
+    });
+  });
+
   test("stores direct dependencies without expanding transitive chains", () => {
     const compiled = unwrap(
       compileTokenGraph({

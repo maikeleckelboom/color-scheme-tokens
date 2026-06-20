@@ -18,8 +18,7 @@ adapters too.
 Adapters are separate npm packages. The root package remains named `color-scheme-tokens` and remains the core package.
 There is no `color-scheme-tokens/sources/*`, `color-scheme-tokens/conversion/*`, or ambient adapter registry.
 
-The repository stays a single core package for now. If it later becomes a workspace, keep the core package at the
-repository root and add adapter packages under `packages/`:
+The repository keeps the core package at the repository root and adapter packages under `packages/`:
 
 ```text
 package.json                            # color-scheme-tokens

@@ -89,6 +89,17 @@ const adapter = JSON.parse(readFileSync(adapterPackagePath, "utf8"));
 if (adapter.dependencies?.["@material/material-color-utilities"] !== "0.4.0") {
   throw new Error("adapter does not own the exact Material engine dependency");
 }
+if (adapter.peerDependencies?.["color-scheme-tokens"] !== "^0.1.0") {
+  throw new Error("adapter does not declare the release-compatible core peer dependency");
+}
+if (JSON.stringify(adapter.dependencies ?? {}).includes("workspace:")) {
+  throw new Error("adapter runtime dependencies leak a workspace protocol");
+}
+const adapterEntryUrl = await import.meta.resolve("@color-scheme-tokens/source-material3");
+const adapterBundle = readFileSync(new URL(adapterEntryUrl), "utf8");
+if (!adapterBundle.includes("@material+material-color-utilities")) {
+  throw new Error("adapter did not bundle the Material engine for runtime compatibility");
+}
 `,
 );
 writeFileSync(

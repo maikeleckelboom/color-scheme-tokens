@@ -1,7 +1,7 @@
 # Architecture
 
 `color-scheme-tokens` is a dependency-light color-token graph core. The graph is the system of record; manual authoring
-helpers and future source adapters feed it, validation and compilation resolve it, and exporters project compiled sets.
+helpers and source adapters feed it, validation and compilation resolve it, and exporters project compiled sets.
 
 ## Core Ownership
 

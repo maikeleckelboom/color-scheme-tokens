@@ -2,7 +2,7 @@
 
 Material 3 source adapter for `color-scheme-tokens`.
 
-Manual custom-color graphs only need the root `color-scheme-tokens` package. Install this adapter only when a project
+Manual token graphs only need the root `color-scheme-tokens` package. Install this adapter only when a project
 wants Material 3 Dynamic Color output from the official Material color utility engine.
 
 ```bash
@@ -43,7 +43,7 @@ instead of being parsed approximately.
 
 ## Extended Colors
 
-Material custom colors are exposed through this adapter as `extendedColors`, using stable adapter vocabulary rather than
+Material extended colors are exposed through this adapter as `extendedColors`, using stable adapter vocabulary rather than
 the engine's own option names.
 
 ```ts
@@ -112,4 +112,8 @@ if (!built.ok) {
 ```
 
 Material 3 support lives in this adapter package. The root package does not import, export, document as required, or
-depend on the Material engine for manual/custom colors.
+depend on the Material engine for manual token graphs.
+
+The adapter package owns `@material/material-color-utilities@0.4.0` and bundles the required runtime code in its published
+artifact because the upstream package's extensionless internal ESM imports do not run directly in supported Node.js
+consumer projects. The published package includes `NOTICE.md` with the Apache-2.0 attribution for that bundled code.

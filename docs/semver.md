@@ -1,8 +1,10 @@
 # Semver
 
-The package is still private at `0.0.0`; breaking changes are allowed while finalizing the first public contract.
+The first public release line starts at `0.1.0`. The packages are usable, but they are still pre-`1.0.0`: minor releases
+may include breaking public-contract changes when they simplify the package or correct an early API mistake. Patch
+releases should stay compatible and focus on fixes, documentation, and release tooling.
 
-After publication, these are versioned contracts:
+These are versioned contracts:
 
 - root runtime exports;
 - package subpath exports;

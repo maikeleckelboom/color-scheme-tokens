@@ -6,6 +6,14 @@ import * as root from "../../src";
 const repoRoot = process.cwd();
 
 describe("package boundary", () => {
+  test("root package metadata is publishable without scoped access metadata", () => {
+    const manifest = readManifest();
+
+    expect(manifest.version).toBe("0.1.0");
+    expect(manifest.private).toBeUndefined();
+    expect(manifest.publishConfig).toBeUndefined();
+  });
+
   test("root runtime exports are exact", () => {
     expect(Object.keys(root).sort()).toEqual([
       "buildTokenSet",
@@ -68,6 +76,9 @@ interface PackageManifest {
   readonly optionalDependencies?: Readonly<Record<string, string>>;
   readonly peerDependencies?: Readonly<Record<string, string>>;
   readonly exports: Readonly<Record<string, unknown>>;
+  readonly private?: boolean;
+  readonly publishConfig?: unknown;
+  readonly version: string;
 }
 
 function readManifest(): PackageManifest {

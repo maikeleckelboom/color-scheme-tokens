@@ -6,9 +6,9 @@ Accepted.
 
 ## Context
 
-The package is unpublished and private at version `0.0.0`, so the v1 contract can still be simplified before any public
-compatibility burden exists. Without a clear boundary, one package could accumulate core graph behavior, Material 3
-generation, Texel conversion, CSS parser validation, and other optional capability engines.
+The package is pre-`1.0.0`, so the first public contract should stay small and explicit. Without a clear boundary, one
+package could accumulate core graph behavior, Material 3 generation, Texel conversion, CSS parser validation, and other
+optional capability engines.
 
 ## Decision
 

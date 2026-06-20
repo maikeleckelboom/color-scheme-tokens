@@ -1,7 +1,6 @@
 {
   "name": "@color-scheme-tokens/source-material3",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
   "description": "Material 3 source adapter for color-scheme-tokens.",
   "keywords": [
     "color-scheme",
@@ -9,11 +8,21 @@
     "material-3",
     "token-graph"
   ],
+  "homepage": "https://github.com/maikeleckelboom/color-scheme-tokens/tree/main/packages/source-material3#readme",
+  "bugs": {
+    "url": "https://github.com/maikeleckelboom/color-scheme-tokens/issues"
+  },
   "license": "MIT",
   "author": "Maikel Eckelboom",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maikeleckelboom/color-scheme-tokens.git",
+    "directory": "packages/source-material3"
+  },
   "files": [
     "dist",
     "README.md",
+    "NOTICE.md",
     "LICENSE"
   ],
   "type": "module",
@@ -26,6 +35,9 @@
       "import": "./dist/index.js"
     },
     "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "tsdown",
@@ -47,7 +59,7 @@
     "color-scheme-tokens": "workspace:*"
   },
   "peerDependencies": {
-    "color-scheme-tokens": "0.0.0"
+    "color-scheme-tokens": "^0.1.0"
   },
   "engines": {
     "node": ">=22"

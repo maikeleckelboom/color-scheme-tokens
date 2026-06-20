@@ -1,6 +1,6 @@
 # Color Policy
 
-Core color values are concrete authored color data, not computed colors. Manual custom colors are a primary root-package
+Core color values are concrete authored color data, not computed colors. Manual colors are a primary root-package
 use case.
 
 ## Supported Core Spaces

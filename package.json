@@ -1,8 +1,7 @@
 {
   "name": "color-scheme-tokens",
-  "version": "0.0.0",
-  "private": true,
-  "description": "Stable graph-first color tokens for TypeScript apps.",
+  "version": "0.1.0",
+  "description": "Dependency-light color token graphs for TypeScript apps.",
   "keywords": [
     "color-scheme",
     "css-variables",
@@ -40,9 +39,6 @@
     "./schemas/token-fragment.v1.schema.json": "./schemas/token-fragment.v1.schema.json",
     "./schemas/compiled-token-set.v1.schema.json": "./schemas/compiled-token-set.v1.schema.json",
     "./package.json": "./package.json"
-  },
-  "publishConfig": {
-    "access": "public"
   },
   "scripts": {
     "build": "tsdown",

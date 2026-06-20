@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -153,6 +153,14 @@ run(
 );
 
 const installedRoot = join(consumerDirectory, "node_modules", manifest.name);
+if (
+  existsSync(join(consumerDirectory, "node_modules", "@color-scheme-tokens", "source-material3"))
+) {
+  throw new Error("core-only consumer unexpectedly installed the Material adapter");
+}
+if (existsSync(join(consumerDirectory, "node_modules", "@material", "material-color-utilities"))) {
+  throw new Error("core-only consumer unexpectedly installed the Material engine");
+}
 const rootJs = readFileSync(join(installedRoot, "dist", "index.js"), "utf8");
 if (
   rootJs.includes("@texel/color") ||

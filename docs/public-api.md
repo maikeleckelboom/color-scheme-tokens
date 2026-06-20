@@ -28,7 +28,7 @@ There are no core conversion, Material, source adapter, or engine subpaths.
 
 ## Ordinary Flow
 
-For manual custom colors:
+For manual colors:
 
 1. Use `defineTokenGraph()` to author a graph.
 2. Use `compileTokenGraph()` to validate and resolve the selected tokens.

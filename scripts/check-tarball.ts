@@ -7,6 +7,9 @@ import { fileURLToPath } from "node:url";
 interface PackageManifest {
   readonly dependencies?: Readonly<Record<string, string>>;
   readonly files: readonly string[];
+  readonly private?: boolean;
+  readonly publishConfig?: unknown;
+  readonly version: string;
 }
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -66,6 +69,15 @@ for (const schemaFile of requiredSchemaFiles) {
 const packageJson = JSON.parse(
   readFileSync(join(repoRoot, "package.json"), "utf8"),
 ) as PackageManifest;
+if (packageJson.version !== "0.1.0") {
+  throw new Error("core package version must be 0.1.0 for the first public release candidate");
+}
+if (packageJson.private !== undefined) {
+  throw new Error("core package must not be private when checking the public tarball");
+}
+if (packageJson.publishConfig !== undefined) {
+  throw new Error("unscoped core package must not carry scoped publishConfig access metadata");
+}
 if (packageJson.files.includes("docs")) {
   throw new Error("package files must not include docs");
 }

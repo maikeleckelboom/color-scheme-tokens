@@ -2,11 +2,12 @@
 
 Dependency-light color token graphs for TypeScript and JavaScript applications.
 
-The primary core workflow is simple: define a few concrete custom colors, compile the graph, and export CSS custom
-properties. Material 3, Texel, image extraction, browser canvas, CSS parser engines, and color-conversion engines are not
-part of the root package and are not required for manual custom colors.
+The primary core workflow is simple: define a manual token graph, compile it, and export CSS custom properties. Material
+3, Texel, image extraction, browser canvas, CSS parser engines, and color-conversion engines are not part of the root
+package and are not required for hand-authored colors.
 
-This repository is still private at version `0.0.0` while the first public contract is being finalized.
+The first public release line is `0.x`: the package is intended for real use, but the public contract can still change
+before `1.0.0`.
 
 ## Quick Start
 
@@ -233,7 +234,7 @@ boundary, not an approximation inside core. The adapter package model is documen
 
 ## Material 3 Adapter
 
-Manual/custom colors require only `color-scheme-tokens`. Material 3 users install the root package plus the source
+Manual token graphs require only `color-scheme-tokens`. Material 3 users install the root package plus the source
 adapter:
 
 ```bash
@@ -261,7 +262,7 @@ depend on Material Design.
 
 `sourceColor` is the required Material source color used to generate the scheme. Some Material tooling calls this a seed
 color; this package keeps the field name `sourceColor` and does not accept `color`, `seed`, or `source` aliases. Material
-custom colors are adapter-owned behavior exposed as `extendedColors`; they are not part of the root core package.
+extended colors are adapter-owned behavior exposed as `extendedColors`; they are not part of the root core package.
 
 ## Development
 
@@ -271,6 +272,6 @@ pnpm validate
 pnpm release:check
 ```
 
-`release:check` builds the package, validates runtime/type surfaces, checks schemas and docs examples, installs the
-packed tarball into a clean consumer, and checks tarball contents. The package remains `private: true`; publishing,
-tagging, and release creation are separate owner-controlled steps.
+`release:check` builds both packages, validates runtime/type surfaces, checks schemas and docs examples, installs packed
+tarballs into clean consumers, and checks tarball contents. Publishing, tagging, and release creation are separate
+owner-controlled steps.

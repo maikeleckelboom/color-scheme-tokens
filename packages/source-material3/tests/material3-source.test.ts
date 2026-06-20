@@ -454,11 +454,14 @@ describe("material3Source", () => {
   test("keeps the adapter dependency model package-owned", () => {
     const manifest = readJsonObject(join(process.cwd(), "package.json"));
 
+    expect(manifest.version).toBe("0.1.0");
+    expect(manifest.private).toBeUndefined();
+    expect(manifest.publishConfig).toEqual({ access: "public" });
     expect(manifest.dependencies).toEqual({
       "@material/material-color-utilities": "0.4.0",
     });
     expect(manifest.peerDependencies).toEqual({
-      "color-scheme-tokens": "0.0.0",
+      "color-scheme-tokens": "^0.1.0",
     });
     expect(manifest.devDependencies).toEqual({
       "color-scheme-tokens": "workspace:*",
