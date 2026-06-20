@@ -98,6 +98,28 @@ describe("JSON Schemas", () => {
     },
   );
 
+  test.each(["camelCase", "snake_case", "PascalCase", "with space", "brand.mixedCase"])(
+    "strict graph schema and parser reject non-canonical token key %s",
+    (key) => {
+      const ajv = createAjv();
+      const graph = {
+        formatVersion: 1,
+        modes: ["base"],
+        defaultMode: "base",
+        defaultVisibility: "public",
+        tokens: {
+          [key]: { value: "#ffffff" },
+        },
+      };
+
+      expectSchemaInvalid(ajv, graphSchema, graph, `graph with token key ${key}`);
+      expect(parseTokenGraph(graph)).toMatchObject({
+        ok: false,
+        issues: [{ code: "invalid-token-key", path: `/tokens/${key}` }],
+      });
+    },
+  );
+
   test("compiled token set schema rejects unresolved authoring color strings", () => {
     expect.hasAssertions();
 

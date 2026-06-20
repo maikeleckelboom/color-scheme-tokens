@@ -187,6 +187,37 @@ Layers are ordered token overlays. Sources compose first, layers compose after s
 key. This is deterministic token composition, not CSS cascade behavior: there is no selector specificity, `!important`,
 CSS `@layer`, DOM mutation, or style injection.
 
+For layer-only light and dark builds, pass the graph mode envelope to `buildTokenSet()`:
+
+```ts
+import { buildTokenSet, defineTokenLayer } from "color-scheme-tokens";
+
+const base = defineTokenLayer({
+  id: "base",
+  modes: ["light", "dark"],
+  tokens: {
+    background: {
+      light: "#ffffff",
+      dark: "#141218",
+    },
+    foreground: {
+      light: "#111111",
+      dark: "#f5eff7",
+    },
+  },
+});
+
+const built = buildTokenSet({
+  modes: ["light", "dark"],
+  defaultMode: "light",
+  layers: [base],
+});
+
+if (!built.ok) {
+  throw new Error(JSON.stringify(built.issues, null, 2));
+}
+```
+
 ## Optional Material 3
 
 Material 3 output is provided by `@color-scheme-tokens/source-material3`, not by the root package.
@@ -201,7 +232,6 @@ import { material3Source } from "@color-scheme-tokens/source-material3";
 
 const application = defineTokenLayer<"light" | "dark">({
   id: "application",
-  defaultVisibility: "public",
   tokens: {
     background: "material3.surface",
     foreground: "material3.on-surface",
@@ -318,4 +348,5 @@ resolved color values plus dependency and origin metadata for the selected token
 - [Diagnostics](./docs/diagnostics.md)
 - [Architecture](./docs/architecture.md)
 - [Adapter policy](./docs/adapter-policy.md)
+- [Roadmap](./docs/roadmap.md)
 - [Semver](./docs/semver.md)

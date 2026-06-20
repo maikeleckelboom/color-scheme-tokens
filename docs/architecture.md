@@ -18,7 +18,8 @@ The root package owns:
 - adapter interfaces.
 
 The root package does not own Material 3, Texel, image extraction, browser canvas behavior, CSS parser engines,
-color-conversion engines, or any other optional capability engine.
+color-conversion engines, external format import/export behavior, target framework scaffolding, or any other optional
+capability engine.
 
 ## Data Shapes
 
@@ -70,13 +71,17 @@ Winning token origin metadata points at the winning source or layer.
 Layer composition is intentionally simpler than CSS cascade behavior. It has no selector specificity, no `!important`, no
 implicit CSS `@layer` behavior, no DOM behavior, and no runtime style injection helpers.
 
-Adapter packages may depend on engines. Core exposes the interface but does not provide Material 3, Texel, conversion, or
-image-backed behavior. The first source adapter is `@color-scheme-tokens/source-material3`; it lives outside the root
-package and owns the Material engine dependency.
+Adapter packages may depend on engines, external format tooling, or target framework policy. Core exposes the interface
+but does not provide Material 3, Texel, conversion, DTCG, shadcn, or image-backed behavior. The first source adapter is
+`@color-scheme-tokens/source-material3`; it lives outside the root package and owns the Material engine dependency.
 
 Source adapters produce graph input for `buildTokenSet()`. Conversion adapters perform separate conversion operations and
-return `Result` values with adapter-owned issues. The adapter package topology and release obligations are defined in
-[`ADR 0002`](./adr/0002-adapter-package-architecture.md).
+return `Result` values with adapter-owned issues. Format adapters import or export external file and wire formats, and
+may expose source helpers, conversion functions, or exporters when the external format is bidirectional. Target adapters
+map compiled or core token material into a target framework or design-system contract and may export target-specific
+scaffolds. Adapter package topology and release obligations are defined in
+[`ADR 0002`](./adr/0002-adapter-package-architecture.md), with format adapter rules in
+[`ADR 0003`](./adr/0003-format-adapter-packages.md).
 
 ## Determinism
 

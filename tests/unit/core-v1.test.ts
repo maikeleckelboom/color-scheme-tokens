@@ -216,6 +216,26 @@ describe("v1 graph and compiler", () => {
     );
   });
 
+  test.each(["camelCase", "snake_case", "PascalCase", "with space", "brand.mixedCase"])(
+    "strict parser rejects non-canonical token key %s",
+    (key) => {
+      expect(
+        parseTokenGraph({
+          formatVersion: 1,
+          modes: ["base"],
+          defaultMode: "base",
+          defaultVisibility: "public",
+          tokens: {
+            [key]: { value: "#ffffff" },
+          },
+        }),
+      ).toMatchObject({
+        ok: false,
+        issues: [{ code: "invalid-token-key", path: `/tokens/${key}`, key }],
+      });
+    },
+  );
+
   test("rejects authoring-helper mode names that collide with token definition keys", () => {
     expect(() =>
       defineTokenGraph({
@@ -728,6 +748,8 @@ describe("v1 sources", () => {
 
     const value = unwrap(buildTokenSet({ layers: [base, brand] }));
 
+    expect(value.graph.modes).toEqual(["base"]);
+    expect(value.graph.defaultMode).toBe("base");
     expect(Object.keys(value.compiled.tokens)).toEqual(["background", "foreground", "primary"]);
     expect(value.graph.tokens.primary?.origin).toEqual({ kind: "layer", id: "brand" });
     expect(value.compiled.tokens.primary?.valueByMode.base).toEqual({
@@ -736,6 +758,95 @@ describe("v1 sources", () => {
       g: 0.23137254901960785,
       b: 0.18823529411764706,
       alpha: 1,
+    });
+  });
+
+  test("buildTokenSet accepts explicit modes for layer-only multi-mode overlays", () => {
+    const base = defineTokenLayer<"light" | "dark">({
+      id: "base",
+      modes: ["light", "dark"],
+      tokens: {
+        background: {
+          light: "#ffffff",
+          dark: "#141218",
+        },
+        foreground: {
+          light: "#111111",
+          dark: "#f5eff7",
+        },
+      },
+    });
+    const brand = defineTokenLayer<"light" | "dark">({
+      id: "brand",
+      modes: ["light", "dark"],
+      tokens: {
+        primary: {
+          light: "#6750a4",
+          dark: "#d0bcff",
+        },
+      },
+    });
+
+    const value = unwrap(
+      buildTokenSet({
+        modes: ["light", "dark"],
+        defaultMode: "light",
+        layers: [base, brand],
+      }),
+    );
+
+    expect(value.graph.modes).toEqual(["light", "dark"]);
+    expect(value.graph.defaultMode).toBe("light");
+    expect(Object.keys(value.compiled.tokens)).toEqual(["background", "foreground", "primary"]);
+    expect(value.compiled.tokens.background?.valueByMode.dark).toEqual({
+      colorSpace: "srgb",
+      r: 0.0784313725490196,
+      g: 0.07058823529411765,
+      b: 0.09411764705882353,
+      alpha: 1,
+    });
+    expect(exportCssVariables(value.compiled)).toEqual({
+      ok: true,
+      value:
+        ":root {\n" +
+        "  --background: #ffffff;\n" +
+        "  --foreground: #111111;\n" +
+        "  --primary: #6750a4;\n" +
+        "}\n\n" +
+        ':root[data-color-scheme="dark"] {\n' +
+        "  --background: #141218;\n" +
+        "  --foreground: #f5eff7;\n" +
+        "  --primary: #d0bcff;\n" +
+        "}\n",
+    });
+  });
+
+  test("buildTokenSet rejects invalid layer-only mode envelopes", () => {
+    const layer = defineTokenLayer({
+      id: "brand",
+      tokens: {
+        primary: "#6750a4",
+      },
+    });
+
+    expect(
+      buildTokenSet({
+        modes: ["light", "dark"],
+        defaultMode: "sepia",
+        layers: [layer],
+      }),
+    ).toMatchObject({
+      ok: false,
+      issues: [{ code: "invalid-build-options", path: "/defaultMode" }],
+    });
+    expect(
+      buildTokenSet({
+        modes: ["light", "dark"],
+        layers: [layer],
+      } as never),
+    ).toMatchObject({
+      ok: false,
+      issues: [{ code: "invalid-build-options", path: "/defaultMode" }],
     });
   });
 
@@ -1053,6 +1164,60 @@ describe("v1 sources", () => {
     expect(buildTokenSet({ sources: [first, differentDefaultMode] })).toMatchObject({
       ok: false,
       issues: [{ code: "invalid-source-result", path: "/sources/1/defaultMode" }],
+    });
+  });
+
+  test("buildTokenSet validates explicit build envelopes against the first source graph", () => {
+    const source = fixedSource("first", {
+      formatVersion: 1,
+      modes: ["dark", "light"],
+      defaultMode: "light",
+      defaultVisibility: "internal",
+      tokens: {
+        "first.token": {
+          visibility: "public",
+          valueByMode: {
+            light: "#ffffff",
+            dark: "#000000",
+          },
+        },
+      },
+    });
+
+    const value = unwrap(
+      buildTokenSet({
+        modes: ["light", "dark"],
+        defaultMode: "light",
+        defaultVisibility: "internal",
+        sources: [source],
+      }),
+    );
+    expect(value.graph.modes).toEqual(["light", "dark"]);
+    expect(Object.keys(value.compiled.tokens)).toEqual(["first.token"]);
+
+    expect(
+      buildTokenSet({
+        modes: ["light", "dim"],
+        defaultMode: "light",
+        sources: [source],
+      }),
+    ).toMatchObject({
+      ok: false,
+      issues: [{ code: "invalid-build-options", path: "/modes" }],
+    });
+    expect(
+      buildTokenSet({
+        modes: ["light", "dark"],
+        defaultMode: "dark",
+        sources: [source],
+      }),
+    ).toMatchObject({
+      ok: false,
+      issues: [{ code: "invalid-build-options", path: "/defaultMode" }],
+    });
+    expect(buildTokenSet({ defaultVisibility: "public", sources: [source] })).toMatchObject({
+      ok: false,
+      issues: [{ code: "invalid-build-options", path: "/defaultVisibility" }],
     });
   });
 

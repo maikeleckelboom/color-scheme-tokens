@@ -18,6 +18,9 @@ export interface TokenSource<I extends Issue = Issue> {
 }
 
 export interface BuildTokenSetOptions<I extends Issue = Issue> {
+  readonly modes?: readonly [string, ...string[]];
+  readonly defaultMode?: string;
+  readonly defaultVisibility?: TokenVisibility;
   readonly sources?: readonly TokenSource<I>[];
   readonly layers?: readonly TokenLayerInput[];
   readonly selection?: TokenSelection;
@@ -61,7 +64,11 @@ export function buildTokenSet<I extends Issue>(
     sourceResults.push({ source, graph: sourceResult.value, sourceIndex });
   }
 
-  const composed = composeSourceGraphs(sourceResults, parsedOptions.value.layers);
+  const composed = composeSourceGraphs(
+    sourceResults,
+    parsedOptions.value.layers,
+    parsedOptions.value.envelope,
+  );
   if (!composed.ok) {
     return composed as Result<never, I | BuildTokenSetIssue>;
   }
@@ -114,9 +121,16 @@ function buildFromComposedGraph(
 }
 
 interface ParsedBuildOptions<I extends Issue> {
+  readonly envelope: BuildTokenSetEnvelope;
   readonly sources: readonly TokenSource<I>[];
   readonly layers?: readonly TokenLayerInput[];
   readonly selection?: TokenSelection;
+}
+
+interface BuildTokenSetEnvelope {
+  readonly modes?: readonly [string, ...string[]];
+  readonly defaultMode?: string;
+  readonly defaultVisibility?: TokenVisibility;
 }
 
 function parseBuildOptions<I extends Issue>(
@@ -131,7 +145,14 @@ function parseBuildOptions<I extends Issue>(
   }
 
   for (const entry of entries.value) {
-    if (entry.key !== "sources" && entry.key !== "layers" && entry.key !== "selection") {
+    if (
+      entry.key !== "modes" &&
+      entry.key !== "defaultMode" &&
+      entry.key !== "defaultVisibility" &&
+      entry.key !== "sources" &&
+      entry.key !== "layers" &&
+      entry.key !== "selection"
+    ) {
       return {
         ok: false,
         issues: [{ code: "invalid-build-options", message: `Unknown build option: ${entry.key}.` }],
@@ -140,9 +161,25 @@ function parseBuildOptions<I extends Issue>(
   }
 
   const record = new Map(entries.value.map((entry) => [entry.key, entry.value]));
+  const envelope = parseBuildEnvelope(record);
+  if (!envelope.ok) {
+    return envelope;
+  }
   const sources = parseSources<I>(record.get("sources"));
   if (!sources.ok) {
     return sources;
+  }
+  if (sources.value.length === 0 && record.has("defaultMode") && !record.has("modes")) {
+    return {
+      ok: false,
+      issues: [
+        {
+          code: "invalid-build-options",
+          message: "defaultMode requires modes when buildTokenSet has no sources.",
+          path: "/defaultMode",
+        },
+      ],
+    };
   }
   const layers = record.get("layers");
   if (layers !== undefined && !Array.isArray(layers)) {
@@ -166,11 +203,171 @@ function parseBuildOptions<I extends Issue>(
   return {
     ok: true,
     value: {
+      envelope: envelope.value,
       sources: sources.value,
       ...(layers === undefined ? {} : { layers: layers as readonly TokenLayerInput[] }),
       ...(record.has("selection") ? { selection: record.get("selection") as TokenSelection } : {}),
     },
   };
+}
+
+function parseBuildEnvelope(
+  record: ReadonlyMap<string, unknown>,
+): Result<BuildTokenSetEnvelope, BuildTokenSetIssue> {
+  const modes = record.has("modes") ? parseBuildModes(record.get("modes")) : undefined;
+  if (modes !== undefined && !modes.ok) {
+    return modes;
+  }
+
+  const defaultMode = record.get("defaultMode");
+  if (record.has("defaultMode") && typeof defaultMode !== "string") {
+    return {
+      ok: false,
+      issues: [
+        {
+          code: "invalid-build-options",
+          message: "defaultMode must be a string.",
+          path: "/defaultMode",
+        },
+      ],
+    };
+  }
+  if (modes !== undefined && !record.has("defaultMode")) {
+    return {
+      ok: false,
+      issues: [
+        {
+          code: "invalid-build-options",
+          message: "defaultMode is required when modes is provided.",
+          path: "/defaultMode",
+        },
+      ],
+    };
+  }
+  if (
+    modes !== undefined &&
+    typeof defaultMode === "string" &&
+    !modes.value.includes(defaultMode)
+  ) {
+    return {
+      ok: false,
+      issues: [
+        {
+          code: "invalid-build-options",
+          message: "defaultMode must belong to modes.",
+          path: "/defaultMode",
+        },
+      ],
+    };
+  }
+
+  const defaultVisibility = record.get("defaultVisibility");
+  if (
+    record.has("defaultVisibility") &&
+    defaultVisibility !== "public" &&
+    defaultVisibility !== "internal"
+  ) {
+    return {
+      ok: false,
+      issues: [
+        {
+          code: "invalid-build-options",
+          message: "defaultVisibility must be public or internal.",
+          path: "/defaultVisibility",
+        },
+      ],
+    };
+  }
+
+  return {
+    ok: true,
+    value: {
+      ...(modes === undefined ? {} : { modes: modes.value }),
+      ...(typeof defaultMode === "string" ? { defaultMode } : {}),
+      ...(defaultVisibility === "public" || defaultVisibility === "internal"
+        ? { defaultVisibility }
+        : {}),
+    },
+  };
+}
+
+function parseBuildModes(
+  input: unknown,
+): Result<readonly [string, ...string[]], BuildTokenSetIssue> {
+  if (!Array.isArray(input)) {
+    return {
+      ok: false,
+      issues: [
+        {
+          code: "invalid-build-options",
+          message: "modes must be a non-empty array.",
+          path: "/modes",
+        },
+      ],
+    };
+  }
+  if (input.length === 0) {
+    return {
+      ok: false,
+      issues: [
+        {
+          code: "invalid-build-options",
+          message: "modes must contain at least one mode.",
+          path: "/modes",
+        },
+      ],
+    };
+  }
+
+  const modes: string[] = [];
+  const modePaths = new Map<string, string>();
+  for (const [index, value] of input.entries()) {
+    const path = `/modes/${index}`;
+    if (typeof value !== "string" || !isSingleSegmentIdentifier(value)) {
+      return {
+        ok: false,
+        issues: [
+          {
+            code: "invalid-build-options",
+            message: "modes entries must be lower-kebab single segments.",
+            path,
+          },
+        ],
+      };
+    }
+    const firstPath = modePaths.get(value);
+    if (firstPath !== undefined) {
+      return {
+        ok: false,
+        issues: [
+          {
+            code: "invalid-build-options",
+            message: `Duplicate mode: ${value}.`,
+            path,
+            firstPath,
+          },
+        ],
+      };
+    }
+    modePaths.set(value, path);
+    modes.push(value);
+  }
+
+  const firstMode = modes[0];
+  if (firstMode === undefined) {
+    return {
+      ok: false,
+      issues: [
+        {
+          code: "invalid-build-options",
+          message: "modes must contain at least one mode.",
+          path: "/modes",
+        },
+      ],
+    };
+  }
+
+  return { ok: true, value: [firstMode, ...modes.slice(1)] };
 }
 
 function parseSources<I extends Issue>(
@@ -403,6 +600,7 @@ interface ComposedSourceGraphs {
 function composeSourceGraphs(
   sources: readonly BuiltSourceGraph[],
   layers: readonly TokenLayerInput[] | undefined,
+  envelope: BuildTokenSetEnvelope,
 ): Result<ComposedSourceGraphs, BuildTokenSetIssue> {
   const sourceGraphs: SourceGraphParts[] = [];
   for (const source of sources) {
@@ -417,10 +615,14 @@ function composeSourceGraphs(
   const first = sourceGraphs[0];
   if (first === undefined) {
     defineRecordValue(output, "formatVersion", 1);
-    defineRecordValue(output, "modes", ["base"]);
-    defineRecordValue(output, "defaultMode", "base");
-    defineRecordValue(output, "defaultVisibility", "public");
+    defineRecordValue(output, "modes", envelope.modes ?? ["base"]);
+    defineRecordValue(output, "defaultMode", envelope.defaultMode ?? "base");
+    defineRecordValue(output, "defaultVisibility", envelope.defaultVisibility ?? "public");
   } else {
+    const envelopeMatch = validateBuildEnvelopeAgainstFirstSource(envelope, first);
+    if (!envelopeMatch.ok) {
+      return envelopeMatch;
+    }
     if (first.schema !== undefined) {
       defineRecordValue(output, "$schema", first.schema);
     }
@@ -476,6 +678,52 @@ function composeSourceGraphs(
       layerSourceIds,
     },
   };
+}
+
+function validateBuildEnvelopeAgainstFirstSource(
+  envelope: BuildTokenSetEnvelope,
+  first: SourceGraphParts,
+): Result<void, BuildTokenSetIssue> {
+  if (envelope.modes !== undefined && !sameModes(envelope.modes, first.modes)) {
+    return {
+      ok: false,
+      issues: [
+        {
+          code: "invalid-build-options",
+          message: "buildTokenSet modes must match the first source graph.",
+          path: "/modes",
+        },
+      ],
+    };
+  }
+  if (envelope.defaultMode !== undefined && envelope.defaultMode !== first.defaultMode) {
+    return {
+      ok: false,
+      issues: [
+        {
+          code: "invalid-build-options",
+          message: "buildTokenSet defaultMode must match the first source graph.",
+          path: "/defaultMode",
+        },
+      ],
+    };
+  }
+  if (
+    envelope.defaultVisibility !== undefined &&
+    envelope.defaultVisibility !== first.defaultVisibility
+  ) {
+    return {
+      ok: false,
+      issues: [
+        {
+          code: "invalid-build-options",
+          message: "buildTokenSet defaultVisibility must match the first source graph.",
+          path: "/defaultVisibility",
+        },
+      ],
+    };
+  }
+  return { ok: true, value: undefined };
 }
 
 interface RawSourceGraphParts {

@@ -87,6 +87,25 @@ if (layerBuilt.ok) {
   layerBuilt.value.compiled.defaultMode.toUpperCase();
 }
 
+const multiModeLayer = defineTokenLayer<"light" | "dark">({
+  id: "application",
+  modes: ["light", "dark"],
+  tokens: {
+    background: {
+      light: "#ffffff",
+      dark: "#141218",
+    },
+  },
+});
+const multiModeLayerBuilt = buildTokenSet({
+  modes: ["light", "dark"],
+  defaultMode: "light",
+  layers: [multiModeLayer],
+});
+if (multiModeLayerBuilt.ok) {
+  multiModeLayerBuilt.value.compiled.defaultMode.toUpperCase();
+}
+
 const cssOptions: ExportCssVariablesOptions = { prefix: "theme" };
 cssOptions.prefix?.toUpperCase();
 const cssBlocks = exportCssVariableBlocks({} as never);

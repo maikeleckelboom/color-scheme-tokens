@@ -17,5 +17,15 @@
 - Expose `buildTokenSet({ sources, layers })` as the adapter runner and layer composer shape. `sources` is optional for
   layer-only builds, source-only builds remain valid, and later layers override earlier layers or source tokens by token
   key.
+- Add `modes`, `defaultMode`, and `defaultVisibility` to `BuildTokenSetOptions` so layer-only builds can establish an
+  explicit graph mode envelope without moving mode authority onto `TokenLayerInput`.
+- Document the canonical core token-key language as dot-separated lower-kebab identifier segments, with external format
+  names handled by adapter-owned mapping and diagnostics rather than by loosening core validation.
+- Add the standards interoperability roadmap and ADR 0003 for future format adapter packages such as
+  `@color-scheme-tokens/format-dtcg`; DTCG runtime support remains deferred beyond 0.1.0.
+- Document `@color-scheme-tokens/conversion-texel` as a planned future conversion adapter using adapter-owned
+  `@texel/color`, with no Texel runtime support in core.
+- Document `@color-scheme-tokens/target-shadcn` as a planned future target adapter for explicit, overridable shadcn CSS
+  variable contract mapping; shadcn runtime support remains deferred beyond 0.1.0.
 - Preserve the package boundary: the root package has no Material dependency, Material exports, Material subpaths, or
   Material schema branches.

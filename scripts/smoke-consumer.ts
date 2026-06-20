@@ -67,6 +67,25 @@ const brand = defineTokenLayer({ id: "brand", tokens: { primary: "#ff3b30" } });
 const built = buildTokenSet({ layers: [base, brand] });
 if (!built.ok) throw new Error(JSON.stringify(built.issues));
 if (built.value.graph.tokens.primary?.origin?.kind !== "layer") throw new Error("layer-only origin failed");
+const lightDarkLayer = defineTokenLayer({
+  id: "application",
+  modes: ["light", "dark"],
+  tokens: {
+    background: {
+      light: "#ffffff",
+      dark: "#141218",
+    },
+  },
+});
+const lightDarkBuilt = buildTokenSet({
+  modes: ["light", "dark"],
+  defaultMode: "light",
+  layers: [lightDarkLayer],
+});
+if (!lightDarkBuilt.ok) throw new Error(JSON.stringify(lightDarkBuilt.issues));
+if (lightDarkBuilt.value.compiled.tokens.background?.valueByMode.dark?.colorSpace !== "srgb") {
+  throw new Error("layer-only multi-mode build failed");
+}
 `,
 );
 writeFileSync(
@@ -161,6 +180,16 @@ const source = {
 };
 const built = buildTokenSet({ sources: [source] });
 const layerBuilt = buildTokenSet({ layers: [layer] });
+const lightDarkLayer = defineTokenLayer<"light" | "dark">({
+  id: "application",
+  modes: ["light", "dark"],
+  tokens: { background: { light: "#ffffff", dark: "#141218" } },
+});
+const lightDarkBuilt = buildTokenSet({
+  modes: ["light", "dark"],
+  defaultMode: "light",
+  layers: [lightDarkLayer],
+});
 cssOptions.prefix?.toUpperCase();
 legacyCssOptions.prefix?.toUpperCase();
 cssBlock?.declarations["--background"]?.toUpperCase();
@@ -168,6 +197,7 @@ color.colorSpace.toUpperCase();
 if (compiled.ok) compiled.value.defaultMode.toUpperCase();
 if (built.ok) built.value.compiled.defaultMode.toUpperCase();
 if (layerBuilt.ok) layerBuilt.value.compiled.defaultMode.toUpperCase();
+if (lightDarkBuilt.ok) lightDarkBuilt.value.compiled.defaultMode.toUpperCase();
 `,
 );
 

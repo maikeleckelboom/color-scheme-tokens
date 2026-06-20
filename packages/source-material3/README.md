@@ -17,7 +17,6 @@ import { material3Source } from "@color-scheme-tokens/source-material3";
 
 const application = defineTokenLayer<"light" | "dark">({
   id: "application",
-  defaultVisibility: "public",
   tokens: {
     background: "material3.surface",
     foreground: "material3.on-surface",
@@ -112,7 +111,6 @@ import { material3Source } from "@color-scheme-tokens/source-material3";
 
 const application = defineTokenLayer<"light" | "dark">({
   id: "application",
-  defaultVisibility: "public",
   tokens: {
     background: "material3.surface",
     foreground: "material3.on-surface",

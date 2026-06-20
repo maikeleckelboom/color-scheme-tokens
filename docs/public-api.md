@@ -52,6 +52,26 @@ custom renderers.
 External CSS variable contracts can be supported by authoring matching token keys and exporting without a prefix. Core
 does not hard-code framework presets or browser mutation behavior.
 
+## Token Keys
+
+Core token keys use one canonical internal language: dot-separated lower-kebab identifier segments.
+
+Valid examples include:
+
+- `background`
+- `primary-foreground`
+- `brand.primary`
+- `material3.on-primary`
+
+Core `TokenGraphInput` and `TokenLayerInput` do not accept arbitrary camelCase, snake_case, PascalCase, spaces, or mixed
+casing in token keys. The strict parser and JSON Schemas reject those names with contractual diagnostics instead of
+normalizing them.
+
+External file formats may have different token-name rules. Those external names are adapter-owned format concerns, not a
+reason to loosen the core token-key language. Format adapters such as the planned
+`@color-scheme-tokens/format-dtcg` should preserve external names or report mapping diagnostics through their own
+contracts. Core does not silently slugify external names.
+
 ## Authoring Helpers
 
 `defineTokenGraph()` and `defineTokenLayer()` are ergonomic authoring helpers. They default `formatVersion` to `1` and
@@ -112,3 +132,29 @@ DOM mutation, or runtime style injection.
 
 The root package does not implement Material 3, Texel, conversion, image, or CSS parser engines. Material 3 support lives
 in `@color-scheme-tokens/source-material3`, which imports core only through the generic source contract.
+
+## BuildTokenSetOptions
+
+`BuildTokenSetOptions` accepts:
+
+- `sources?: readonly TokenSource[]`
+- `layers?: readonly TokenLayerInput[]`
+- `modes?: readonly [string, ...string[]]`
+- `defaultMode?: string`
+- `defaultVisibility?: "public" | "internal"`
+- `selection?: TokenSelection`
+
+At least one source or layer is required.
+
+When sources are present, the first source graph establishes the composed graph envelope. If `modes`, `defaultMode`, or
+`defaultVisibility` are also provided to `buildTokenSet()`, they must match that first source graph or the call returns an
+`invalid-build-options` issue. Explicit build options validate the expected source envelope; they do not override source
+authority.
+
+When no sources are present, `buildTokenSet()` uses `modes`, `defaultMode`, and `defaultVisibility` from the options to
+create the composed graph envelope. If `modes` is omitted, the current simple layer-only behavior remains one `base` mode
+with `defaultMode: "base"`. If `modes` is provided, `defaultMode` is required and must belong to `modes`.
+`defaultVisibility` defaults to `public` when omitted.
+
+Layers do not own the graph mode envelope. `TokenLayerInput` remains a mode-shaped contribution to a graph; use
+`buildTokenSet({ modes, defaultMode, layers })` when a layer-only build needs light and dark modes.
