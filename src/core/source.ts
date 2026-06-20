@@ -39,10 +39,14 @@ export function buildTokenSet<I extends Issue>(
   options: BuildTokenSetOptions<I>,
 ): Result<BuildTokenSetValue, I | BuildTokenSetIssue> {
   const parsedOptions = parseBuildOptions(options);
-  if (!parsedOptions.ok) return parsedOptions as Result<never, I | BuildTokenSetIssue>;
+  if (!parsedOptions.ok) {
+    return parsedOptions as Result<never, I | BuildTokenSetIssue>;
+  }
 
   const sourceResult = callSource(parsedOptions.value.source);
-  if (!sourceResult.ok) return sourceResult as Result<never, I | BuildTokenSetIssue>;
+  if (!sourceResult.ok) {
+    return sourceResult as Result<never, I | BuildTokenSetIssue>;
+  }
 
   const composedGraph = composeSourceGraph(sourceResult.value, parsedOptions.value.fragments);
   const callerFragmentIds = collectCallerFragmentIds(parsedOptions.value.fragments);
@@ -61,16 +65,22 @@ function buildFromComposedGraph(
   selection: TokenSelection | undefined,
 ): Result<BuildTokenSetValue, BuildTokenSetIssue> {
   const parsedGraph = parseTokenGraphInternal(graphInput, { sourceId, callerFragmentIds });
-  if (!parsedGraph.ok) return parsedGraph;
+  if (!parsedGraph.ok) {
+    return parsedGraph;
+  }
 
   const parsedSelection = parseCompileSelection(
     parsedGraph.value,
     selection === undefined ? undefined : { selection },
   );
-  if (!parsedSelection.ok) return parsedSelection;
+  if (!parsedSelection.ok) {
+    return parsedSelection;
+  }
 
   const compiled = compileParsedTokenGraph(parsedGraph.value, parsedSelection.value);
-  if (!compiled.ok) return compiled;
+  if (!compiled.ok) {
+    return compiled;
+  }
 
   return {
     ok: true,
@@ -94,7 +104,9 @@ function parseBuildOptions<I extends Issue>(
     code: "invalid-build-options",
     message: "buildTokenSet options must be a plain object.",
   });
-  if (!entries.ok) return entries as Result<never, BuildTokenSetIssue>;
+  if (!entries.ok) {
+    return entries as Result<never, BuildTokenSetIssue>;
+  }
 
   for (const entry of entries.value) {
     if (entry.key !== "source" && entry.key !== "fragments" && entry.key !== "selection") {
@@ -107,7 +119,9 @@ function parseBuildOptions<I extends Issue>(
 
   const record = new Map(entries.value.map((entry) => [entry.key, entry.value]));
   const source = parseSource<I>(record.get("source"));
-  if (!source.ok) return source;
+  if (!source.ok) {
+    return source;
+  }
   const fragments = record.get("fragments");
   if (fragments !== undefined && !Array.isArray(fragments)) {
     return {
@@ -131,7 +145,9 @@ function parseSource<I extends Issue>(input: unknown): Result<TokenSource<I>, Bu
     code: "invalid-build-options",
     message: "source must be a plain object with id and build.",
   });
-  if (!entries.ok) return entries as Result<never, BuildTokenSetIssue>;
+  if (!entries.ok) {
+    return entries as Result<never, BuildTokenSetIssue>;
+  }
   const record = new Map(entries.value.map((entry) => [entry.key, entry.value]));
   if (record.size !== 2 || !record.has("id") || !record.has("build")) {
     return {
@@ -191,7 +207,9 @@ function validateSourceResult<I extends Issue>(
     code: "invalid-source-result",
     message: "Source build result must be a plain Result object.",
   });
-  if (!entries.ok) return entries as Result<never, I | BuildTokenSetIssue>;
+  if (!entries.ok) {
+    return entries as Result<never, I | BuildTokenSetIssue>;
+  }
   const record = new Map(entries.value.map((entry) => [entry.key, entry.value]));
   const okValue = record.get("ok");
   if (okValue === true) {
@@ -255,15 +273,21 @@ function composeSourceGraph(
   graph: TokenGraphInput,
   fragments: readonly TokenFragmentInput[] | undefined,
 ): unknown {
-  if (fragments === undefined || fragments.length === 0) return graph;
+  if (fragments === undefined || fragments.length === 0) {
+    return graph;
+  }
   const entries = readPlainRecord(graph, {
     code: "invalid-source-result",
     message: "Source graph must be a plain object.",
   });
-  if (!entries.ok) return graph;
+  if (!entries.ok) {
+    return graph;
+  }
 
   const output: Record<string, unknown> = {};
-  for (const entry of entries.value) defineRecordValue(output, entry.key, entry.value);
+  for (const entry of entries.value) {
+    defineRecordValue(output, entry.key, entry.value);
+  }
   const existingFragments = output.fragments;
   if (existingFragments === undefined) {
     defineRecordValue(output, "fragments", [...fragments]);
@@ -277,15 +301,21 @@ function collectCallerFragmentIds(
   fragments: readonly TokenFragmentInput[] | undefined,
 ): ReadonlySet<string> {
   const ids = new Set<string>();
-  if (fragments === undefined) return ids;
+  if (fragments === undefined) {
+    return ids;
+  }
   for (const fragment of fragments) {
     const entries = readPlainRecord(fragment, {
       code: "invalid-build-options",
       message: "Fragment must be a plain object.",
     });
-    if (!entries.ok) continue;
+    if (!entries.ok) {
+      continue;
+    }
     const id = entries.value.find((entry) => entry.key === "id")?.value;
-    if (typeof id === "string") ids.add(id);
+    if (typeof id === "string") {
+      ids.add(id);
+    }
   }
   return ids;
 }

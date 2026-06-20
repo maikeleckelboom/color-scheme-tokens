@@ -9,7 +9,9 @@ const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const manifest = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8"));
 const readme = readFileSync(join(repoRoot, "README.md"), "utf8");
 const blocks = [...readme.matchAll(/```ts\n([\s\S]*?)```/g)].map((match) => match[1]);
-if (blocks.length === 0) throw new Error("README contains no executable TypeScript examples");
+if (blocks.length === 0) {
+  throw new Error("README contains no executable TypeScript examples");
+}
 
 const workspace = mkdtempSync(join(tmpdir(), "color-scheme-tokens-docs-"));
 const packDirectory = join(workspace, "pack");
@@ -53,7 +55,9 @@ function pack(destination) {
     .trim()
     .split(/\r?\n/)
     .at(-1);
-  if (output === undefined) throw new Error("Unable to determine packed tarball name");
+  if (output === undefined) {
+    throw new Error("Unable to determine packed tarball name");
+  }
   return join(destination, basename(output));
 }
 

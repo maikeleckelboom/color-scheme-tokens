@@ -11,7 +11,9 @@ function canonicalTokenSet(tokenSet: CompiledTokenSet): unknown {
   const tokens: Record<string, unknown> = {};
   for (const key of Object.keys(tokenSet.tokens).sort(compareCodeUnits)) {
     const token = tokenSet.tokens[key];
-    if (token === undefined) continue;
+    if (token === undefined) {
+      continue;
+    }
     const valueByMode: Record<string, unknown> = {};
     const dependenciesByMode: Record<string, readonly string[]> = {};
     for (const mode of tokenSet.modes) {
@@ -28,11 +30,15 @@ function canonicalTokenSet(tokenSet: CompiledTokenSet): unknown {
     defineRecordValue(output, "valueByMode", valueByMode);
     defineRecordValue(output, "origin", canonicalOrigin(token.origin));
     defineRecordValue(output, "dependenciesByMode", dependenciesByMode);
-    if (token.description !== undefined)
+    if (token.description !== undefined) {
       defineRecordValue(output, "description", token.description);
-    if (token.deprecated !== undefined) defineRecordValue(output, "deprecated", token.deprecated);
-    if (token.extensions !== undefined)
+    }
+    if (token.deprecated !== undefined) {
+      defineRecordValue(output, "deprecated", token.deprecated);
+    }
+    if (token.extensions !== undefined) {
       defineRecordValue(output, "extensions", canonicalJson(token.extensions));
+    }
     defineRecordValue(tokens, key, output);
   }
 
@@ -47,8 +53,9 @@ function canonicalTokenSet(tokenSet: CompiledTokenSet): unknown {
 function canonicalOrigin(origin: CompiledTokenSet["tokens"][string]["origin"]): unknown {
   const output: Record<string, unknown> = {};
   defineRecordValue(output, "kind", origin.kind);
-  if (origin.kind === "fragment" || origin.kind === "source")
+  if (origin.kind === "fragment" || origin.kind === "source") {
     defineRecordValue(output, "id", origin.id);
+  }
   if (origin.kind === "source" && origin.sourceToken !== undefined) {
     defineRecordValue(output, "sourceToken", origin.sourceToken);
   }
@@ -72,9 +79,15 @@ function canonicalColor(color: ColorValue): unknown {
 }
 
 function canonicalJson(value: JsonValue): JsonValue {
-  if (value === null || typeof value === "string" || typeof value === "boolean") return value;
-  if (typeof value === "number") return normalizeNumber(value);
-  if (Array.isArray(value)) return value.map((entry) => canonicalJson(entry));
+  if (value === null || typeof value === "string" || typeof value === "boolean") {
+    return value;
+  }
+  if (typeof value === "number") {
+    return normalizeNumber(value);
+  }
+  if (Array.isArray(value)) {
+    return value.map((entry) => canonicalJson(entry));
+  }
 
   const output: Record<string, JsonValue> = {};
   const record = value as Readonly<Record<string, JsonValue>>;

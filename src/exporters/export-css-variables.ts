@@ -2,7 +2,8 @@ import type { CompiledTokenSet } from "../core/compiled-types";
 import { isClassPrefix, isDataAttributeName, isSingleSegmentIdentifier } from "../core/identifiers";
 import { compareCodeUnits, readPlainRecord } from "../core/json";
 import type { Issue, Result } from "../core/result";
-import { formatCssColor } from "./formatCssColor";
+import { describeUnknown } from "../core/unknown-description";
+import { formatCssColor } from "./format-css-color";
 import { isValidCssSelector } from "./selector-validation";
 
 export type CssScope =
@@ -56,7 +57,9 @@ export function exportCssVariables(
   options?: ExportCssVariablesOptions,
 ): Result<string, ExportCssVariablesIssue> {
   const parsed = parseOptions(tokenSet, options);
-  if (!parsed.ok) return parsed;
+  if (!parsed.ok) {
+    return parsed;
+  }
 
   const tokenKeys = Object.keys(tokenSet.tokens).sort(compareCodeUnits);
   const blocks = tokenSet.modes.map((mode) => {
@@ -96,7 +99,9 @@ function parseOptions(
           code: "invalid-css-options",
           message: "CSS options must be a plain object.",
         });
-  if (!entries.ok) return entries as Result<never, ExportCssVariablesIssue>;
+  if (!entries.ok) {
+    return entries as Result<never, ExportCssVariablesIssue>;
+  }
 
   for (const entry of entries.value) {
     if (
@@ -139,7 +144,9 @@ function parseOptions(
   const modeSelectors = record.get("modeSelectors");
   const scope = record.get("scope");
   const selectors = parseSelectors(tokenSet, scope, modeSelectors);
-  if (!selectors.ok) return selectors;
+  if (!selectors.ok) {
+    return selectors;
+  }
 
   return {
     ok: true,
@@ -164,7 +171,9 @@ function parseSelectors(
     code: "invalid-mode-selectors",
     message: "modeSelectors must be a plain object.",
   });
-  if (!selectorStrategy.ok) return selectorStrategy as Result<never, ExportCssVariablesIssue>;
+  if (!selectorStrategy.ok) {
+    return selectorStrategy as Result<never, ExportCssVariablesIssue>;
+  }
   const strategyRecord = new Map(selectorStrategy.value.map((entry) => [entry.key, entry.value]));
   const strategy = strategyRecord.get("strategy");
 
@@ -179,7 +188,9 @@ function parseSelectors(
   }
 
   const scope = parseScope(scopeInput);
-  if (!scope.ok) return scope;
+  if (!scope.ok) {
+    return scope;
+  }
 
   if (strategy === "data-attribute") {
     const attribute = strategyRecord.get("attribute");
@@ -228,14 +239,20 @@ function parseSelectors(
 }
 
 function parseScope(input: unknown): Result<string, ExportCssVariablesIssue> {
-  if (input === undefined) return { ok: true, value: ":root" };
+  if (input === undefined) {
+    return { ok: true, value: ":root" };
+  }
   const entries = readPlainRecord(input, {
     code: "invalid-scope",
     message: "scope must be a plain object.",
   });
-  if (!entries.ok) return entries as Result<never, ExportCssVariablesIssue>;
+  if (!entries.ok) {
+    return entries as Result<never, ExportCssVariablesIssue>;
+  }
   const record = new Map(entries.value.map((entry) => [entry.key, entry.value]));
-  if (record.get("strategy") === "root" && record.size === 1) return { ok: true, value: ":root" };
+  if (record.get("strategy") === "root" && record.size === 1) {
+    return { ok: true, value: ":root" };
+  }
   if (
     record.get("strategy") === "selector" &&
     record.size === 2 &&
@@ -260,7 +277,9 @@ function parseExactSelectors(
     code: "invalid-mode-selectors",
     message: "selectors must be a plain object.",
   });
-  if (!entries.ok) return entries as Result<never, ExportCssVariablesIssue>;
+  if (!entries.ok) {
+    return entries as Result<never, ExportCssVariablesIssue>;
+  }
 
   const modeSet = new Set(tokenSet.modes);
   const selectors: Record<string, string> = {};
@@ -285,7 +304,7 @@ function parseExactSelectors(
             code: "invalid-selector",
             message: "Invalid CSS selector.",
             mode: entry.key,
-            selector: String(entry.value),
+            selector: typeof entry.value === "string" ? entry.value : describeUnknown(entry.value),
           },
         ],
       };

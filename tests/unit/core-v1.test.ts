@@ -17,7 +17,9 @@ import {
 
 function unwrap<Value>(result: Result<Value, Issue>): Value {
   expect(result.ok).toBe(true);
-  if (!result.ok) throw new Error(JSON.stringify(result.issues));
+  if (!result.ok) {
+    throw new Error(JSON.stringify(result.issues));
+  }
   return result.value;
 }
 
@@ -58,22 +60,17 @@ describe("v1 color parsing and formatting", () => {
 describe("v1 graph and compiler", () => {
   const makeGraph = () =>
     defineTokenGraph({
-      formatVersion: 1,
       modes: ["dark", "light"],
       defaultMode: "light",
       defaultVisibility: "internal",
       tokens: {
         "brand.primary": {
-          valueByMode: {
-            light: "#6750a4",
-            dark: "#d0bcff",
-          },
+          light: "#6750a4",
+          dark: "#d0bcff",
         },
         "brand.on-primary": {
-          valueByMode: {
-            light: "#ffffff",
-            dark: "#381e72",
-          },
+          light: "#ffffff",
+          dark: "#381e72",
         },
         "app.action": {
           visibility: "public",
@@ -85,6 +82,30 @@ describe("v1 graph and compiler", () => {
         },
       },
     });
+
+  test("defines simple single-mode graphs with safe defaults and shorthands", () => {
+    const graph = defineTokenGraph({
+      tokens: {
+        "app.background": "#ffffff",
+        "app.foreground": { ref: "app.background" },
+      },
+    });
+
+    expect(graph).toEqual({
+      formatVersion: 1,
+      modes: ["base"],
+      defaultMode: "base",
+      defaultVisibility: "public",
+      tokens: {
+        "app.background": { value: "#ffffff" },
+        "app.foreground": { value: { ref: "app.background" } },
+      },
+    });
+
+    const compiled = unwrap(compileTokenGraph(graph));
+    expect(Object.keys(compiled.tokens)).toEqual(["app.background", "app.foreground"]);
+    expect(compiled.tokens["app.foreground"]?.dependenciesByMode.base).toEqual(["app.background"]);
+  });
 
   test("parses to an owned canonical graph", () => {
     const graph = makeGraph();
@@ -130,6 +151,25 @@ describe("v1 graph and compiler", () => {
     expect(serializeTokenSet(compiled).endsWith("\n")).toBe(true);
   });
 
+  test("stores direct dependencies without expanding transitive chains", () => {
+    const compiled = unwrap(
+      compileTokenGraph({
+        formatVersion: 1,
+        modes: ["base"],
+        defaultMode: "base",
+        defaultVisibility: "public",
+        tokens: {
+          "brand.primary": { value: "#6750a4" },
+          "brand.alias": { value: { ref: "brand.primary" } },
+          "app.action": { value: { ref: "brand.alias" } },
+        },
+      }),
+    );
+
+    expect(compiled.tokens["app.action"]?.dependenciesByMode.base).toEqual(["brand.alias"]);
+    expect(compiled.tokens["brand.alias"]?.dependenciesByMode.base).toEqual(["brand.primary"]);
+  });
+
   test("reports duplicate fragments, exact-selection issues, and cycles", () => {
     const graph = makeGraph();
     const fragment = defineTokenFragment({
@@ -163,7 +203,40 @@ describe("v1 graph and compiler", () => {
       }),
     ).toMatchObject({
       ok: false,
-      issues: [{ code: "reference-cycle", cycle: ["a.one", "a.two"] }],
+      issues: [
+        {
+          code: "reference-cycle",
+          cycle: ["a.one", "a.two"],
+          path: "/tokens/a.one/value",
+        },
+      ],
+    });
+  });
+
+  test("reports precise JSON Pointer paths for references", () => {
+    expect(
+      parseTokenGraph({
+        formatVersion: 1,
+        modes: ["light", "dark"],
+        defaultMode: "light",
+        defaultVisibility: "public",
+        tokens: {
+          "app.action": {
+            valueByMode: {
+              light: { ref: "missing.light" },
+              dark: "#000000",
+            },
+          },
+        },
+      }),
+    ).toMatchObject({
+      ok: false,
+      issues: [
+        {
+          code: "unknown-reference",
+          path: "/tokens/app.action/valueByMode/light",
+        },
+      ],
     });
   });
 });
@@ -215,6 +288,30 @@ describe("v1 sources", () => {
     expect(value.graph.tokens["app.action"]?.origin).toEqual({
       kind: "fragment",
       id: "application",
+    });
+  });
+});
+
+describe("public boundaries reject hostile unknown input without throwing", () => {
+  test("plain-data readers do not invoke hostile object traps as exceptions", () => {
+    const hostile = new Proxy(
+      {},
+      {
+        getPrototypeOf() {
+          throw new Error("prototype trap should be contained");
+        },
+      },
+    );
+
+    expect(() => parseColor(hostile)).not.toThrow();
+    expect(() => parseTokenGraph(hostile)).not.toThrow();
+    expect(parseColor(hostile)).toMatchObject({
+      ok: false,
+      issues: [{ code: "invalid-color-input" }],
+    });
+    expect(parseTokenGraph(hostile)).toMatchObject({
+      ok: false,
+      issues: [{ code: "invalid-object" }],
     });
   });
 });

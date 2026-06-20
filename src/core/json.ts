@@ -16,7 +16,9 @@ export interface RecordEntry {
 }
 
 export function pointer(...segments: readonly (string | number)[]): string {
-  if (segments.length === 0) return "";
+  if (segments.length === 0) {
+    return "";
+  }
   return `/${segments.map((segment) => escapePointerSegment(String(segment))).join("/")}`;
 }
 
@@ -40,18 +42,29 @@ export function readPlainRecord<Code extends string>(
     return invalidRecord(issue);
   }
 
-  const prototype = Object.getPrototypeOf(input);
+  let prototype: object | null;
+  let descriptors: PropertyDescriptorMap;
+  try {
+    prototype = Object.getPrototypeOf(input);
+    descriptors = Object.getOwnPropertyDescriptors(input);
+  } catch {
+    return invalidRecord(issue);
+  }
+
   if (prototype !== Object.prototype && prototype !== null) {
     return invalidRecord(issue);
   }
 
-  const descriptors = Object.getOwnPropertyDescriptors(input);
   const entries: RecordEntry[] = [];
 
-  for (const key of Object.keys(descriptors)) {
+  for (const key of Object.keys(descriptors).sort(compareCodeUnits)) {
     const descriptor = descriptors[key];
-    if (descriptor === undefined || !descriptor.enumerable) continue;
-    if (!("value" in descriptor)) return invalidRecord(issue);
+    if (descriptor === undefined || !descriptor.enumerable) {
+      continue;
+    }
+    if (!("value" in descriptor)) {
+      return invalidRecord(issue);
+    }
     entries.push({ key, value: descriptor.value });
   }
 
@@ -80,17 +93,27 @@ export function copyJsonValue<Code extends string>(
 }
 
 export function isJsonSafeIssue(input: unknown): input is Issue {
-  if (input === null || typeof input !== "object" || Array.isArray(input)) return false;
+  if (input === null || typeof input !== "object" || Array.isArray(input)) {
+    return false;
+  }
   const entries = readPlainRecord(input, {
     code: "invalid-issue",
     message: "Issue must be a plain object.",
   });
-  if (!entries.ok) return false;
+  if (!entries.ok) {
+    return false;
+  }
 
   const record = Object.fromEntries(entries.value.map((entry) => [entry.key, entry.value]));
-  if (typeof record.code !== "string" || record.code.length === 0) return false;
-  if (typeof record.message !== "string") return false;
-  if ("path" in record && typeof record.path !== "string") return false;
+  if (typeof record.code !== "string" || record.code.length === 0) {
+    return false;
+  }
+  if (typeof record.message !== "string") {
+    return false;
+  }
+  if ("path" in record && typeof record.path !== "string") {
+    return false;
+  }
 
   return copyJsonValue(input, {
     code: "invalid-issue",
@@ -145,10 +168,14 @@ function copyJsonValueInternal<Code extends string>(
   seen: Set<object>,
   collector: IssueCollector<Issue<Code>>,
 ): JsonValue | undefined {
-  if (input === null || typeof input === "string" || typeof input === "boolean") return input;
+  if (input === null || typeof input === "string" || typeof input === "boolean") {
+    return input;
+  }
 
   if (typeof input === "number") {
-    if (Number.isFinite(input)) return normalizeNumber(input);
+    if (Number.isFinite(input)) {
+      return normalizeNumber(input);
+    }
     collector.add({
       code,
       message: message ?? "Expected a finite JSON number.",
@@ -225,6 +252,8 @@ function copyJsonValueInternal<Code extends string>(
 }
 
 function childPointer(parent: string | undefined, segment: string | number): string {
-  if (parent === undefined || parent === "") return pointer(segment);
+  if (parent === undefined || parent === "") {
+    return pointer(segment);
+  }
   return `${parent}/${escapePointerSegment(String(segment))}`;
 }

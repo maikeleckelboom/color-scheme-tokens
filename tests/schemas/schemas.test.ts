@@ -36,7 +36,9 @@ describe("JSON Schemas", () => {
 
     const compiled = compileTokenGraph(graph);
     expect(compiled.ok).toBe(true);
-    if (!compiled.ok) throw new Error("Expected schema fixture to compile");
+    if (!compiled.ok) {
+      throw new Error("Expected schema fixture to compile");
+    }
     expect(ajv.validate(compiledSchema, JSON.parse(serializeTokenSet(compiled.value)))).toBe(true);
   });
 

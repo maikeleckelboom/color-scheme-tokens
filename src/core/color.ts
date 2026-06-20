@@ -72,7 +72,9 @@ export function parseColor(input: unknown): Result<ColorValue, ParseColorIssue> 
 }
 
 export function parseColorAt(input: unknown, path?: string): Result<ColorValue, ParseColorIssue> {
-  if (typeof input === "string") return parseColorString(input, path);
+  if (typeof input === "string") {
+    return parseColorString(input, path);
+  }
   return parseColorObject(input, path);
 }
 
@@ -105,7 +107,9 @@ function parseColorObject(
     message: "Color input must be a concrete CSS string or plain color object.",
     ...(path === undefined ? {} : { path }),
   });
-  if (!entries.ok) return entries as Result<never, ParseColorIssue>;
+  if (!entries.ok) {
+    return entries as Result<never, ParseColorIssue>;
+  }
 
   const record = new Map(entries.value.map((entry) => [entry.key, entry.value]));
   const colorSpace = record.get("colorSpace");
@@ -150,13 +154,21 @@ function parseColorObject(
 
   if (colorSpace === "oklch") {
     const l = readFinite(record, "l", path, colorSpace);
-    if (!l.ok) return l;
+    if (!l.ok) {
+      return l;
+    }
     const c = readFinite(record, "c", path, colorSpace);
-    if (!c.ok) return c;
+    if (!c.ok) {
+      return c;
+    }
     const h = readFinite(record, "h", path, colorSpace);
-    if (!h.ok) return h;
+    if (!h.ok) {
+      return h;
+    }
     const alpha = readAlpha(record.get("alpha"), path, colorSpace);
-    if (!alpha.ok) return alpha;
+    if (!alpha.ok) {
+      return alpha;
+    }
     if (c.value < 0) {
       return componentIssue("c", "OKLCH chroma must be non-negative.", path, colorSpace);
     }
@@ -173,13 +185,21 @@ function parseColorObject(
   }
 
   const r = readFinite(record, "r", path, colorSpace);
-  if (!r.ok) return r;
+  if (!r.ok) {
+    return r;
+  }
   const g = readFinite(record, "g", path, colorSpace);
-  if (!g.ok) return g;
+  if (!g.ok) {
+    return g;
+  }
   const b = readFinite(record, "b", path, colorSpace);
-  if (!b.ok) return b;
+  if (!b.ok) {
+    return b;
+  }
   const alpha = readAlpha(record.get("alpha"), path, colorSpace);
-  if (!alpha.ok) return alpha;
+  if (!alpha.ok) {
+    return alpha;
+  }
   return {
     ok: true,
     value: {
@@ -197,30 +217,42 @@ function parseColorString(
   path: string | undefined,
 ): Result<ColorValue, ParseColorIssue> {
   const source = input.trim();
-  if (source === "") return unsupported(path);
+  if (source === "") {
+    return unsupported(path);
+  }
 
   const hex = parseHex(source);
-  if (hex !== undefined) return { ok: true, value: hex };
+  if (hex !== undefined) {
+    return { ok: true, value: hex };
+  }
 
   if (/^transparent$/i.test(source)) {
     return { ok: true, value: { colorSpace: "srgb", r: 0, g: 0, b: 0, alpha: 0 } };
   }
 
   const rgb = parseRgbFunction(source, path);
-  if (rgb !== undefined) return rgb;
+  if (rgb !== undefined) {
+    return rgb;
+  }
 
   const oklch = parseOklchFunction(source, path);
-  if (oklch !== undefined) return oklch;
+  if (oklch !== undefined) {
+    return oklch;
+  }
 
   const color = parseColorFunction(source, path);
-  if (color !== undefined) return color;
+  if (color !== undefined) {
+    return color;
+  }
 
   return unsupported(path);
 }
 
 function parseHex(input: string): SrgbColor | undefined {
   const match = /^#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.exec(input);
-  if (match === null) return undefined;
+  if (match === null) {
+    return undefined;
+  }
   const digits = match[1] as string;
   const expanded =
     digits.length <= 4 ? [...digits].map((digit) => `${digit}${digit}`).join("") : digits;
@@ -236,14 +268,18 @@ function parseRgbFunction(
   path: string | undefined,
 ): Result<ColorValue, ParseColorIssue> | undefined {
   const match = /^rgba?\((.*)\)$/i.exec(input);
-  if (match === null) return undefined;
+  if (match === null) {
+    return undefined;
+  }
   const body = (match[1] as string).trim();
   if (body.includes(",")) {
-    if (body.includes("/"))
+    if (body.includes("/")) {
       return componentIssue("rgb", "Mixed rgb delimiter forms are not supported.", path);
+    }
     const parts = body.split(",").map((part) => part.trim());
-    if (parts.length !== 3 && parts.length !== 4)
+    if (parts.length !== 3 && parts.length !== 4) {
       return componentIssue("rgb", "rgb() expects three channels and optional alpha.", path);
+    }
     return createRgb(
       parseRgbChannel(parts[0], "r"),
       parseRgbChannel(parts[1], "g"),
@@ -254,10 +290,13 @@ function parseRgbFunction(
   }
 
   const slashParts = body.split("/");
-  if (slashParts.length > 2)
+  if (slashParts.length > 2) {
     return componentIssue("alpha", "rgb() has too many alpha separators.", path);
+  }
   const channels = (slashParts[0] ?? "").trim().split(/\s+/).filter(Boolean);
-  if (channels.length !== 3) return componentIssue("rgb", "rgb() expects three channels.", path);
+  if (channels.length !== 3) {
+    return componentIssue("rgb", "rgb() expects three channels.", path);
+  }
   const alpha =
     slashParts[1] === undefined
       ? { ok: true as const, value: 1 }
@@ -276,16 +315,21 @@ function parseOklchFunction(
   path: string | undefined,
 ): Result<ColorValue, ParseColorIssue> | undefined {
   const match = /^oklch\((.*)\)$/i.exec(input);
-  if (match === null) return undefined;
+  if (match === null) {
+    return undefined;
+  }
   const body = (match[1] as string).trim();
-  if (body.includes(","))
+  if (body.includes(",")) {
     return componentIssue("oklch", "oklch() uses space-separated syntax.", path);
+  }
   const slashParts = body.split("/");
-  if (slashParts.length > 2)
+  if (slashParts.length > 2) {
     return componentIssue("alpha", "oklch() has too many alpha separators.", path);
+  }
   const parts = (slashParts[0] ?? "").trim().split(/\s+/).filter(Boolean);
-  if (parts.length !== 3)
+  if (parts.length !== 3) {
     return componentIssue("oklch", "oklch() expects lightness, chroma, and hue.", path);
+  }
   const l = parsePercentOrNumber(parts[0], "l", 1);
   const c = parseRequiredNumber(parts[1], "c");
   const h = parseHueText(parts[2], "h");
@@ -293,11 +337,21 @@ function parseOklchFunction(
     slashParts[1] === undefined
       ? { ok: true as const, value: 1 }
       : parseAlphaText(slashParts[1].trim(), "alpha");
-  if (!l.ok) return componentIssue(l.component, l.message, path);
-  if (!c.ok) return componentIssue(c.component, c.message, path);
-  if (!h.ok) return componentIssue(h.component, h.message, path);
-  if (!alpha.ok) return componentIssue(alpha.component, alpha.message, path);
-  if (c.value < 0) return componentIssue("c", "OKLCH chroma must be non-negative.", path);
+  if (!l.ok) {
+    return componentIssue(l.component, l.message, path);
+  }
+  if (!c.ok) {
+    return componentIssue(c.component, c.message, path);
+  }
+  if (!h.ok) {
+    return componentIssue(h.component, h.message, path);
+  }
+  if (!alpha.ok) {
+    return componentIssue(alpha.component, alpha.message, path);
+  }
+  if (c.value < 0) {
+    return componentIssue("c", "OKLCH chroma must be non-negative.", path);
+  }
   return {
     ok: true,
     value: {
@@ -315,7 +369,9 @@ function parseColorFunction(
   path: string | undefined,
 ): Result<ColorValue, ParseColorIssue> | undefined {
   const match = /^color\(\s*([a-z0-9-]+)\s+(.*)\)$/i.exec(input);
-  if (match === null) return undefined;
+  if (match === null) {
+    return undefined;
+  }
   const colorSpace = (match[1] as string).toLowerCase();
   if (colorSpace !== "srgb" && colorSpace !== "display-p3") {
     return {
@@ -332,14 +388,17 @@ function parseColorFunction(
   }
 
   const body = (match[2] as string).trim();
-  if (body.includes(","))
+  if (body.includes(",")) {
     return componentIssue("color", "color() uses space-separated syntax.", path, colorSpace);
+  }
   const slashParts = body.split("/");
-  if (slashParts.length > 2)
+  if (slashParts.length > 2) {
     return componentIssue("alpha", "color() has too many alpha separators.", path, colorSpace);
+  }
   const channels = (slashParts[0] ?? "").trim().split(/\s+/).filter(Boolean);
-  if (channels.length !== 3)
+  if (channels.length !== 3) {
     return componentIssue("color", "color() expects three coordinates.", path, colorSpace);
+  }
   const alpha =
     slashParts[1] === undefined
       ? { ok: true as const, value: 1 }
@@ -363,13 +422,22 @@ function createRgb(
   colorSpace: "srgb" | "display-p3" = "srgb",
 ): Result<ColorValue, ParseColorIssue> {
   for (const component of [r, g, b, alpha]) {
-    if (!component.ok)
+    if (!component.ok) {
       return componentIssue(component.component, component.message, path, colorSpace);
+    }
   }
-  if (!r.ok) return componentIssue(r.component, r.message, path, colorSpace);
-  if (!g.ok) return componentIssue(g.component, g.message, path, colorSpace);
-  if (!b.ok) return componentIssue(b.component, b.message, path, colorSpace);
-  if (!alpha.ok) return componentIssue(alpha.component, alpha.message, path, colorSpace);
+  if (!r.ok) {
+    return componentIssue(r.component, r.message, path, colorSpace);
+  }
+  if (!g.ok) {
+    return componentIssue(g.component, g.message, path, colorSpace);
+  }
+  if (!b.ok) {
+    return componentIssue(b.component, b.message, path, colorSpace);
+  }
+  if (!alpha.ok) {
+    return componentIssue(alpha.component, alpha.message, path, colorSpace);
+  }
   if (alpha.value < 0 || alpha.value > 1) {
     return componentIssue("alpha", "Alpha must be between 0 and 1.", path, colorSpace);
   }
@@ -398,7 +466,9 @@ function parsePercentOrNumber(
   component: string,
   numberScale: number,
 ): NumberParseOutcome {
-  if (input === undefined || input === "") return invalidNumber(component);
+  if (input === undefined || input === "") {
+    return invalidNumber(component);
+  }
   if (input.endsWith("%")) {
     const value = Number(input.slice(0, -1));
     return Number.isFinite(value) ? { ok: true, value: value / 100 } : invalidNumber(component);
@@ -410,13 +480,17 @@ function parsePercentOrNumber(
 }
 
 function parseRequiredNumber(input: string | undefined, component: string): NumberParseOutcome {
-  if (input === undefined || input === "" || input.endsWith("%")) return invalidNumber(component);
+  if (input === undefined || input === "" || input.endsWith("%")) {
+    return invalidNumber(component);
+  }
   const value = Number(input);
   return Number.isFinite(value) ? { ok: true, value } : invalidNumber(component);
 }
 
 function parseHueText(input: string | undefined, component: string): NumberParseOutcome {
-  if (input === undefined || input === "") return invalidNumber(component);
+  if (input === undefined || input === "") {
+    return invalidNumber(component);
+  }
   const text = input.toLowerCase().endsWith("deg") ? input.slice(0, -3) : input;
   const value = Number(text);
   return Number.isFinite(value) ? { ok: true, value } : invalidNumber(component);
@@ -424,7 +498,9 @@ function parseHueText(input: string | undefined, component: string): NumberParse
 
 function parseAlphaText(input: string | undefined, component: string): NumberParseOutcome {
   const parsed = parsePercentOrNumber(input, component, 1);
-  if (!parsed.ok) return parsed;
+  if (!parsed.ok) {
+    return parsed;
+  }
   return parsed.value >= 0 && parsed.value <= 1
     ? parsed
     : { ok: false, component, message: "Alpha must be between 0 and 1." };
@@ -441,7 +517,9 @@ function readFinite(
   colorSpace: string,
 ): Result<number, ParseColorIssue> {
   const value = record.get(component);
-  if (value === undefined) return missing(component, path, colorSpace);
+  if (value === undefined) {
+    return missing(component, path, colorSpace);
+  }
   if (typeof value !== "number" || !Number.isFinite(value)) {
     return componentIssue(component, "Color components must be finite numbers.", path, colorSpace);
   }
@@ -453,7 +531,9 @@ function readAlpha(
   path: string | undefined,
   colorSpace: string,
 ): Result<number, ParseColorIssue> {
-  if (value === undefined) return { ok: true, value: 1 };
+  if (value === undefined) {
+    return { ok: true, value: 1 };
+  }
   if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 1) {
     return componentIssue(
       "alpha",
@@ -466,7 +546,9 @@ function readAlpha(
 }
 
 function normalizeHue(chroma: number, hue: number): number {
-  if (chroma === 0) return 0;
+  if (chroma === 0) {
+    return 0;
+  }
   const normalized = ((hue % 360) + 360) % 360;
   return normalizeNumber(normalized);
 }

@@ -1,70 +1,54 @@
 # Architecture
 
-color-scheme-tokens is a graph-first package. The public center is `ColorSchemeTokenGraph`, not a Material wrapper and
-not a product-specific theme object.
+`color-scheme-tokens` is a dependency-light color-token graph core. The graph is the system of record; source adapters
+feed it, validation and compilation resolve it, and exporters project compiled sets.
 
-## Model
+## Core Ownership
 
-The package is split into three boundaries:
+The root package owns:
 
-1. Generic color token graph core.
-2. Generic recipe pipeline.
-3. Explicit source adapters, currently including the Material 3 adapter.
+- token graph contracts;
+- JSON-safe public authoring inputs;
+- graph parsing and validation;
+- token compilation;
+- deterministic serialization;
+- CSS variable export;
+- `Result` and `Issue` contracts;
+- adapter interfaces.
 
-Source adapters produce graphs. They do not define token nodes, modes, aliases, validation, compilation, layers,
-deterministic serialization, or CSS export.
+The root package does not own Material 3, Texel, image extraction, browser canvas behavior, CSS parser engines,
+color-conversion engines, or any other optional capability engine.
 
 ## Pipeline
 
 ```text
-source adapter
-  -> source-emitted graph
-  -> optional token layers
-  -> optional aliases
-  -> validated/compiled token set
-  -> exporter projection
+authoring helper or adapter source
+  -> strict token graph input
+  -> parse and validate
+  -> compile selected tokens
+  -> serialize or export CSS
 ```
 
-Source adapters create graph nodes with stable token keys, modes, authored color token values, aliases, and provenance.
-Token layers are reusable graph additions and may add aliases or authored color tokens. Recipe `aliases` are sugar for
-simple alias nodes. The compiler validates the graph, resolves aliases, and unwraps color token values into concrete
-color values. Exporters consume compiled token sets only.
+`defineTokenGraph()` and `defineTokenFragment()` are authoring helpers. They may fill safe defaults and normalize
+shorthands, but `parseTokenGraph()` remains the strict boundary for persisted wire-format data.
 
-## Boundaries
+## Compilation
 
-- The graph core is source-agnostic.
-- The recipe pipeline is source-agnostic.
-- Material 3 Dynamic Color is one explicit source adapter at `color-scheme-tokens/sources/material3`.
-- The Material 3 adapter emits `m3.*` keys. That namespace is adapter-emitted token data, not mandatory graph structure.
-- Consumer/application namespaces should be owned by the consumer, such as `app.*` or `brand.*`.
-- Material 3 `keyColors` and `algorithm` options are adapter concerns. `specVersion`, `platform`, `variant`, and
-  `contrastLevel` do not belong to generic recipe options.
-- ARGB is an adapter implementation detail for Material 3 generation or an explicit low-level interop concern. Public
-  authoring uses plain color inputs such as hex strings. Authored graph inputs use plain token keys, mode keys, and
-  color literals. Branded keys, branded modes, and parsed color values are produced by validation and normalization, not
-  required as authoring syntax.
-- The Material 3 adapter is backed by `@material/material-color-utilities` internally. Upstream types and Material
-  utility wrappers are not public root API.
-- Graph types, validation, compilation, layers, serialization, and CSS export remain generic.
-- Token layers may add generic app or brand aliases; bundled layers must not quietly assume a source-emitted namespace.
-- Color token nodes store `ModeValues<ColorTokenValue>`. v0 supports only literal color values, and compiled color values
-  remain concrete `ColorValue` objects.
-- `serializeTokenSet()` is the canonical internal deterministic snapshot format. It is independent from DTCG; dedicated
-  interop exporters are deferred.
-- Material Dynamic Color algorithm changes are package-level events because upstream generation changes can alter compiled
-  token output; the upstream package is pinned exactly and fixtures are expected to catch drift.
-- `tests/fixtures/material3-purple.token-set.snapshot.json` is byte-for-byte serialized Material 3 adapter output and is
-  intentionally not formatter-owned.
-- Exporters do not validate graphs, resolve aliases, or mutate token sets.
-- Lab proof tooling remains external future work and is not package doctrine.
+Compilation validates first, then resolves selected tokens. The default selection is `public`; exact key selection and
+`all` selection are explicit options.
 
-## Current Slice
+Compiled tokens store direct dependencies by mode. Full transitive analysis is intentionally not stored in every compiled
+token; it can be added later as an on-demand analyzer without bloating the default compiled artifact.
 
-The root package exposes generic behavior: key parsing, mode parsing, color input parsing, `createSourceGraph()` source
-materialization, graph validation, compilation, deterministic serialization, CSS variable export, generic layer types,
-and the `createSchemeTokens()` recipe.
+## Exporters
 
-The Material 3 subpath exposes `material3Source()` and Material 3 source option/problem types. The adapter defaults are
-spec version `2021`, platform `phone`, contrast level `0`, and variant `tonalSpot`. It emits the reconciled role
-inventory as `m3.*` keys: 55 required roles and four optional dim roles when the upstream adapter provides them
-symmetrically.
+Exporters consume compiled token sets only. They do not validate graphs, resolve references, load engines, or mutate token
+sets.
+
+The CSS exporter is dependency-free and uses a conservative selector validator. It supports the generated root,
+data-attribute, class, and simple exact-selector workflows without making a CSS parser part of the core dependency graph.
+
+## Determinism
+
+Object-record diagnostics, compiled token keys, serialized JSON keys, modes after the default mode, and CSS declarations
+use code-unit ordering. Public issue codes and JSON Pointer paths are contractual.

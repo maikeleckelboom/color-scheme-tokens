@@ -18,6 +18,7 @@ import {
   readPlainRecord,
   sortedRecord,
 } from "./json";
+import type { JsonValue } from "./json";
 import { IssueCollector, type Result } from "./result";
 
 interface ParseContext {
@@ -28,10 +29,11 @@ interface ParseContext {
 interface ParsedToken {
   readonly visibility: TokenVisibility;
   readonly valueByMode: Readonly<Record<string, ColorExpression>>;
+  readonly expressionPathsByMode: Readonly<Record<string, string>>;
   readonly origin: TokenOrigin;
   readonly description?: string;
   readonly deprecated?: boolean | string;
-  readonly extensions?: Readonly<Record<string, unknown>>;
+  readonly extensions?: Readonly<Record<string, JsonValue>>;
 }
 
 interface TokenDeclaration {
@@ -73,7 +75,9 @@ export function parseTokenGraphInternal(
     code: "invalid-object",
     message: "Token graph must be a plain object.",
   });
-  if (!top.ok) return top as Result<never, TokenGraphIssue>;
+  if (!top.ok) {
+    return top as Result<never, TokenGraphIssue>;
+  }
 
   const graphRecord = new Map(top.value.map((entry) => [entry.key, entry.value]));
   rejectUnknownKeys(top.value, topLevelKeys, "", collector);
@@ -155,15 +159,16 @@ export function parseTokenGraphInternal(
     }
   }
 
-  const tokenEntries = declarations.map(
-    (declaration) => [declaration.key, declaration.token] as const,
+  const tokenMap = new Map(
+    declarations.map((declaration) => [declaration.key, declaration.token] as const),
   );
-  const tokenMap = new Map(tokenEntries);
   validateReferences(tokenMap, validModes, collector);
   validateCycles(tokenMap, validModes, collector);
 
   const issues = collector.issues();
-  if (issues !== undefined) return { ok: false, issues };
+  if (issues !== undefined) {
+    return { ok: false, issues };
+  }
 
   if (canonicalModes === undefined || defaultMode === undefined) {
     return {
@@ -178,7 +183,11 @@ export function parseTokenGraphInternal(
       formatVersion: 1,
       modes: canonicalModes as readonly [string, ...string[]],
       defaultMode,
-      tokens: sortedRecord(tokenEntries) as Readonly<Record<string, TokenGraphToken>>,
+      tokens: sortedRecord(
+        declarations.map(
+          (declaration) => [declaration.key, toPublicToken(declaration.token)] as const,
+        ),
+      ),
     },
   };
 }
@@ -271,7 +280,9 @@ function parseVisibility(
   code: "invalid-default-visibility" | "invalid-visibility",
   collector: IssueCollector<TokenGraphIssue>,
 ): TokenVisibility | undefined {
-  if (input === "public" || input === "internal") return input;
+  if (input === "public" || input === "internal") {
+    return input;
+  }
   collector.add({ code, message: "Visibility must be public or internal.", path });
   return undefined;
 }
@@ -330,7 +341,9 @@ function parseTokenRecord(
       origin: options.origin,
       collector: options.collector,
     });
-    if (token === undefined) continue;
+    if (token === undefined) {
+      continue;
+    }
 
     options.firstTokenPaths.set(entry.key, tokenPath);
     options.declarations.push({ key: entry.key, path: tokenPath, token });
@@ -417,7 +430,9 @@ function parseFragment(
       path: `${path}/tokens`,
     });
   }
-  if (fragmentId === undefined || defaultVisibility === undefined || tokens === undefined) return;
+  if (fragmentId === undefined || defaultVisibility === undefined || tokens === undefined) {
+    return;
+  }
 
   parseTokenRecord(tokens, {
     path: `${path}/tokens`,
@@ -463,7 +478,9 @@ function parseTokenDefinition(
           "invalid-visibility",
           options.collector,
         );
-  if (visibility === undefined) return undefined;
+  if (visibility === undefined) {
+    return undefined;
+  }
 
   const metadata = parseMetadata(record, options.path, options.collector);
   const hasValue = record.has("value");
@@ -488,6 +505,7 @@ function parseTokenDefinition(
   }
 
   const valueByMode: Record<string, ColorExpression> = {};
+  const expressionPathsByMode: Record<string, string> = {};
   if (hasValue) {
     const expression = parseExpression(
       record.get("value"),
@@ -495,8 +513,10 @@ function parseTokenDefinition(
       options.collector,
     );
     if (expression !== undefined) {
-      for (const mode of options.modes)
+      for (const mode of options.modes) {
         defineRecordValue(valueByMode, mode, cloneExpression(expression));
+        defineRecordValue(expressionPathsByMode, mode, `${options.path}/value`);
+      }
     }
   } else {
     parseValueByMode(record.get("valueByMode"), {
@@ -505,13 +525,17 @@ function parseTokenDefinition(
       modes: options.modes,
       collector: options.collector,
       output: valueByMode,
+      expressionPathsByMode,
     });
   }
 
-  if (Object.keys(valueByMode).length !== options.modes.length) return undefined;
+  if (Object.keys(valueByMode).length !== options.modes.length) {
+    return undefined;
+  }
   return {
     visibility,
     valueByMode: sortedRecord(Object.entries(valueByMode)),
+    expressionPathsByMode: sortedRecord(Object.entries(expressionPathsByMode)),
     origin: options.origin,
     ...metadata,
   };
@@ -525,31 +549,35 @@ function parseMetadata(
   const output: {
     description?: string;
     deprecated?: boolean | string;
-    extensions?: Readonly<Record<string, unknown>>;
+    extensions?: Readonly<Record<string, JsonValue>>;
   } = {};
 
   const description = record.get("description");
   if (description !== undefined) {
-    if (typeof description === "string") output.description = description;
-    else
+    if (typeof description === "string") {
+      output.description = description;
+    } else {
       collector.add({
         code: "invalid-description",
         message: "description must be a string.",
         path: `${path}/description`,
       });
+    }
   }
 
   const deprecated = record.get("deprecated");
   if (deprecated !== undefined) {
-    if (deprecated === true || deprecated === false) output.deprecated = deprecated;
-    else if (typeof deprecated === "string" && deprecated.length > 0)
+    if (deprecated === true || deprecated === false) {
       output.deprecated = deprecated;
-    else
+    } else if (typeof deprecated === "string" && deprecated.length > 0) {
+      output.deprecated = deprecated;
+    } else {
       collector.add({
         code: "invalid-deprecated",
         message: "deprecated must be boolean or non-empty string.",
         path: `${path}/deprecated`,
       });
+    }
   }
 
   const extensions = record.get("extensions");
@@ -562,7 +590,7 @@ function parseMetadata(
     if (!extensionEntries.ok) {
       collector.addMany(extensionEntries.issues as readonly TokenGraphIssue[]);
     } else {
-      const copied: Record<string, unknown> = {};
+      const copied: Record<string, JsonValue> = {};
       for (const entry of extensionEntries.value) {
         if (!isExtensionKey(entry.key)) {
           collector.add({
@@ -577,8 +605,11 @@ function parseMetadata(
           message: "Extension values must be JSON-safe.",
           path: `${path}/extensions/${escapeTokenPath(entry.key)}`,
         });
-        if (value.ok) defineRecordValue(copied, entry.key, value.value);
-        else collector.addMany(value.issues as readonly TokenGraphIssue[]);
+        if (value.ok) {
+          defineRecordValue(copied, entry.key, value.value);
+        } else {
+          collector.addMany(value.issues as readonly TokenGraphIssue[]);
+        }
       }
       output.extensions = sortedRecord(Object.entries(copied));
     }
@@ -595,6 +626,7 @@ function parseValueByMode(
     readonly modes: readonly string[];
     readonly collector: IssueCollector<TokenGraphIssue>;
     readonly output: Record<string, ColorExpression>;
+    readonly expressionPathsByMode: Record<string, string>;
   },
 ): void {
   const entries = readPlainRecord(input, {
@@ -623,7 +655,10 @@ function parseValueByMode(
     }
     seen.add(entry.key);
     const expression = parseExpression(entry.value, valuePath, options.collector);
-    if (expression !== undefined) defineRecordValue(options.output, entry.key, expression);
+    if (expression !== undefined) {
+      defineRecordValue(options.output, entry.key, expression);
+      defineRecordValue(options.expressionPathsByMode, entry.key, valuePath);
+    }
   }
 
   for (const mode of options.modes) {
@@ -686,11 +721,16 @@ function validateReferences(
   for (const [key, token] of tokens) {
     for (const mode of modes) {
       const expression = token.valueByMode[mode];
-      if (expression === undefined || !isReferenceExpression(expression)) continue;
+      if (expression === undefined || !isReferenceExpression(expression)) {
+        continue;
+      }
       if (!tokens.has(expression.ref)) {
         collector.add({
           code: "unknown-reference",
           message: `Reference target does not exist: ${expression.ref}.`,
+          ...(token.expressionPathsByMode[mode] === undefined
+            ? {}
+            : { path: token.expressionPathsByMode[mode] }),
           key,
           mode,
         });
@@ -710,23 +750,29 @@ function validateCycles(
   for (const mode of modes) {
     const resolved = new Set<string>();
     for (const start of tokenKeys) {
-      if (resolved.has(start)) continue;
+      if (resolved.has(start)) {
+        continue;
+      }
       const path: string[] = [];
       const indexes = new Map<string, number>();
       let current: string | undefined = start;
       let foundCycle = false;
 
       while (current !== undefined) {
-        if (resolved.has(current)) break;
+        if (resolved.has(current)) {
+          break;
+        }
         const existingIndex = indexes.get(current);
         if (existingIndex !== undefined) {
           const canonicalCycle = canonicalCycleKeys(path.slice(existingIndex));
           const key = `${mode}\0${canonicalCycle.join("\0")}`;
           if (!cycleKeys.has(key)) {
             cycleKeys.add(key);
+            const issuePath = tokens.get(current)?.expressionPathsByMode[mode];
             collector.add({
               code: "reference-cycle",
               message: `Reference cycle detected for mode ${mode}.`,
+              ...(issuePath === undefined ? {} : { path: issuePath }),
               mode,
               cycle: canonicalCycle,
             });
@@ -746,14 +792,18 @@ function validateCycles(
       }
 
       if (!foundCycle) {
-        for (const item of path) resolved.add(item);
+        for (const item of path) {
+          resolved.add(item);
+        }
       }
     }
   }
 }
 
 function canonicalCycleKeys(cycle: readonly string[]): readonly string[] {
-  if (cycle.length === 0) return cycle;
+  if (cycle.length === 0) {
+    return cycle;
+  }
   let smallestIndex = 0;
   for (let index = 1; index < cycle.length; index += 1) {
     if (compareCodeUnits(cycle[index] as string, cycle[smallestIndex] as string) < 0) {
@@ -770,7 +820,9 @@ function rejectUnknownKeys(
   collector: IssueCollector<TokenGraphIssue>,
 ): void {
   for (const entry of entries) {
-    if (allowed.has(entry.key)) continue;
+    if (allowed.has(entry.key)) {
+      continue;
+    }
     collector.add({
       code: "unknown-property",
       message: `Unknown property: ${entry.key}.`,
@@ -804,6 +856,17 @@ function fragmentOrigin(fragmentId: string, context: ParseContext): TokenOrigin 
 
 function cloneExpression(expression: ColorExpression): ColorExpression {
   return isReferenceExpression(expression) ? { ref: expression.ref } : cloneColor(expression);
+}
+
+function toPublicToken(token: ParsedToken): TokenGraphToken {
+  return {
+    visibility: token.visibility,
+    valueByMode: token.valueByMode,
+    origin: token.origin,
+    ...(token.description === undefined ? {} : { description: token.description }),
+    ...(token.deprecated === undefined ? {} : { deprecated: token.deprecated }),
+    ...(token.extensions === undefined ? {} : { extensions: token.extensions }),
+  };
 }
 
 function isReferenceExpression(expression: ColorExpression): expression is ReferenceInput {

@@ -13,7 +13,9 @@ const output = runPnpm(["pack", "--pack-destination", packDirectory], repoRoot)
   .trim()
   .split(/\r?\n/)
   .at(-1);
-if (output === undefined) throw new Error("Unable to determine packed tarball name");
+if (output === undefined) {
+  throw new Error("Unable to determine packed tarball name");
+}
 const tarball = join(packDirectory, basename(output));
 const files = execFileSync("tar", ["-tf", tarball], { encoding: "utf8" }).trim().split(/\r?\n/);
 
@@ -45,7 +47,20 @@ for (const file of files) {
 }
 
 const packageJson = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8"));
-if (packageJson.files.includes("docs")) throw new Error("package files must not include docs");
+if (packageJson.files.includes("docs")) {
+  throw new Error("package files must not include docs");
+}
+if ("dependencies" in packageJson && Object.keys(packageJson.dependencies).length > 0) {
+  throw new Error("core package tarball must not advertise runtime dependencies");
+}
+const dependencyText = JSON.stringify(packageJson);
+if (
+  dependencyText.includes("@texel/color") ||
+  dependencyText.includes("@material/material-color-utilities") ||
+  dependencyText.includes("css-tree")
+) {
+  throw new Error("core package manifest leaks optional engine dependencies");
+}
 
 function runPnpm(args, cwd) {
   const npmExecPath = process.env.npm_execpath;

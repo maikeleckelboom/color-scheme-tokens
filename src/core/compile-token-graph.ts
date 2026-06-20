@@ -21,7 +21,6 @@ export type {
 
 interface ResolvedNode {
   readonly value: ColorValue;
-  readonly dependencies: readonly string[];
 }
 
 export function compileTokenGraph(
@@ -29,10 +28,14 @@ export function compileTokenGraph(
   options?: import("./compiled-types").CompileTokenGraphOptions,
 ): Result<CompiledTokenSet, TokenGraphIssue | CompileTokenGraphIssue> {
   const parsed = parseTokenGraphInternal(input, {});
-  if (!parsed.ok) return parsed;
+  if (!parsed.ok) {
+    return parsed;
+  }
 
   const selection = parseCompileSelection(parsed.value, options);
-  if (!selection.ok) return selection;
+  if (!selection.ok) {
+    return selection;
+  }
 
   return compileParsedTokenGraph(parsed.value, selection.value);
 }
@@ -42,9 +45,11 @@ export function compileParsedTokenGraph(
   selection: TokenSelection = "public",
 ): Result<CompiledTokenSet, CompileTokenGraphIssue> {
   const selectedKeys = selectTokenKeys(graph, selection);
-  if (!selectedKeys.ok) return selectedKeys;
+  if (!selectedKeys.ok) {
+    return selectedKeys;
+  }
 
-  const resolved = resolveAll(graph);
+  const memo = new Map<string, ResolvedNode>();
   const tokens: Record<string, CompiledToken> = {};
 
   for (const key of selectedKeys.value) {
@@ -53,21 +58,9 @@ export function compileParsedTokenGraph(
     const dependenciesByMode: Record<string, readonly string[]> = {};
 
     for (const mode of graph.modes) {
-      const node = resolved.get(nodeId(key, mode));
-      if (node === undefined) {
-        return {
-          ok: false,
-          issues: [
-            {
-              code: "unknown-selection-key",
-              message: `Unable to resolve token: ${key}.`,
-              key,
-            },
-          ],
-        };
-      }
+      const node = resolveNode(graph, key, mode, memo);
       defineRecordValue(valueByMode, mode, cloneColor(node.value));
-      defineRecordValue(dependenciesByMode, mode, [...node.dependencies]);
+      defineRecordValue(dependenciesByMode, mode, directDependencies(source, mode));
     }
 
     const compiled: CompiledToken = {
@@ -97,13 +90,17 @@ export function parseCompileSelection(
   graph: TokenGraph,
   options: import("./compiled-types").CompileTokenGraphOptions | undefined,
 ): Result<TokenSelection, CompileTokenGraphIssue> {
-  if (options === undefined) return { ok: true, value: "public" };
+  if (options === undefined) {
+    return { ok: true, value: "public" };
+  }
 
   const optionEntries = readPlainRecord(options, {
     code: "invalid-compile-options",
     message: "Compile options must be a plain object.",
   });
-  if (!optionEntries.ok) return optionEntries as Result<never, CompileTokenGraphIssue>;
+  if (!optionEntries.ok) {
+    return optionEntries as Result<never, CompileTokenGraphIssue>;
+  }
 
   for (const entry of optionEntries.value) {
     if (entry.key !== "selection") {
@@ -120,14 +117,20 @@ export function parseCompileSelection(
   }
 
   const selection = optionEntries.value.find((entry) => entry.key === "selection")?.value;
-  if (selection === undefined) return { ok: true, value: "public" };
-  if (selection === "public" || selection === "all") return { ok: true, value: selection };
+  if (selection === undefined) {
+    return { ok: true, value: "public" };
+  }
+  if (selection === "public" || selection === "all") {
+    return { ok: true, value: selection };
+  }
 
   const selectionEntries = readPlainRecord(selection, {
     code: "invalid-selection",
     message: "selection must be public, all, or { keys }.",
   });
-  if (!selectionEntries.ok) return selectionEntries as Result<never, CompileTokenGraphIssue>;
+  if (!selectionEntries.ok) {
+    return selectionEntries as Result<never, CompileTokenGraphIssue>;
+  }
   if (selectionEntries.value.length !== 1 || selectionEntries.value[0]?.key !== "keys") {
     return {
       ok: false,
@@ -207,19 +210,6 @@ function selectTokenKeys(
   return { ok: true, value: canonical };
 }
 
-function resolveAll(graph: TokenGraph): ReadonlyMap<string, ResolvedNode> {
-  const memo = new Map<string, ResolvedNode>();
-  const tokenKeys = Object.keys(graph.tokens).sort(compareCodeUnits);
-
-  for (const key of tokenKeys) {
-    for (const mode of graph.modes) {
-      resolveNode(graph, key, mode, memo);
-    }
-  }
-
-  return memo;
-}
-
 function resolveNode(
   graph: TokenGraph,
   startKey: string,
@@ -228,7 +218,9 @@ function resolveNode(
 ): ResolvedNode {
   const startId = nodeId(startKey, mode);
   const existing = memo.get(startId);
-  if (existing !== undefined) return existing;
+  if (existing !== undefined) {
+    return existing;
+  }
 
   const stack: string[] = [];
   let currentKey = startKey;
@@ -244,7 +236,7 @@ function resolveNode(
       mode
     ] as ColorExpression;
     if (!isReferenceExpression(expression)) {
-      const resolved = { value: cloneColor(expression), dependencies: [] };
+      const resolved = { value: cloneColor(expression) };
       memo.set(currentId, resolved);
       return unwind(stack, mode, resolved, currentKey, memo);
     }
@@ -262,19 +254,12 @@ function unwind(
   memo: Map<string, ResolvedNode>,
 ): ResolvedNode {
   let current = leaf;
-  let dependencyKey = leafKey;
   for (let index = stack.length - 1; index >= 0; index -= 1) {
     const key = stack[index] as string;
-    const dependencies = uniqueSorted([dependencyKey, ...current.dependencies]);
-    current = { value: cloneColor(current.value), dependencies };
+    current = { value: cloneColor(current.value) };
     memo.set(nodeId(key, mode), current);
-    dependencyKey = key;
   }
   return current;
-}
-
-function uniqueSorted(values: readonly string[]): readonly string[] {
-  return [...new Set(values)].sort(compareCodeUnits);
 }
 
 function nodeId(key: string, mode: string): string {
@@ -288,11 +273,20 @@ function isReferenceExpression(
 }
 
 function cloneOrigin(origin: TokenGraphToken["origin"]): TokenGraphToken["origin"] {
-  if (origin.kind === "graph") return { kind: "graph" };
-  if (origin.kind === "fragment") return { kind: "fragment", id: origin.id };
+  if (origin.kind === "graph") {
+    return { kind: "graph" };
+  }
+  if (origin.kind === "fragment") {
+    return { kind: "fragment", id: origin.id };
+  }
   return {
     kind: "source",
     id: origin.id,
     ...(origin.sourceToken === undefined ? {} : { sourceToken: origin.sourceToken }),
   };
+}
+
+function directDependencies(token: TokenGraphToken, mode: string): readonly string[] {
+  const expression = token.valueByMode[mode] as ColorExpression | undefined;
+  return expression !== undefined && isReferenceExpression(expression) ? [expression.ref] : [];
 }

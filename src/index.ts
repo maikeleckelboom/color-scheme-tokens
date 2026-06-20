@@ -3,9 +3,9 @@ export { parseTokenGraph } from "./core/parse-token-graph";
 export { parseColor } from "./core/color";
 export { compileTokenGraph } from "./core/compile-token-graph";
 export { buildTokenSet } from "./core/source";
-export { exportCssVariables } from "./exporters/exportCssVariables";
+export { exportCssVariables } from "./exporters/export-css-variables";
 export { serializeTokenSet } from "./exporters/serialize-token-set";
-export { formatCssColor } from "./exporters/formatCssColor";
+export { formatCssColor } from "./exporters/format-css-color";
 
 export type { JsonPrimitive, JsonValue } from "./core/json";
 export type { Issue, NonEmptyIssues, Result } from "./core/result";
@@ -25,9 +25,12 @@ export type {
   ColorExpression,
   ColorExpressionInput,
   ReferenceInput,
+  TokenDefinitionAuthoringInput,
   TokenDefinitionInput,
+  TokenFragmentAuthoringInput,
   TokenFragmentInput,
   TokenGraph,
+  TokenGraphAuthoringInput,
   TokenGraphInput,
   TokenGraphIssue,
   TokenGraphToken,
@@ -52,4 +55,4 @@ export type {
   CssScope,
   ExportCssVariablesIssue,
   ExportCssVariablesOptions,
-} from "./exporters/exportCssVariables";
+} from "./exporters/export-css-variables";

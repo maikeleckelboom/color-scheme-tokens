@@ -18,7 +18,9 @@ export function isExtensionKey(input: string): boolean {
 }
 
 export function isClassPrefix(input: string): boolean {
-  if (!input.endsWith("-")) return false;
+  if (!input.endsWith("-")) {
+    return false;
+  }
   const withoutTrailingHyphen = input.slice(0, -1);
   return isIdentifierSegment(withoutTrailingHyphen);
 }

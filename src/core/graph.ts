@@ -1,6 +1,7 @@
 import type { ColorInput, ColorValue, ParseColorIssue } from "./color";
-import type { Issue, Result } from "./result";
 import type { JsonValue } from "./json";
+import { defineRecordValue, readPlainRecord } from "./json";
+import type { Issue, Result } from "./result";
 
 export type TokenVisibility = "public" | "internal";
 
@@ -44,6 +45,39 @@ export interface TokenGraphInput<Mode extends string = string> {
   readonly tokens: Readonly<Record<string, TokenDefinitionInput<Mode>>>;
   readonly fragments?: readonly TokenFragmentInput<Mode>[];
 }
+
+export type TokenDefinitionAuthoringInput<Mode extends string = string> =
+  | TokenDefinitionInput<Mode>
+  | ColorExpressionInput
+  | Readonly<Record<Mode, ColorExpressionInput>>;
+
+export interface TokenFragmentAuthoringInput<Mode extends string = string> {
+  readonly $schema?: string;
+  readonly formatVersion?: 1;
+  readonly id: string;
+  readonly defaultVisibility?: TokenVisibility;
+  readonly tokens: Readonly<Record<string, TokenDefinitionAuthoringInput<Mode>>>;
+}
+
+export type TokenGraphAuthoringInput<Mode extends string = string> =
+  | {
+      readonly $schema?: string;
+      readonly formatVersion?: 1;
+      readonly modes?: never;
+      readonly defaultMode?: never;
+      readonly defaultVisibility?: TokenVisibility;
+      readonly tokens: Readonly<Record<string, TokenDefinitionAuthoringInput<"base">>>;
+      readonly fragments?: readonly TokenFragmentInput<"base">[];
+    }
+  | {
+      readonly $schema?: string;
+      readonly formatVersion?: 1;
+      readonly modes: readonly [Mode, ...Mode[]];
+      readonly defaultMode: Mode;
+      readonly defaultVisibility?: TokenVisibility;
+      readonly tokens: Readonly<Record<string, TokenDefinitionAuthoringInput<Mode>>>;
+      readonly fragments?: readonly TokenFragmentInput<Mode>[];
+    };
 
 export type TokenOrigin =
   | {
@@ -106,7 +140,6 @@ export type TokenGraphIssue =
       | "invalid-deprecated"
       | "invalid-extensions"
       | "invalid-extension-key"
-      | "issue-limit-reached"
     > & {
       readonly key?: string;
       readonly mode?: string;
@@ -116,59 +149,127 @@ export type TokenGraphIssue =
     });
 
 export function defineTokenGraph<
-  const Modes extends readonly [string, ...string[]],
-  const Tokens extends Readonly<Record<string, TokenDefinitionInput<NoInfer<Modes[number]>>>>,
-  const Fragments extends readonly TokenFragmentInput<NoInfer<Modes[number]>>[] | undefined =
-    undefined,
+  const Tokens extends Readonly<Record<string, TokenDefinitionAuthoringInput<"base">>>,
 >(input: {
   readonly $schema?: string;
-  readonly formatVersion: 1;
-  readonly modes: Modes;
-  readonly defaultMode: Modes[number];
-  readonly defaultVisibility: TokenVisibility;
+  readonly formatVersion?: 1;
+  readonly modes?: never;
+  readonly defaultMode?: never;
+  readonly defaultVisibility?: TokenVisibility;
   readonly tokens: Tokens;
-  readonly fragments?: Fragments;
-}): {
-  readonly $schema?: string;
-  readonly formatVersion: 1;
-  readonly modes: Modes;
-  readonly defaultMode: Modes[number];
-  readonly defaultVisibility: TokenVisibility;
-  readonly tokens: Tokens;
-} & (Fragments extends undefined ? Record<never, never> : { readonly fragments: Fragments }) {
-  return input as {
-    readonly $schema?: string;
-    readonly formatVersion: 1;
-    readonly modes: Modes;
-    readonly defaultMode: Modes[number];
-    readonly defaultVisibility: TokenVisibility;
-    readonly tokens: Tokens;
-  } & (Fragments extends undefined ? Record<never, never> : { readonly fragments: Fragments });
-}
-
-export function defineTokenFragment<
-  const Mode extends string = string,
-  const Tokens extends Readonly<Record<string, TokenDefinitionInput<Mode>>> = Readonly<
-    Record<string, TokenDefinitionInput<Mode>>
+  readonly fragments?: readonly TokenFragmentInput<"base">[];
+}): TokenGraphInput<"base">;
+export function defineTokenGraph<
+  const Modes extends readonly [string, ...string[]],
+  const Tokens extends Readonly<
+    Record<string, TokenDefinitionAuthoringInput<NoInfer<Modes[number]>>>
   >,
 >(input: {
   readonly $schema?: string;
-  readonly formatVersion: 1;
-  readonly id: string;
-  readonly defaultVisibility: TokenVisibility;
+  readonly formatVersion?: 1;
+  readonly modes: Modes;
+  readonly defaultMode: Modes[number];
+  readonly defaultVisibility?: TokenVisibility;
   readonly tokens: Tokens;
-}): {
+  readonly fragments?: readonly TokenFragmentInput<NoInfer<Modes[number]>>[];
+}): TokenGraphInput<Modes[number]>;
+export function defineTokenGraph(input: TokenGraphAuthoringInput): TokenGraphInput {
+  const modes = "modes" in input && input.modes !== undefined ? input.modes : ["base"];
+  const defaultMode =
+    "defaultMode" in input && input.defaultMode !== undefined ? input.defaultMode : modes[0];
+  return {
+    ...(input.$schema === undefined ? {} : { $schema: input.$schema }),
+    formatVersion: input.formatVersion ?? 1,
+    modes: [...modes] as readonly [string, ...string[]],
+    defaultMode,
+    defaultVisibility: input.defaultVisibility ?? "public",
+    tokens: normalizeTokenRecord(input.tokens, modes),
+    ...(input.fragments === undefined ? {} : { fragments: input.fragments }),
+  };
+}
+
+export function defineTokenFragment<const Mode extends string = string>(input: {
   readonly $schema?: string;
-  readonly formatVersion: 1;
+  readonly formatVersion?: 1;
   readonly id: string;
-  readonly defaultVisibility: TokenVisibility;
-  readonly tokens: Tokens;
-} {
-  return input;
+  readonly defaultVisibility?: TokenVisibility;
+  readonly tokens: Readonly<Record<string, TokenDefinitionAuthoringInput<Mode>>>;
+}): TokenFragmentInput<Mode> {
+  return {
+    ...(input.$schema === undefined ? {} : { $schema: input.$schema }),
+    formatVersion: input.formatVersion ?? 1,
+    id: input.id,
+    defaultVisibility: input.defaultVisibility ?? "public",
+    tokens: normalizeTokenRecord(input.tokens, undefined) as Readonly<
+      Record<string, TokenDefinitionInput<Mode>>
+    >,
+  };
 }
 
 export function isReferenceInput(input: unknown): input is ReferenceInput {
-  return input !== null && typeof input === "object" && "ref" in input;
+  const entries = readPlainRecord(input, {
+    code: "invalid-reference",
+    message: "Reference probes must be plain data.",
+  });
+  return entries.ok && entries.value.some((entry) => entry.key === "ref");
 }
 
 export type ParseTokenGraphResult = Result<TokenGraph, TokenGraphIssue>;
+
+const tokenDefinitionKeys = new Set([
+  "visibility",
+  "description",
+  "deprecated",
+  "extensions",
+  "value",
+  "valueByMode",
+]);
+
+function normalizeTokenRecord(
+  input: Readonly<Record<string, TokenDefinitionAuthoringInput>>,
+  modes: readonly string[] | undefined,
+): Readonly<Record<string, TokenDefinitionInput>> {
+  const output: Record<string, TokenDefinitionInput> = {};
+  for (const key of Object.keys(input)) {
+    defineRecordValue(output, key, normalizeTokenDefinition(input[key], modes));
+  }
+  return output;
+}
+
+function normalizeTokenDefinition(
+  input: TokenDefinitionAuthoringInput | undefined,
+  modes: readonly string[] | undefined,
+): TokenDefinitionInput {
+  if (isTokenDefinitionInput(input)) {
+    return input;
+  }
+
+  if (modes !== undefined && isModeValueRecord(input, modes)) {
+    return { valueByMode: input };
+  }
+
+  return { value: input as ColorExpressionInput };
+}
+
+function isTokenDefinitionInput(input: unknown): input is TokenDefinitionInput {
+  const entries = readPlainRecord(input, {
+    code: "invalid-token-definition",
+    message: "Token definition probes must be plain data.",
+  });
+  return entries.ok && entries.value.some((entry) => tokenDefinitionKeys.has(entry.key));
+}
+
+function isModeValueRecord(
+  input: unknown,
+  modes: readonly string[],
+): input is Readonly<Record<string, ColorExpressionInput>> {
+  const entries = readPlainRecord(input, {
+    code: "invalid-token-definition",
+    message: "Mode value probes must be plain data.",
+  });
+  if (!entries.ok || entries.value.length === 0) {
+    return false;
+  }
+  const modeSet = new Set(modes);
+  return entries.value.every((entry) => modeSet.has(entry.key));
+}

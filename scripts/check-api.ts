@@ -1,9 +1,26 @@
 // @ts-nocheck
 import { readFileSync } from "node:fs";
-import { pathToFileURL } from "node:url";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 
 const root = process.cwd();
+const packageJson = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+
+assertEqual(
+  Object.keys(packageJson.exports).sort(),
+  [
+    ".",
+    "./package.json",
+    "./schemas/compiled-token-set.v1.schema.json",
+    "./schemas/token-fragment.v1.schema.json",
+    "./schemas/token-graph.v1.schema.json",
+  ],
+  "package exports",
+);
+
+if ("dependencies" in packageJson && Object.keys(packageJson.dependencies).length > 0) {
+  throw new Error("The core package must not declare runtime dependencies");
+}
 
 const manifests = [
   {
@@ -41,8 +58,11 @@ const manifests = [
       "ReferenceInput",
       "ColorExpressionInput",
       "ColorExpression",
+      "TokenDefinitionAuthoringInput",
       "TokenDefinitionInput",
+      "TokenFragmentAuthoringInput",
       "TokenFragmentInput",
+      "TokenGraphAuthoringInput",
       "TokenGraphInput",
       "TokenOrigin",
       "TokenGraphToken",
@@ -63,52 +83,6 @@ const manifests = [
       "ExportCssVariablesIssue",
     ],
   },
-  {
-    name: "conversion",
-    modulePath: "dist/conversion/index.js",
-    dtsPath: "dist/conversion/index.d.ts",
-    runtime: ["convertColor", "isColorInGamut", "mapColorToGamut"],
-    types: [
-      "ColorGamut",
-      "GamutMappingMethod",
-      "MapColorToGamutOptions",
-      "ColorConversionIssue",
-      "GamutMappingIssue",
-    ],
-  },
-  {
-    name: "material3",
-    modulePath: "dist/sources/material3/index.js",
-    dtsPath: "dist/sources/material3/index.d.ts",
-    runtime: ["material3Source"],
-    types: [
-      "Material3AlgorithmVariant",
-      "Material3SpecVersion",
-      "Material3Platform",
-      "Material3KeyColors",
-      "Material3AlgorithmOptions",
-      "Material3GamutMappingOptions",
-      "Material3SourceOptions",
-      "Material3SourceIssue",
-      "Material3TokenKey",
-    ],
-  },
-];
-
-const forbidden = [
-  "ParseResult",
-  "problems",
-  "schemaVersion",
-  "compileGraph",
-  "compileValidatedGraph",
-  "createSchemeTokens",
-  "createSourceGraph",
-  "validateGraph",
-  "applyLayers",
-  "srgb255",
-  "parseColorInput",
-  "parseHexColor",
-  "CssVariableOptions",
 ];
 
 for (const manifest of manifests) {
@@ -122,12 +96,11 @@ for (const manifest of manifests) {
       throw new Error(`${manifest.name} declaration is missing ${typeName}`);
     }
   }
-  for (const oldName of forbidden) {
-    if (dts.includes(oldName)) {
-      throw new Error(`${manifest.name} declaration contains removed name ${oldName}`);
-    }
-  }
-  if (dts.includes("@texel/color") || dts.includes("@material/material-color-utilities")) {
+  if (
+    dts.includes("@texel/color") ||
+    dts.includes("@material/material-color-utilities") ||
+    dts.includes("css-tree")
+  ) {
     throw new Error(`${manifest.name} declaration leaks dependency types`);
   }
 }
@@ -135,7 +108,8 @@ for (const manifest of manifests) {
 const rootBundle = readFileSync(join(root, "dist/index.js"), "utf8");
 if (
   rootBundle.includes("@texel/color") ||
-  rootBundle.includes("@material/material-color-utilities")
+  rootBundle.includes("@material/material-color-utilities") ||
+  rootBundle.includes("css-tree")
 ) {
   throw new Error("Root import graph references optional engine dependencies");
 }

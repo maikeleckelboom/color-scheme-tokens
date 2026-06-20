@@ -26,25 +26,15 @@ export function fail<I extends Issue>(issues: NonEmptyIssues<I>): Result<never, 
 
 export class IssueCollector<I extends Issue> {
   readonly #issues: I[] = [];
-  #limitReached = false;
 
   add(issue: I): void {
-    if (this.#limitReached) return;
-
-    if (this.#issues.length < 99) {
-      this.#issues.push(issue);
-      return;
-    }
-
-    this.#issues.push({
-      code: "issue-limit-reached",
-      message: "Issue limit reached; additional issues were omitted.",
-    } as I);
-    this.#limitReached = true;
+    this.#issues.push(issue);
   }
 
   addMany(issues: readonly I[]): void {
-    for (const issue of issues) this.add(issue);
+    for (const issue of issues) {
+      this.add(issue);
+    }
   }
 
   get hasIssues(): boolean {
