@@ -28,6 +28,10 @@ A format adapter may expose more than one kind of API when the external format i
 - conversion functions for adapter-owned intermediate work;
 - exporters, such as a future `exportDtcgDocuments(compiled)`.
 
+That does not make a format adapter the whole pipeline. Format import can contribute source material before
+`buildScheme()`, and format export can emit documents from a `CompiledScheme` after build. Format adapters should remain
+sibling exporters beside core CSS export, core serialization, target exports, and optional conversion projection.
+
 Do not create placeholder packages. A format adapter package exists only when it has a real implementation and release
 proof.
 
@@ -53,6 +57,10 @@ names. It must not rely on core silently slugifying external names.
 The first DTCG import surface is expected to be `dtcgSource(input)`, returning source material that can enter
 `buildScheme()`. The first export surface is expected to be `exportDtcgDocuments(compiled)`, taking a core
 `CompiledScheme` and producing DTCG documents.
+
+`dtcgLayer()` remains deferred because `TokenLayerInput` does not own modes. A layer helper cannot establish a light/dark
+graph envelope by itself; a future DTCG layer story needs adapter-owned mapping and explicit `buildScheme({ modes,
+defaultMode, layers })` composition.
 
 DTCG token names are external format names and may not be valid core token keys. The DTCG adapter must preserve or report
 those names through adapter-owned mapping and diagnostics instead of weakening core validation.

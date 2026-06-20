@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted. Implemented by the first source adapter package in Slice 4.
+Accepted. Implemented for source adapters by the first source adapter package in Slice 4. Conversion, target, and format
+adapter packages remain planned unless a package exists with a real implementation and release proof.
 
 ## Context
 
@@ -10,22 +11,27 @@ ADR 0001 keeps `scheme-tokens` as the dependency-light core package. Slice 2 mad
 artifacts for persisted graph input, layer input, and compiled scheme output.
 
 Future optional capabilities need real engines without moving those engines into core. The first likely capabilities are
-Material 3 source generation and Texel-backed conversion, but this decision must hold for future source and conversion
-adapters too.
+Material 3 source generation and Texel-backed conversion, but this decision must also hold for target framework output
+and external format adapters.
 
 ## Decision
 
 Adapters are separate npm packages. The root package remains named `scheme-tokens` and remains the core package.
 There is no `scheme-tokens/sources/*`, `scheme-tokens/conversion/*`, or ambient adapter registry.
 
-The repository keeps the core package at the repository root and adapter packages under `packages/`:
+The repository keeps the core package at the repository root. Adapter packages live under `packages/` only when they have
+a real implementation:
 
 ```text
 package.json                            # scheme-tokens
 packages/source-material3/package.json  # @scheme-tokens/source-material3
 packages/conversion-texel/package.json  # @scheme-tokens/conversion-texel
+packages/target-shadcn/package.json     # @scheme-tokens/target-shadcn
+packages/format-dtcg/package.json       # @scheme-tokens/format-dtcg
 packages/source-*/package.json          # future source adapters
 packages/conversion-*/package.json      # future conversion adapters
+packages/target-*/package.json          # future target adapters
+packages/format-*/package.json          # future format adapters
 ```
 
 Do not move core to `packages/core` unless a separate decision proves that churn is worth it.
@@ -36,13 +42,36 @@ Use role-first package names:
 
 - `@scheme-tokens/source-material3`;
 - `@scheme-tokens/conversion-texel`;
+- `@scheme-tokens/target-shadcn`;
+- `@scheme-tokens/format-dtcg`;
 - `@scheme-tokens/source-*` for future source adapters;
-- `@scheme-tokens/conversion-*` for future conversion adapters.
+- `@scheme-tokens/conversion-*` for future conversion adapters;
+- `@scheme-tokens/target-*` for future target adapters;
+- `@scheme-tokens/format-*` for future format adapters.
+
+## Pipeline Shape
+
+Adapter lanes can participate in one workflow, but they must not all become the same kind of adapter and they must not
+depend on each other's output as a hidden chain. The intended shape is:
+
+```text
+source adapters
++ authored token layers
++ target mapping layers
+-> buildScheme()
+-> optional conversion projection
+-> sibling exports
+```
+
+Sibling exports include core CSS variables, target-specific CSS from a target adapter, external documents from a format
+adapter, and core serialized compiled schemes. Do not design a chain such as `Material -> Texel -> shadcn -> DTCG`;
+that creates hidden transitive adapter dependencies and makes downstream adapters depend on each other's artifacts.
 
 ## Dependency Ownership
 
 The root package must not depend on optional engines. Material 3 dependencies belong to
-`@scheme-tokens/source-material3`. Texel dependencies belong to `@scheme-tokens/conversion-texel`.
+`@scheme-tokens/source-material3`. Texel dependencies belong to `@scheme-tokens/conversion-texel`. Target framework
+policy belongs to target adapters. External format behavior belongs to format adapters.
 
 Adapters depend on `scheme-tokens` as a peer dependency and dev dependency, not as a normal runtime dependency.
 The peer dependency keeps one core contract in the consuming app; the dev dependency lets the adapter build and test
@@ -81,6 +110,33 @@ surface is:
 Conversion output may be a package-specific JSON-safe value, strict `TokenGraphInput`, strict `TokenLayerInput`, or a
 core compiled scheme artifact, depending on the package role. If conversion output is a core artifact, consumers pass
 that artifact back to core parse, compile, serialize, or export functions explicitly.
+
+Texel remains planned conversion scope. Future operations likely include `convertColor(input)`, `mapGamut(input)`, and
+`projectScheme(input)`. `projectScheme()` projects a `CompiledScheme` after build; it does not replace source or target
+layers. Gamut mapping must never be silent, and default out-of-gamut RGB behavior should fail rather than clipping or
+mapping. Use the upstream `@texel/color` package inside the adapter package only. Do not use `@texel/colors`.
+
+## Target Adapter Shape
+
+A target adapter maps compiled or core token material into a framework or design-system target contract. Target packages
+export declared contracts, not namespaces.
+
+The planned shadcn package is `@scheme-tokens/target-shadcn`. It may later expose:
+
+- `shadcnLayer()` for direct source-agnostic target contract mapping;
+- `material3ShadcnLayer()` for mapping known `material3.*` roles into `shadcn.*` target tokens;
+- `validateShadcnScheme()` for explicit target readiness validation;
+- `exportShadcnCss()` for target CSS export with internal validation.
+
+`material3ShadcnLayer()` must not claim that Material 3 roles naturally equal shadcn tokens. Normal target-readiness
+failures return `Result` issues, not thrown exceptions. Validation should cover required token presence by exported mode,
+color value presence, missing target tokens, invalid mappings, CSS variable collisions, and mode-specific absence where
+relevant.
+
+Custom target contract extensions must be explicit. Extension token keys remain core-valid token keys but should not be
+forced under the target namespace; application tokens may live under `app.*`, `brand.*`, `component.*`, or another
+explicit namespace. Exporters must not export every matching namespace token by default, and CSS variable collisions must
+be reported instead of overwritten.
 
 ## Issue Codes
 

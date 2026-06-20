@@ -30,6 +30,21 @@ helper input or strict graph input
   -> serialize compiled JSON or export CSS
 ```
 
+With adapters, the same core build step remains the center of the workflow:
+
+```text
+source adapters
++ authored token layers
++ target mapping layers
+-> buildScheme()
+-> optional conversion projection
+-> sibling exports
+```
+
+Adapters are not a transitive chain. Material source generation, Texel projection, shadcn export, DTCG export, core CSS
+export, and core serialization stay explicit sibling operations around the compiled scheme instead of becoming
+`Material -> Texel -> shadcn -> DTCG`.
+
 `defineTokens()`, `defineTokenGraph()`, and `defineTokenLayer()` are authoring helpers for ordinary package use. They may
 fill safe defaults and normalize JSON-safe shorthand. `defineTokens()` is the simple token-record graph helper;
 `defineTokenGraph()` remains the full graph-shaped helper. `parseTokenGraph()` remains the strict boundary for persisted
@@ -76,11 +91,12 @@ Adapter packages may depend on engines, external format tooling, or target frame
 but does not provide Material 3, Texel, conversion, DTCG, shadcn, or image-backed behavior. The first source adapter is
 `@scheme-tokens/source-material3`; it lives outside the root package and owns the Material engine dependency.
 
-Source adapters produce graph input for `buildScheme()`. Conversion adapters perform separate conversion operations and
-return `Result` values with adapter-owned issues. Format adapters import or export external file and wire formats, and
-may expose source helpers, conversion functions, or exporters when the external format is bidirectional. Target adapters
-map compiled or core token material into a target framework or design-system contract and may export target-specific
-scaffolds. Adapter package topology and release obligations are defined in
+Source adapters produce graph input for `buildScheme()`. Conversion adapters perform separate post-compile conversion
+operations and return `Result` values with adapter-owned issues. Format adapters import or export external file and wire
+formats, and may expose source helpers, conversion functions, or exporters when the external format is bidirectional.
+Target adapters map compiled or core token material into a target framework or design-system contract and may export
+target-specific scaffolds. Target exporters validate declared target contracts; they do not scan arbitrary namespaces by
+default. Adapter package topology and release obligations are defined in
 [`ADR 0002`](./adr/0002-adapter-package-architecture.md), with format adapter rules in
 [`ADR 0003`](./adr/0003-format-adapter-packages.md).
 

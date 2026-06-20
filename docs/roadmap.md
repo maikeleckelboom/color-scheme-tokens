@@ -38,16 +38,102 @@ Planned package names:
 
 ## Adapter Categories
 
-Source adapters generate `TokenGraphInput` from an engine or provider and may expose `TokenSource` helpers.
+Source adapters generate `TokenGraphInput` from an engine or provider and may expose `TokenSource` helpers. Source
+packages use `@scheme-tokens/source-*`; the current example is `@scheme-tokens/source-material3`.
 
-Format adapters import or export external file or wire formats, such as DTCG.
-
-Conversion adapters perform explicit color conversion, gamut mapping, color math, or engine-backed transformations. Texel
-belongs to conversion adapters, not source adapters and not format adapters.
+Conversion adapters perform explicit post-compile color conversion, gamut mapping, color math, or projection.
+Conversion packages use `@scheme-tokens/conversion-*`. Texel belongs to conversion adapters, not source adapters and not
+format adapters.
 
 Target adapters map compiled or core token material into a target framework or design-system contract and may export
 target-specific scaffolds. shadcn belongs to target adapters, not source adapters, format adapters, conversion adapters,
-or Material 3 features.
+or Material 3 features. Target packages use `@scheme-tokens/target-*`.
+
+Format adapters import or export external file or wire formats, such as DTCG. Format packages use
+`@scheme-tokens/format-*`.
+
+These lanes can participate in one workflow, but they are not one transitive chain. The intended model is:
+
+```text
+source adapters
++ authored token layers
++ target mapping layers
+-> buildScheme()
+-> optional conversion projection
+-> sibling exports
+```
+
+Sibling exports may include core CSS variables, shadcn CSS from a target adapter, DTCG documents from a format adapter,
+and core serialized compiled schemes. This is not the intended model:
+
+```text
+Material -> Texel -> shadcn -> DTCG
+```
+
+That chain would hide adapter dependencies and make downstream adapters depend on each other's artifacts.
+
+## Planned Combined Workflow
+
+The following is a future API sketch. It is not executable in 0.1.0 and does not mean the planned packages exist today.
+It shows the intended composition shape using current scheme vocabulary:
+
+```ts
+import {
+  buildScheme,
+  defineTokenLayer,
+  defineTokens,
+  exportCssVariables,
+  serializeScheme,
+  type CompiledScheme,
+} from "scheme-tokens";
+import { projectScheme } from "@scheme-tokens/conversion-texel";
+import { exportDtcgDocuments } from "@scheme-tokens/format-dtcg";
+import { material3Source } from "@scheme-tokens/source-material3";
+import { exportShadcnCss, material3ShadcnLayer } from "@scheme-tokens/target-shadcn";
+
+const applicationLayer = defineTokenLayer({
+  id: "application",
+  tokens: defineTokens({
+    "app.command.background": "material3.surface-container",
+    "app.command.accent": "material3.primary",
+  }).tokens,
+});
+
+const shadcnMappingLayer = material3ShadcnLayer({
+  modules: ["sidebar", "charts"],
+});
+
+const built = buildScheme(
+  material3Source({
+    sourceColor: "#6750a4",
+    defaultVisibility: "internal",
+  }),
+  {
+    layers: [applicationLayer, shadcnMappingLayer],
+  },
+);
+
+if (!built.ok) {
+  throw new Error(JSON.stringify(built.issues, null, 2));
+}
+
+const compiled: CompiledScheme = built.value.compiled;
+const projected = projectScheme({ scheme: compiled, to: "display-p3" });
+if (!projected.ok) {
+  throw new Error(JSON.stringify(projected.issues, null, 2));
+}
+
+const deliveryScheme = projected.value.compiled;
+
+const coreCss = exportCssVariables(deliveryScheme);
+const shadcnCss = exportShadcnCss(deliveryScheme);
+const dtcgDocuments = exportDtcgDocuments(deliveryScheme);
+const serialized = serializeScheme(deliveryScheme);
+```
+
+The important part is the shape: Material source material, application-owned layer material, and target mapping layers
+compose before `buildScheme()`. Optional conversion projection operates on a `CompiledScheme`. CSS variables, shadcn CSS,
+DTCG documents, and serialized compiled JSON are sibling exports from the compiled or projected scheme.
 
 ## High-Gamut Doctrine
 
@@ -112,6 +198,10 @@ envelope; DTCG import needs adapter-owned mapping before exposing a layer helper
 `exportDtcgDocuments(compiled)` should export resolved values from compiled schemes. Alias-preserving graph export is
 deferred because compiled schemes do not preserve the original authored expression as the primary artifact.
 
+DTCG participates on both sides of the core build pipeline: `dtcgSource()` can produce source material before
+`buildScheme()`, and `exportDtcgDocuments(compiled)` can export after build. External DTCG names remain adapter-owned
+mapping concerns and must not loosen core token-key validation.
+
 ## Deferred Standards Work
 
 Deferred until after `@scheme-tokens/format-dtcg` exists:
@@ -139,7 +229,7 @@ the Texel context. The likely first operations are:
 
 - `convertColor(input)` for one color;
 - `mapGamut(input)` for one explicit gamut-mapping operation;
-- `projectScheme(input)` for projecting a compiled scheme into a target delivery color space or gamut.
+- `projectScheme(input)` for projecting a `CompiledScheme` into a target delivery color space or gamut.
 
 Unsupported spaces, non-finite output, and out-of-gamut RGB results should return adapter-owned `Result` issues rather
 than silently clipping. Default out-of-gamut RGB behavior should fail, not map or clip. Gamut mapping must never be
@@ -208,8 +298,7 @@ contract, not a natural synonym set for any source system.
 
 `material3ShadcnLayer()` may be a convenience policy later, but it should only map known `material3.*` token keys into
 the `shadcn.*` target contract. Use current Material source keys such as `material3.primary`, `material3.on-primary`,
-`material3.surface`, and `material3.surface-container`. Do not use old shorthand such as `m3.primary` or camelCase
-Material role keys in docs.
+`material3.surface`, and `material3.surface-container`. Use lower-kebab Material role keys in docs.
 
 `exportShadcnCss()` may emit target-specific scaffold pieces such as `@theme inline`, `:root`, `.dark`, and radius
 variables. Scaffold pieces must be configurable because many shadcn projects already own parts of their global CSS.
@@ -217,8 +306,45 @@ variables. Scaffold pieces must be configurable because many shadcn projects alr
 Radius is not a color token in this package. If `@scheme-tokens/target-shadcn` later emits radius, it should be an
 `exportShadcnCss()` option such as `radius: "0.625rem"`. Do not add radius to the core color token graph.
 
-`validateShadcnTarget()` should report missing required shadcn tokens and risky mappings before any automatic repair is
+`validateShadcnScheme()` should report missing required shadcn tokens and risky mappings before any automatic repair is
 considered.
+
+Target readiness must be validated against the compiled scheme before target output is emitted. The planned validator
+name is `validateShadcnScheme()`. It should check required token presence by exported mode, color value presence, missing
+required target tokens, invalid target contract mappings, CSS variable collisions, and mode-specific absence where
+relevant. `exportShadcnCss()` should validate internally for ergonomic one-call use. Normal missing-token failures return
+`Result` issues, not thrown exceptions.
+
+Target adapters export declared contracts, not namespaces. Base shadcn tokens are target-owned. Known optional modules
+such as sidebar or charts are target-owned explicit module selections. User-defined target contract extensions are
+consumer-owned and should be declared explicitly:
+
+```ts
+const commandExtension = defineShadcnExtension({
+  id: "command-menu",
+  variables: {
+    "--command-background": {
+      token: "app.command.background",
+      required: true,
+    },
+    "--command-accent": {
+      token: "app.command.accent",
+      required: false,
+    },
+  },
+});
+
+exportShadcnCss(scheme, {
+  extensions: [commandExtension],
+});
+```
+
+Custom extension token keys must still be valid core token keys. They should not be forced under `shadcn.*`; app-specific
+tokens may live under `app.*`, `brand.*`, `component.*`, or another explicit core-valid namespace. The extension maps
+those tokens into target CSS variable names. Required extension tokens must exist for exported modes. Optional extension
+tokens may be omitted when absent. CSS variable collisions must be reported, not silently overwritten. Exporters must not
+export every `shadcn.*`, `app.*`, or matching namespace token by default. Future namespace scanning may be considered
+only as explicit opt-in and not for 0.1.0.
 
 Chart tokens are categorical colors, not simple role aliases. Chart defaults are provisional unless explicitly mapped or
 validated.
