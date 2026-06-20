@@ -18,7 +18,7 @@ Material 3 support, Texel-backed conversion, image extraction, browser canvas be
 engine-backed behavior must live in separate adapter packages. Intended future package names include:
 
 - `@scheme-tokens/material3`;
-- `@scheme-tokens/conversion-texel`.
+- `@scheme-tokens/texel`.
 
 The core package may expose adapter interfaces such as `TokenSource`, but it must not import adapter engines or fake their
 behavior.

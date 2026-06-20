@@ -25,13 +25,11 @@ a real implementation:
 ```text
 package.json                            # scheme-tokens
 packages/material3/package.json         # @scheme-tokens/material3
-packages/conversion-texel/package.json  # @scheme-tokens/conversion-texel
-packages/target-shadcn/package.json     # @scheme-tokens/target-shadcn
-packages/format-dtcg/package.json       # @scheme-tokens/format-dtcg
+packages/texel/package.json             # @scheme-tokens/texel
+packages/shadcn/package.json            # @scheme-tokens/shadcn
+packages/dtcg/package.json              # @scheme-tokens/dtcg
 packages/*/package.json                 # future source adapters
-packages/conversion-*/package.json      # future conversion adapters
-packages/target-*/package.json          # future target adapters
-packages/format-*/package.json          # future format adapters
+packages/*/package.json                 # future conversion, target, and format adapters
 ```
 
 Do not move core to `packages/core` unless a separate decision proves that churn is worth it.
@@ -41,13 +39,11 @@ Do not move core to `packages/core` unless a separate decision proves that churn
 Use role-first package names:
 
 - `@scheme-tokens/material3`;
-- `@scheme-tokens/conversion-texel`;
-- `@scheme-tokens/target-shadcn`;
-- `@scheme-tokens/format-dtcg`;
+- `@scheme-tokens/texel`;
+- `@scheme-tokens/shadcn`;
+- `@scheme-tokens/dtcg`;
 - `@scheme-tokens/*` for future source adapters;
-- `@scheme-tokens/conversion-*` for future conversion adapters;
-- `@scheme-tokens/target-*` for future target adapters;
-- `@scheme-tokens/format-*` for future format adapters.
+- `@scheme-tokens/*` for future conversion, target, and format adapters.
 
 ## Pipeline Shape
 
@@ -70,7 +66,7 @@ that creates hidden transitive adapter dependencies and makes downstream adapter
 ## Dependency Ownership
 
 The root package must not depend on optional engines. Material 3 dependencies belong to
-`@scheme-tokens/material3`. Texel dependencies belong to `@scheme-tokens/conversion-texel`. Target framework
+`@scheme-tokens/material3`. Texel dependencies belong to `@scheme-tokens/texel`. Target framework
 policy belongs to target adapters. External format behavior belongs to format adapters.
 
 Adapters depend on `scheme-tokens` as a peer dependency and dev dependency, not as a normal runtime dependency.
@@ -121,7 +117,7 @@ mapping. Use the upstream `@texel/color` package inside the adapter package only
 A target adapter maps compiled or core token material into a framework or design-system target contract. Target packages
 export declared contracts, not namespaces.
 
-The planned shadcn package is `@scheme-tokens/target-shadcn`. It may later expose:
+The planned shadcn target adapter package is `@scheme-tokens/shadcn`. It may later expose:
 
 - `shadcnLayer()` for direct source-agnostic target contract mapping;
 - `material3ShadcnLayer()` for mapping known `material3.*` roles into `shadcn.*` target tokens;

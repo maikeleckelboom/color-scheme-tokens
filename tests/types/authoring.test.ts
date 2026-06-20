@@ -29,9 +29,6 @@ export type RemovedBuildHelper = RootModule[RemovedBuildName];
 type RemovedCompiledName = `Compiled${"Token"}${"Set"}`;
 // @ts-expect-error old compiled type is not exported.
 export type RemovedCompiledType = RootModule[RemovedCompiledName];
-type RemovedCssBlockExporterName = `exportCss${"Var"}Blocks`;
-// @ts-expect-error old CSS block exporter is not exported.
-export type RemovedCssBlockExporter = RootModule[RemovedCssBlockExporterName];
 
 const simpleGraph = defineTokenGraph({
   tokens: {

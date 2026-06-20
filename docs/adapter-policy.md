@@ -13,14 +13,15 @@ a real engine-backed capability is ready.
 Adapter packages have different roles. They can participate in one workflow, but they must not all pretend to be the
 same pipeline slot:
 
-- `@scheme-tokens/source-*` contributes source graph material before build. Example:
-  `@scheme-tokens/material3`.
-- `@scheme-tokens/conversion-*` performs explicit post-compile color conversion, gamut mapping, color math, or
-  projection. Planned example: `@scheme-tokens/conversion-texel`.
-- `@scheme-tokens/target-*` maps compiled or core token material into a framework or design-system target contract.
-  Planned example: `@scheme-tokens/target-shadcn`.
-- `@scheme-tokens/format-*` imports or exports external file or wire formats. Planned example:
-  `@scheme-tokens/format-dtcg`.
+- Source adapter packages contribute source graph material before build. They use plain capability names when the package
+  is primarily a source adapter, such as `@scheme-tokens/material3`, and only use a prefix when the package role needs
+  disambiguation.
+- `@scheme-tokens/texel` is the planned Texel color conversion adapter for explicit post-compile color conversion, gamut
+  mapping, color math, or projection.
+- `@scheme-tokens/shadcn` is the planned shadcn target adapter for mapping compiled or core token material into a
+  framework or design-system target contract.
+- `@scheme-tokens/dtcg` is the planned DTCG format adapter for importing or exporting external DTCG file and wire
+  formats.
 
 The intended composed workflow is:
 
@@ -112,7 +113,7 @@ Conversion output may be package-specific JSON-safe data or an explicit core art
 layer, or compiled scheme, it must satisfy the matching core parser and schema contract.
 
 Texel belongs to conversion adapters, not source adapters or format adapters. Future Texel support belongs in
-`@scheme-tokens/conversion-texel` and should depend on the upstream engine package `@texel/color` inside that
+`@scheme-tokens/texel` and should depend on the upstream engine package `@texel/color` inside that
 adapter package only. Do not use `@texel/colors`.
 
 High-gamut authoring is not a Texel feature. Core already supports canonical color values in `srgb`, `display-p3`, and
@@ -127,7 +128,7 @@ Format adapters import or export external file and wire formats, such as DTCG. T
 external format rules, naming, metadata, aliases, and validation diagnostics are not core graph behavior.
 
 A format adapter may expose source helpers, conversion functions, and exporters when the external format is
-bidirectional. For example, planned DTCG support belongs in `@scheme-tokens/format-dtcg`, not in the root package,
+bidirectional. For example, planned DTCG support belongs in `@scheme-tokens/dtcg`, not in the root package,
 because DTCG can be both an import format and an export format.
 
 Format adapters must keep public inputs and outputs JSON-safe and return recoverable failures through `Result` with
@@ -148,7 +149,7 @@ must not loosen core token-key validation.
 Target adapters map compiled or core token material into a target framework or design-system contract. They may export
 target-specific scaffolds when the target owns more than a plain token map.
 
-The planned shadcn target adapter belongs in `@scheme-tokens/target-shadcn`. Do not use
+The planned shadcn target adapter belongs in `@scheme-tokens/shadcn`. Do not use
 `scheme-tokens/targets/shadcn`, do not add a root subpath export, and do not expose shadcn helpers from the root
 package.
 
@@ -211,9 +212,9 @@ be considered only as explicit opt-in and is not 0.1.0 scope.
 - Core must not import adapter packages.
 
 Material 3 engine code belongs to `@scheme-tokens/material3`. Texel dependencies belong to future
-`@scheme-tokens/conversion-texel`. DTCG format behavior belongs to future
-`@scheme-tokens/format-dtcg`. shadcn target behavior belongs to future
-`@scheme-tokens/target-shadcn`.
+`@scheme-tokens/texel`. DTCG format behavior belongs to future
+`@scheme-tokens/dtcg`. shadcn target behavior belongs to future
+`@scheme-tokens/shadcn`.
 
 ## Issue and Schema Rules
 

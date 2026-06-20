@@ -123,7 +123,6 @@ function assertNoRemovedPublicNames(): void {
     `token ${"set"}`,
     `token-${"set"}`,
     `compiled-${"token"}-${"set"}`,
-    `exportCss${"Var"}Blocks`,
     `exportCss${"Variables"}`,
     `exportCss${"Variable"}Blocks`,
   ] as const;

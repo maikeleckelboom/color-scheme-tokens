@@ -17,7 +17,7 @@ important to the design-token ecosystem.
 ## Decision
 
 Format adapters are separate packages that import or export external file and wire formats. Use role-first package names
-such as `@scheme-tokens/format-dtcg`.
+such as `@scheme-tokens/dtcg`.
 
 Core must not import format adapters. Format adapters may import `scheme-tokens` contracts and helpers, but core
 continues to export only the root runtime surface, strict core schemas, and package metadata.
@@ -52,7 +52,7 @@ names. It must not rely on core silently slugifying external names.
 
 ## DTCG Example
 
-`@scheme-tokens/format-dtcg` is planned as the DTCG format adapter. It is not part of `scheme-tokens` 0.1.0.
+`@scheme-tokens/dtcg` is planned as the DTCG format adapter. It is not part of `scheme-tokens` 0.1.0.
 
 The first DTCG import surface is expected to be `dtcgSource(input)`, returning source material that can enter
 `buildScheme()`. The first export surface is expected to be `exportDtcgDocuments(compiled)`, taking a core

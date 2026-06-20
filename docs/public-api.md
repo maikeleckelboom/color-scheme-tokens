@@ -98,7 +98,7 @@ normalizing them.
 
 External file formats may have different token-name rules. Those external names are adapter-owned format concerns, not a
 reason to loosen the core token-key language. Format adapters such as the planned
-`@scheme-tokens/format-dtcg` should preserve external names or report mapping diagnostics through their own
+`@scheme-tokens/dtcg` should preserve external names or report mapping diagnostics through their own
 contracts. Core does not silently slugify external names.
 
 ## Authoring Helpers
@@ -206,6 +206,8 @@ const base = material3("#6750a4");
 `material3({ sourceColors: "#6750a4" })`. Object input owns Material 3 generation options:
 
 ```ts
+import { material3 } from "@scheme-tokens/material3";
+
 const generated = material3(
   {
     sourceColors: ["#6750a4", "#00a88f"],
@@ -227,6 +229,8 @@ colors, preserving source order.
 With object input, the optional second argument is scheme-token integration policy:
 
 ```ts
+import { material3 } from "@scheme-tokens/material3";
+
 const internalBase = material3(
   {
     sourceColors: ["#6750a4", "#00a88f"],
@@ -244,6 +248,8 @@ With shorthand input, the optional second argument is Material 3 generation opti
 integration policy:
 
 ```ts
+import { material3 } from "@scheme-tokens/material3";
+
 const internalExpressiveBase = material3(
   "#6750a4",
   { variant: "expressive" },

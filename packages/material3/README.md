@@ -55,13 +55,17 @@ material3.primary-container
 `material3({ sourceColors: "#6750a4" })` and is the ordinary one-color path:
 
 ```ts
-material3("#6750a4");
+import { material3 } from "@scheme-tokens/material3";
+
+const base = material3("#6750a4");
 ```
 
 Use the object form when you want explicit Material generation input:
 
 ```ts
-material3({
+import { material3 } from "@scheme-tokens/material3";
+
+const base = material3({
   sourceColors: "#6750a4",
 });
 ```
@@ -70,7 +74,9 @@ material3({
 one-brand-color case, or an array for official multi-source generation paths. Empty arrays fail at runtime validation:
 
 ```ts
-material3(["#6750a4", "#00a88f"], { variant: "cmf", specVersion: "2026" });
+import { material3 } from "@scheme-tokens/material3";
+
+const base = material3(["#6750a4", "#00a88f"], { variant: "cmf", specVersion: "2026" });
 ```
 
 The first color is the primary source color. Additional colors are passed to the official multi-source Material
@@ -80,7 +86,9 @@ generation path in array order; they are not silently reduced to the first color
 the optional second argument owns integration policy:
 
 ```ts
-material3(
+import { material3 } from "@scheme-tokens/material3";
+
+const base = material3(
   {
     sourceColors: "#6750a4",
   },
@@ -95,7 +103,9 @@ With shorthand input, the optional second argument owns Material generation opti
 integration policy:
 
 ```ts
-material3("#6750a4", { variant: "expressive" }, { defaultVisibility: "internal" });
+import { material3 } from "@scheme-tokens/material3";
+
+const base = material3("#6750a4", { variant: "expressive" }, { defaultVisibility: "internal" });
 ```
 
 `id` and `defaultVisibility` are integration options, not Material generation input. They are rejected in object input
@@ -152,7 +162,9 @@ The default variant is `tonal-spot`. CMF is official 2026 behavior, so `variant:
 CMF output but is not required by the current official implementation.
 
 ```ts
-material3({
+import { material3 } from "@scheme-tokens/material3";
+
+const base = material3({
   sourceColors: ["#6750a4", "#00a88f"],
   variant: "cmf",
   contrastLevel: 0.5,
@@ -166,7 +178,9 @@ material3({
 `palettes` overrides generated tonal palettes without changing Material role token keys:
 
 ```ts
-material3({
+import { material3 } from "@scheme-tokens/material3";
+
+const base = material3({
   sourceColors: "#6750a4",
   palettes: {
     primary: "#6750a4",
@@ -188,7 +202,9 @@ source-color fallbacks.
 Material extended colors are exposed through canonical scheme-tokens vocabulary:
 
 ```ts
-material3({
+import { material3 } from "@scheme-tokens/material3";
+
+const base = material3({
   sourceColors: "#6750a4",
   extendedColors: [
     {
@@ -230,7 +246,9 @@ keys.
 `paletteTones` is opt-in to avoid bloating the base graph.
 
 ```ts
-material3({
+import { material3 } from "@scheme-tokens/material3";
+
+const base = material3({
   sourceColors: "#6750a4",
   paletteTones: [0, 40, 90, 100],
 });

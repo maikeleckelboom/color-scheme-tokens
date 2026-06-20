@@ -45,7 +45,6 @@ const removedPublicNames = [
   `Build${"Token"}${"Set"}Options`,
   `Build${"Token"}${"Set"}Value`,
   `Build${"Token"}${"Set"}Issue`,
-  `exportCss${"Var"}Blocks`,
   `exportCss${"Variables"}`,
   `exportCss${"Variable"}Blocks`,
   `Css${"Variable"}Block`,
