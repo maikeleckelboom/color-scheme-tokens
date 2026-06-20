@@ -1,5 +1,3 @@
-import type { DynamicScheme } from "@material/material-color-utilities";
-
 export const MATERIAL3_ROLE_NAMES = [
   "primaryPaletteKeyColor",
   "secondaryPaletteKeyColor",
@@ -60,7 +58,7 @@ export const MATERIAL3_ROLE_NAMES = [
   "onError",
   "errorContainer",
   "onErrorContainer",
-] as const satisfies readonly (keyof DynamicScheme & string)[];
+] as const;
 
 export type Material3RoleName = (typeof MATERIAL3_ROLE_NAMES)[number];
 

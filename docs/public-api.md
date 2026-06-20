@@ -176,6 +176,63 @@ DOM mutation, or runtime style injection.
 The root package does not implement Material 3, Texel, conversion, image, or CSS parser engines. Material 3 support lives
 in `@scheme-tokens/material3`, which imports core only through the generic source contract.
 
+## Material 3 Adapter Package
+
+`@scheme-tokens/material3` exports the package-specific `material3(input, options?)` source helper. It is not a root
+subpath and it does not make the root package load Material engine code.
+
+The first argument is Material 3 generation input:
+
+```ts
+import { material3 } from "@scheme-tokens/material3";
+
+const base = material3({
+  sourceColors: "#6750a4",
+  variant: "tonal-spot",
+  contrastLevel: 0,
+  specVersion: "2021",
+  platform: "phone",
+  palettes: {
+    primary: "#6750a4",
+  },
+  extendedColors: [
+    {
+      name: "success",
+      color: "#2e7d32",
+      harmonize: true,
+      description: "Positive state color",
+    },
+  ],
+  paletteTones: [40, 90],
+});
+```
+
+`sourceColors` is required and accepts either a strict `#rrggbb` string or a non-empty readonly array of strict
+`#rrggbb` strings. The scalar form is the common one-color case; the array form maps to official upstream
+`sourceColorHcts` behavior for paths that use multiple source colors.
+
+The optional second argument is scheme-token integration policy:
+
+```ts
+const internalBase = material3(
+  {
+    sourceColors: ["#6750a4", "#00a88f"],
+    variant: "cmf",
+    specVersion: "2026",
+  },
+  {
+    id: "brand-material",
+    defaultVisibility: "internal",
+  },
+);
+```
+
+`id` and `defaultVisibility` belong only in the second argument. Removed or older option names are rejected instead of
+being treated as aliases.
+
+The package also exports narrow UI-oriented values and types: `material3Variants`, `material3SpecVersions`,
+`material3Platforms`, `Material3Variant`, `Material3SpecVersion`, and `Material3Platform`.
+
 ## BuildSchemeOptions
 
 `BuildSchemeOptions` accepts:

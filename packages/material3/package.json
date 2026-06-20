@@ -1,7 +1,7 @@
 {
   "name": "@scheme-tokens/material3",
   "version": "0.1.0",
-  "description": "Material 3 source adapter for scheme-tokens.",
+  "description": "Material 3 dynamic scheme adapter for scheme-tokens.",
   "keywords": [
     "color-scheme",
     "design-tokens",
@@ -42,18 +42,15 @@
   "scripts": {
     "build": "tsdown",
     "typecheck": "tsc -p tsconfig.lib.json && tsc -p tsconfig.test.json && tsc -p tsconfig.scripts.json",
-    "lint": "oxlint . --import-plugin --vitest-plugin --deny-warnings",
+    "lint": "oxlint . --ignore-pattern src/vendor/material-color-utilities/** --import-plugin --vitest-plugin --deny-warnings",
     "test": "vitest run",
     "package:check": "pnpm build && publint --strict && attw --pack . --profile esm-only",
     "check:tarball": "node --experimental-strip-types scripts/check-tarball.ts",
-    "format": "oxfmt --check .",
-    "format:fix": "oxfmt --write .",
+    "format": "oxfmt --check . \"!src/vendor/material-color-utilities/**\"",
+    "format:fix": "oxfmt --write . \"!src/vendor/material-color-utilities/**\"",
     "validate": "pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm format",
     "release:check": "pnpm validate && pnpm package:check && pnpm check:tarball",
     "prepack": "pnpm build"
-  },
-  "dependencies": {
-    "@material/material-color-utilities": "0.4.0"
   },
   "devDependencies": {
     "scheme-tokens": "workspace:*"

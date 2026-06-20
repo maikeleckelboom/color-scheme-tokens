@@ -74,16 +74,15 @@ if (!manifest.files.includes("NOTICE.md")) {
 }
 const noticeText = readFileSync(join(packageRoot, "NOTICE.md"), "utf8");
 if (
-  !noticeText.includes("@material/material-color-utilities@0.4.0") ||
+  !noticeText.includes("material-foundation/material-color-utilities") ||
+  !noticeText.includes("6fd88eb3e95ba1d457842e2a2bf847d06b3a018a") ||
   !noticeText.includes("Apache License, Version 2.0") ||
-  !noticeText.includes("Copyright 2021 Google LLC")
+  !noticeText.includes("Google LLC")
 ) {
-  throw new Error("adapter third-party notice must cover the bundled Material engine");
+  throw new Error("adapter third-party notice must cover the vendored Material engine");
 }
-if (manifest.dependencies?.["@material/material-color-utilities"] !== "0.4.0") {
-  throw new Error(
-    "adapter package must exact-pin @material/material-color-utilities as a runtime dependency",
-  );
+if (manifest.dependencies?.["@material/material-color-utilities"] !== undefined) {
+  throw new Error("adapter package must not depend on the lagging npm Material engine");
 }
 if (manifest.devDependencies?.["@material/material-color-utilities"] !== undefined) {
   throw new Error("adapter package must not duplicate the Material engine in devDependencies");
@@ -103,16 +102,11 @@ if (
 
 const bundleText = readFileSync(join(packageRoot, "dist", "index.js"), "utf8");
 const sourceMapText = readFileSync(join(packageRoot, "dist", "index.js.map"), "utf8");
-if (!bundleText.includes("@material+material-color-utilities")) {
-  throw new Error(
-    "adapter bundle must inline the Material engine for Node-compatible runtime imports",
-  );
+if (!bundleText.includes("src/vendor/material-color-utilities")) {
+  throw new Error("adapter bundle must inline the vendored Material engine");
 }
-if (
-  !sourceMapText.includes("node_modules/.pnpm/@material+material-color-utilities") &&
-  !sourceMapText.includes("node_modules/@material/material-color-utilities")
-) {
-  throw new Error("adapter source map must preserve bundled Material engine provenance");
+if (!sourceMapText.includes("../src/vendor/material-color-utilities")) {
+  throw new Error("adapter source map must preserve vendored Material engine provenance");
 }
 
 function runPnpm(args: readonly string[], cwd: string): string {

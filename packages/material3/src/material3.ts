@@ -7,29 +7,91 @@ import {
 import { readPlainRecord } from "./plain-record";
 import { describeUnknown } from "./safe-description";
 
+export const material3Variants = [
+  "monochrome",
+  "neutral",
+  "tonal-spot",
+  "vibrant",
+  "expressive",
+  "fidelity",
+  "content",
+  "rainbow",
+  "fruit-salad",
+  "cmf",
+] as const;
+
+export const material3SpecVersions = ["2021", "2025", "2026"] as const;
+
+export const material3Platforms = ["phone", "watch"] as const;
+
+export type Material3Variant = (typeof material3Variants)[number];
+export type Material3SpecVersion = (typeof material3SpecVersions)[number];
+export type Material3Platform = (typeof material3Platforms)[number];
+export type Material3SourceColorsInput = string | readonly [string, ...string[]];
+
+export interface Material3PaletteOverridesInput {
+  readonly primary?: string;
+  readonly secondary?: string;
+  readonly tertiary?: string;
+  readonly neutral?: string;
+  readonly neutralVariant?: string;
+  readonly error?: string;
+}
+
 export interface Material3ExtendedColorInput {
   readonly name: string;
   readonly color: string;
   readonly harmonize?: boolean;
+  readonly description?: string;
 }
 
 export interface Material3Input {
-  readonly sourceColor: string;
+  readonly sourceColors: Material3SourceColorsInput;
+  readonly variant?: Material3Variant;
+  readonly contrastLevel?: number;
+  readonly specVersion?: Material3SpecVersion;
+  readonly platform?: Material3Platform;
+  readonly palettes?: Material3PaletteOverridesInput;
+  readonly extendedColors?: readonly Material3ExtendedColorInput[];
+  readonly paletteTones?: true | readonly number[];
+}
+
+export interface Material3IntegrationOptions {
   readonly id?: string;
   readonly defaultVisibility?: TokenVisibility;
-  readonly extendedColors?: readonly Material3ExtendedColorInput[];
 }
+
+type Material3ColorField =
+  | "sourceColors"
+  | "extendedColors.color"
+  | `palettes.${Material3PaletteName}`;
 
 export type Material3Issue =
   | (Issue<"material3-invalid-input"> & {
       readonly receivedType: string;
     })
-  | (Issue<"material3-invalid-source-color"> & {
-      readonly field: "sourceColor";
+  | (Issue<"material3-invalid-source-colors"> & {
+      readonly field: "sourceColors";
       readonly receivedType?: string;
     })
   | (Issue<"material3-unsupported-color-input"> & {
-      readonly field: "sourceColor";
+      readonly field: Material3ColorField;
+      readonly receivedType?: string;
+      readonly value?: string;
+    })
+  | (Issue<"material3-invalid-variant"> & {
+      readonly receivedType?: string;
+      readonly value?: string;
+    })
+  | (Issue<"material3-invalid-contrast-level"> & {
+      readonly receivedType?: string;
+      readonly value?: number;
+    })
+  | (Issue<"material3-invalid-spec-version"> & {
+      readonly receivedType?: string;
+      readonly value?: string;
+    })
+  | (Issue<"material3-invalid-platform"> & {
       readonly receivedType?: string;
       readonly value?: string;
     })
@@ -40,6 +102,9 @@ export type Material3Issue =
   | (Issue<"material3-invalid-default-visibility"> & {
       readonly receivedType?: string;
       readonly value?: string;
+    })
+  | (Issue<"material3-invalid-palettes"> & {
+      readonly receivedType?: string;
     })
   | (Issue<"material3-invalid-extended-colors"> & {
       readonly receivedType?: string;
@@ -61,6 +126,19 @@ export type Material3Issue =
   | (Issue<"material3-invalid-extended-color-harmonize"> & {
       readonly receivedType: string;
     })
+  | (Issue<"material3-invalid-extended-color-description"> & {
+      readonly receivedType: string;
+    })
+  | (Issue<"material3-invalid-palette-tones"> & {
+      readonly receivedType?: string;
+    })
+  | (Issue<"material3-invalid-palette-tone"> & {
+      readonly receivedType?: string;
+      readonly value?: number;
+    })
+  | (Issue<"material3-duplicate-palette-tone"> & {
+      readonly value: number;
+    })
   | (Issue<"material3-engine-failed"> & {
       readonly enginePackage: typeof MATERIAL3_ENGINE_PACKAGE;
       readonly engineVersion: typeof MATERIAL3_ENGINE_VERSION;
@@ -70,36 +148,92 @@ export interface Material3ExtendedColor {
   readonly name: string;
   readonly color: string;
   readonly harmonize: boolean;
+  readonly description?: string;
 }
 
+type Material3PaletteName =
+  | "primary"
+  | "secondary"
+  | "tertiary"
+  | "neutral"
+  | "neutralVariant"
+  | "error";
+
+export type Material3PaletteOverrides = Readonly<Partial<Record<Material3PaletteName, string>>>;
+
 interface ParsedMaterial3Input {
-  readonly sourceId: string;
-  readonly sourceColor: string | undefined;
-  readonly defaultVisibility: TokenVisibility;
+  readonly sourceColors: readonly [string, ...string[]] | undefined;
+  readonly variant: Material3Variant;
+  readonly contrastLevel: number;
+  readonly specVersion: Material3SpecVersion;
+  readonly platform: Material3Platform;
+  readonly palettes: Material3PaletteOverrides;
   readonly extendedColors: readonly Material3ExtendedColor[];
+  readonly paletteTones: readonly number[] | undefined;
+  readonly issues: readonly Material3Issue[];
+}
+
+interface ParsedMaterial3IntegrationOptions {
+  readonly sourceId: string;
+  readonly defaultVisibility: TokenVisibility;
   readonly issues: readonly Material3Issue[];
 }
 
 const defaultSourceId = "material3";
+const defaultVisibility = "public";
+const defaultVariant: Material3Variant = "tonal-spot";
+const defaultContrastLevel = 0;
+const defaultSpecVersion: Material3SpecVersion = "2021";
+const defaultPlatform: Material3Platform = "phone";
 const strictHexPattern = /^#[0-9a-fA-F]{6}$/;
 const sourceIdPattern = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
+const defaultPaletteTones = [
+  0, 5, 10, 15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 90, 95, 98, 99, 100,
+] as const;
 
-export function material3(input: Material3Input): TokenSource<Material3Issue> {
-  const parsed = parseMaterial3Input(input);
+const material3InputKeys = new Set([
+  "sourceColors",
+  "variant",
+  "contrastLevel",
+  "specVersion",
+  "platform",
+  "palettes",
+  "extendedColors",
+  "paletteTones",
+]);
+
+const material3IntegrationOptionKeys = new Set(["id", "defaultVisibility"]);
+
+const paletteKeys = new Set<Material3PaletteName>([
+  "primary",
+  "secondary",
+  "tertiary",
+  "neutral",
+  "neutralVariant",
+  "error",
+]);
+
+export function material3(
+  input: Material3Input,
+  options?: Material3IntegrationOptions,
+): TokenSource<Material3Issue> {
+  const parsedInput = parseMaterial3Input(input);
+  const parsedOptions = parseMaterial3IntegrationOptions(options);
 
   return {
-    id: parsed.sourceId,
+    id: parsedOptions.sourceId,
     build(): Result<TokenGraphInput, Material3Issue> {
-      if (parsed.issues.length > 0) {
-        return fail(parsed.issues);
+      const issues = [...parsedInput.issues, ...parsedOptions.issues];
+      if (issues.length > 0) {
+        return fail(issues);
       }
-      if (parsed.sourceColor === undefined) {
+      if (parsedInput.sourceColors === undefined) {
         return fail([
           {
-            code: "material3-invalid-source-color",
-            message: "sourceColor is required.",
-            field: "sourceColor",
-            path: "/sourceColor",
+            code: "material3-invalid-source-colors",
+            message: "sourceColors is required.",
+            field: "sourceColors",
+            path: "/sourceColors",
           },
         ]);
       }
@@ -108,10 +242,16 @@ export function material3(input: Material3Input): TokenSource<Material3Issue> {
         return {
           ok: true,
           value: createMaterial3Graph({
-            sourceColor: parsed.sourceColor,
-            sourceId: parsed.sourceId,
-            defaultVisibility: parsed.defaultVisibility,
-            extendedColors: parsed.extendedColors,
+            sourceColors: parsedInput.sourceColors,
+            sourceId: parsedOptions.sourceId,
+            defaultVisibility: parsedOptions.defaultVisibility,
+            variant: parsedInput.variant,
+            contrastLevel: parsedInput.contrastLevel,
+            specVersion: parsedInput.specVersion,
+            platform: parsedInput.platform,
+            palettes: parsedInput.palettes,
+            extendedColors: parsedInput.extendedColors,
+            paletteTones: parsedInput.paletteTones,
           }),
         };
       } catch {
@@ -132,40 +272,60 @@ function parseMaterial3Input(input: unknown): ParsedMaterial3Input {
   const entries = readPlainRecord(input);
   if (!entries.ok) {
     return {
-      sourceId: defaultSourceId,
-      sourceColor: undefined,
-      defaultVisibility: "public",
+      sourceColors: undefined,
+      variant: defaultVariant,
+      contrastLevel: defaultContrastLevel,
+      specVersion: defaultSpecVersion,
+      platform: defaultPlatform,
+      palettes: {},
       extendedColors: [],
+      paletteTones: undefined,
       issues: [entries.issue],
     };
   }
 
   const record = new Map(entries.value.map((entry) => [entry.key, entry.value]));
   const issues: Material3Issue[] = [];
-  const sourceId = parseSourceId(record.get("id"), record.has("id"), issues);
-  const sourceColor = parseSourceColor(
-    record.get("sourceColor"),
-    record.has("sourceColor"),
+  const sourceColors = normalizeSourceColors(
+    record.get("sourceColors"),
+    record.has("sourceColors"),
     issues,
   );
-  const defaultVisibility = parseDefaultVisibility(
-    record.get("defaultVisibility"),
-    record.has("defaultVisibility"),
+  const variant = parseVariant(record.get("variant"), record.has("variant"), issues);
+  const contrastLevel = parseContrastLevel(
+    record.get("contrastLevel"),
+    record.has("contrastLevel"),
     issues,
   );
+  const specVersion = parseSpecVersion(
+    record.get("specVersion"),
+    record.has("specVersion"),
+    issues,
+  );
+  const platform = parsePlatform(record.get("platform"), record.has("platform"), issues);
+  const palettes = parsePalettes(record.get("palettes"), record.has("palettes"), issues);
   const extendedColors = parseExtendedColors(
     record.get("extendedColors"),
     record.has("extendedColors"),
     issues,
   );
+  const paletteTones = parsePaletteTones(
+    record.get("paletteTones"),
+    record.has("paletteTones"),
+    issues,
+  );
+
+  if (variant === "cmf" && specVersion !== "2026") {
+    issues.push({
+      code: "material3-invalid-spec-version",
+      message: 'variant "cmf" requires specVersion "2026".',
+      path: "/specVersion",
+      value: specVersion,
+    });
+  }
 
   for (const entry of entries.value) {
-    if (
-      entry.key !== "sourceColor" &&
-      entry.key !== "id" &&
-      entry.key !== "defaultVisibility" &&
-      entry.key !== "extendedColors"
-    ) {
+    if (!material3InputKeys.has(entry.key)) {
       issues.push({
         code: "material3-invalid-input",
         message: `Unknown material3 input property: ${entry.key}.`,
@@ -176,10 +336,59 @@ function parseMaterial3Input(input: unknown): ParsedMaterial3Input {
   }
 
   return {
-    sourceId,
-    sourceColor,
-    defaultVisibility,
+    sourceColors,
+    variant,
+    contrastLevel,
+    specVersion,
+    platform,
+    palettes,
     extendedColors,
+    paletteTones,
+    issues,
+  };
+}
+
+function parseMaterial3IntegrationOptions(options: unknown): ParsedMaterial3IntegrationOptions {
+  if (options === undefined) {
+    return {
+      sourceId: defaultSourceId,
+      defaultVisibility,
+      issues: [],
+    };
+  }
+
+  const entries = readPlainRecord(options);
+  if (!entries.ok) {
+    return {
+      sourceId: defaultSourceId,
+      defaultVisibility,
+      issues: [entries.issue],
+    };
+  }
+
+  const record = new Map(entries.value.map((entry) => [entry.key, entry.value]));
+  const issues: Material3Issue[] = [];
+  const sourceId = parseSourceId(record.get("id"), record.has("id"), issues);
+  const visibility = parseDefaultVisibility(
+    record.get("defaultVisibility"),
+    record.has("defaultVisibility"),
+    issues,
+  );
+
+  for (const entry of entries.value) {
+    if (!material3IntegrationOptionKeys.has(entry.key)) {
+      issues.push({
+        code: "material3-invalid-input",
+        message: `Unknown material3 integration option: ${entry.key}.`,
+        path: `/${jsonPointerSegment(entry.key)}`,
+        receivedType: describeUnknown(entry.value),
+      });
+    }
+  }
+
+  return {
+    sourceId,
+    defaultVisibility: visibility,
     issues,
   };
 }
@@ -200,50 +409,13 @@ function parseSourceId(value: unknown, hasValue: boolean, issues: Material3Issue
   return defaultSourceId;
 }
 
-function parseSourceColor(
-  value: unknown,
-  hasValue: boolean,
-  issues: Material3Issue[],
-): string | undefined {
-  if (!hasValue) {
-    issues.push({
-      code: "material3-invalid-source-color",
-      message: "sourceColor is required.",
-      field: "sourceColor",
-      path: "/sourceColor",
-    });
-    return undefined;
-  }
-  if (typeof value !== "string") {
-    issues.push({
-      code: "material3-unsupported-color-input",
-      message: "sourceColor currently supports strict #rrggbb hex strings only.",
-      field: "sourceColor",
-      path: "/sourceColor",
-      receivedType: describeUnknown(value),
-    });
-    return undefined;
-  }
-  if (!strictHexPattern.test(value)) {
-    issues.push({
-      code: "material3-unsupported-color-input",
-      message: "sourceColor currently supports strict #rrggbb hex strings only.",
-      field: "sourceColor",
-      path: "/sourceColor",
-      value,
-    });
-    return undefined;
-  }
-  return value.toLowerCase();
-}
-
 function parseDefaultVisibility(
   value: unknown,
   hasValue: boolean,
   issues: Material3Issue[],
 ): TokenVisibility {
   if (!hasValue) {
-    return "public";
+    return defaultVisibility;
   }
   if (value === "public" || value === "internal") {
     return value;
@@ -254,7 +426,196 @@ function parseDefaultVisibility(
     path: "/defaultVisibility",
     ...(typeof value === "string" ? { value } : { receivedType: describeUnknown(value) }),
   });
-  return "public";
+  return defaultVisibility;
+}
+
+function normalizeSourceColors(
+  value: unknown,
+  hasValue: boolean,
+  issues: Material3Issue[],
+): readonly [string, ...string[]] | undefined {
+  if (!hasValue) {
+    issues.push({
+      code: "material3-invalid-source-colors",
+      message: "sourceColors is required.",
+      field: "sourceColors",
+      path: "/sourceColors",
+    });
+    return undefined;
+  }
+
+  if (typeof value === "string") {
+    const color = parseHexColor(value, "/sourceColors", "sourceColors", issues);
+    return color === undefined ? undefined : [color];
+  }
+
+  if (!Array.isArray(value)) {
+    issues.push({
+      code: "material3-invalid-source-colors",
+      message: "sourceColors must be a #rrggbb string or a non-empty array of #rrggbb strings.",
+      field: "sourceColors",
+      path: "/sourceColors",
+      receivedType: describeUnknown(value),
+    });
+    return undefined;
+  }
+
+  let items: readonly unknown[];
+  try {
+    items = [...value];
+  } catch {
+    issues.push({
+      code: "material3-invalid-source-colors",
+      message: "sourceColors must be a #rrggbb string or a non-empty array of #rrggbb strings.",
+      field: "sourceColors",
+      path: "/sourceColors",
+      receivedType: describeUnknown(value),
+    });
+    return undefined;
+  }
+
+  if (items.length === 0) {
+    issues.push({
+      code: "material3-invalid-source-colors",
+      message: "sourceColors must contain at least one color.",
+      field: "sourceColors",
+      path: "/sourceColors",
+    });
+    return undefined;
+  }
+
+  const colors: string[] = [];
+  for (const [index, item] of items.entries()) {
+    const color = parseHexColor(item, `/sourceColors/${index}`, "sourceColors", issues);
+    if (color !== undefined) {
+      colors.push(color);
+    }
+  }
+  return colors.length === items.length ? (colors as [string, ...string[]]) : undefined;
+}
+
+function parseVariant(
+  value: unknown,
+  hasValue: boolean,
+  issues: Material3Issue[],
+): Material3Variant {
+  if (!hasValue) {
+    return defaultVariant;
+  }
+  if (typeof value === "string" && (material3Variants as readonly string[]).includes(value)) {
+    return value as Material3Variant;
+  }
+  issues.push({
+    code: "material3-invalid-variant",
+    message: `variant must be one of: ${material3Variants.join(", ")}.`,
+    path: "/variant",
+    ...(typeof value === "string" ? { value } : { receivedType: describeUnknown(value) }),
+  });
+  return defaultVariant;
+}
+
+function parseContrastLevel(value: unknown, hasValue: boolean, issues: Material3Issue[]): number {
+  if (!hasValue) {
+    return defaultContrastLevel;
+  }
+  if (typeof value === "number" && Number.isFinite(value) && value >= -1 && value <= 1) {
+    return value;
+  }
+  issues.push({
+    code: "material3-invalid-contrast-level",
+    message: "contrastLevel must be a finite number from -1 through 1.",
+    path: "/contrastLevel",
+    ...(typeof value === "number" && Number.isFinite(value)
+      ? { value }
+      : { receivedType: describeUnknown(value) }),
+  });
+  return defaultContrastLevel;
+}
+
+function parseSpecVersion(
+  value: unknown,
+  hasValue: boolean,
+  issues: Material3Issue[],
+): Material3SpecVersion {
+  if (!hasValue) {
+    return defaultSpecVersion;
+  }
+  if (typeof value === "string" && (material3SpecVersions as readonly string[]).includes(value)) {
+    return value as Material3SpecVersion;
+  }
+  issues.push({
+    code: "material3-invalid-spec-version",
+    message: `specVersion must be one of: ${material3SpecVersions.join(", ")}.`,
+    path: "/specVersion",
+    ...(typeof value === "string" ? { value } : { receivedType: describeUnknown(value) }),
+  });
+  return defaultSpecVersion;
+}
+
+function parsePlatform(
+  value: unknown,
+  hasValue: boolean,
+  issues: Material3Issue[],
+): Material3Platform {
+  if (!hasValue) {
+    return defaultPlatform;
+  }
+  if (typeof value === "string" && (material3Platforms as readonly string[]).includes(value)) {
+    return value as Material3Platform;
+  }
+  issues.push({
+    code: "material3-invalid-platform",
+    message: `platform must be one of: ${material3Platforms.join(", ")}.`,
+    path: "/platform",
+    ...(typeof value === "string" ? { value } : { receivedType: describeUnknown(value) }),
+  });
+  return defaultPlatform;
+}
+
+function parsePalettes(
+  value: unknown,
+  hasValue: boolean,
+  issues: Material3Issue[],
+): Material3PaletteOverrides {
+  if (!hasValue) {
+    return {};
+  }
+
+  const entries = readPlainRecord(value);
+  if (!entries.ok) {
+    issues.push({
+      code: "material3-invalid-palettes",
+      message: "palettes must be a JSON-safe plain object.",
+      path: "/palettes",
+      receivedType:
+        "receivedType" in entries.issue ? entries.issue.receivedType : describeUnknown(value),
+    });
+    return {};
+  }
+
+  const palettes: Partial<Record<Material3PaletteName, string>> = {};
+  for (const entry of entries.value) {
+    if (!paletteKeys.has(entry.key as Material3PaletteName)) {
+      issues.push({
+        code: "material3-invalid-input",
+        message: `Unknown material3 palettes property: ${entry.key}.`,
+        path: `/palettes/${jsonPointerSegment(entry.key)}`,
+        receivedType: describeUnknown(entry.value),
+      });
+      continue;
+    }
+    const paletteName = entry.key as Material3PaletteName;
+    const color = parseHexColor(
+      entry.value,
+      `/palettes/${jsonPointerSegment(entry.key)}`,
+      `palettes.${paletteName}`,
+      issues,
+    );
+    if (color !== undefined) {
+      palettes[paletteName] = color;
+    }
+  }
+  return palettes;
 }
 
 function parseExtendedColors(
@@ -337,9 +698,20 @@ function parseExtendedColor(
     path,
     issues,
   );
+  const description = parseExtendedColorDescription(
+    record.get("description"),
+    record.has("description"),
+    path,
+    issues,
+  );
 
   for (const entry of entries.value) {
-    if (entry.key !== "name" && entry.key !== "color" && entry.key !== "harmonize") {
+    if (
+      entry.key !== "name" &&
+      entry.key !== "color" &&
+      entry.key !== "harmonize" &&
+      entry.key !== "description"
+    ) {
       issues.push({
         code: "material3-invalid-input",
         message: `Unknown material3 extendedColors entry property: ${entry.key}.`,
@@ -349,10 +721,20 @@ function parseExtendedColor(
     }
   }
 
-  if (name === undefined || color === undefined || harmonize === undefined) {
+  if (
+    name === undefined ||
+    color === undefined ||
+    harmonize === undefined ||
+    description === null
+  ) {
     return undefined;
   }
-  return { name, color, harmonize };
+  return {
+    name,
+    color,
+    harmonize,
+    ...(description === undefined ? {} : { description }),
+  };
 }
 
 function parseExtendedColorName(
@@ -404,25 +786,7 @@ function parseExtendedColorValue(
     });
     return undefined;
   }
-  if (typeof value !== "string") {
-    issues.push({
-      code: "material3-unsupported-extended-color-input",
-      message: "extended color color currently supports strict #rrggbb hex strings only.",
-      path: `${path}/color`,
-      receivedType: describeUnknown(value),
-    });
-    return undefined;
-  }
-  if (!strictHexPattern.test(value)) {
-    issues.push({
-      code: "material3-unsupported-extended-color-input",
-      message: "extended color color currently supports strict #rrggbb hex strings only.",
-      path: `${path}/color`,
-      value,
-    });
-    return undefined;
-  }
-  return value.toLowerCase();
+  return parseHexColor(value, `${path}/color`, "extendedColors.color", issues);
 }
 
 function parseExtendedColorHarmonize(
@@ -444,6 +808,119 @@ function parseExtendedColorHarmonize(
     receivedType: describeUnknown(value),
   });
   return undefined;
+}
+
+function parseExtendedColorDescription(
+  value: unknown,
+  hasValue: boolean,
+  path: string,
+  issues: Material3Issue[],
+): string | undefined | null {
+  if (!hasValue) {
+    return undefined;
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  issues.push({
+    code: "material3-invalid-extended-color-description",
+    message: "extended color description must be a string.",
+    path: `${path}/description`,
+    receivedType: describeUnknown(value),
+  });
+  return null;
+}
+
+function parsePaletteTones(
+  value: unknown,
+  hasValue: boolean,
+  issues: Material3Issue[],
+): readonly number[] | undefined {
+  if (!hasValue) {
+    return undefined;
+  }
+  if (value === true) {
+    return defaultPaletteTones;
+  }
+  if (!Array.isArray(value)) {
+    issues.push({
+      code: "material3-invalid-palette-tones",
+      message: "paletteTones must be true or an array of numbers from 0 through 100.",
+      path: "/paletteTones",
+      receivedType: describeUnknown(value),
+    });
+    return undefined;
+  }
+
+  let items: readonly unknown[];
+  try {
+    items = [...value];
+  } catch {
+    issues.push({
+      code: "material3-invalid-palette-tones",
+      message: "paletteTones must be true or an array of numbers from 0 through 100.",
+      path: "/paletteTones",
+      receivedType: describeUnknown(value),
+    });
+    return undefined;
+  }
+
+  const tones: number[] = [];
+  const seen = new Set<number>();
+  for (const [index, item] of items.entries()) {
+    if (typeof item !== "number" || !Number.isFinite(item) || item < 0 || item > 100) {
+      issues.push({
+        code: "material3-invalid-palette-tone",
+        message: "palette tone must be a finite number from 0 through 100.",
+        path: `/paletteTones/${index}`,
+        ...(typeof item === "number" && Number.isFinite(item)
+          ? { value: item }
+          : { receivedType: describeUnknown(item) }),
+      });
+      continue;
+    }
+    if (seen.has(item)) {
+      issues.push({
+        code: "material3-duplicate-palette-tone",
+        message: `Duplicate palette tone: ${item}.`,
+        path: `/paletteTones/${index}`,
+        value: item,
+      });
+      continue;
+    }
+    seen.add(item);
+    tones.push(item);
+  }
+  return tones;
+}
+
+function parseHexColor(
+  value: unknown,
+  path: string,
+  field: Material3ColorField,
+  issues: Material3Issue[],
+): string | undefined {
+  if (typeof value !== "string") {
+    issues.push({
+      code: "material3-unsupported-color-input",
+      message: `${field} currently supports strict #rrggbb hex strings only.`,
+      field,
+      path,
+      receivedType: describeUnknown(value),
+    });
+    return undefined;
+  }
+  if (!strictHexPattern.test(value)) {
+    issues.push({
+      code: "material3-unsupported-color-input",
+      message: `${field} currently supports strict #rrggbb hex strings only.`,
+      field,
+      path,
+      value,
+    });
+    return undefined;
+  }
+  return value.toLowerCase();
 }
 
 function jsonPointerSegment(segment: string): string {

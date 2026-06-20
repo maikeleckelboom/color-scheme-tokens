@@ -10,8 +10,4 @@ export default defineConfig({
   clean: true,
   treeshake: true,
   dts: true,
-  deps: {
-    alwaysBundle: ["@material/material-color-utilities"],
-    onlyBundle: ["@material/material-color-utilities"],
-  },
 });

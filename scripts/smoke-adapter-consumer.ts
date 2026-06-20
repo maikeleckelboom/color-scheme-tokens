@@ -53,11 +53,13 @@ const application = defineTokenLayer({
 });
 
 const built = buildScheme(
-  material3({
-    sourceColor: "#6750a4",
-    defaultVisibility: "internal",
-    extendedColors: [{ name: "success", color: "#2e7d32" }],
-  }),
+  material3(
+    {
+      sourceColors: "#6750a4",
+      extendedColors: [{ name: "success", color: "#2e7d32" }],
+    },
+    { defaultVisibility: "internal" },
+  ),
   { layers: [application], selection: "all" },
 );
 
@@ -86,8 +88,8 @@ if (consumer.dependencies["@material/material-color-utilities"] !== undefined) {
 
 const adapterPackagePath = require.resolve("@scheme-tokens/material3/package.json");
 const adapter = JSON.parse(readFileSync(adapterPackagePath, "utf8"));
-if (adapter.dependencies?.["@material/material-color-utilities"] !== "0.4.0") {
-  throw new Error("adapter does not own the exact Material engine dependency");
+if (adapter.dependencies?.["@material/material-color-utilities"] !== undefined) {
+  throw new Error("adapter depends on the lagging npm Material engine");
 }
 if (adapter.peerDependencies?.["scheme-tokens"] !== "^0.1.0") {
   throw new Error("adapter does not declare the release-compatible core peer dependency");
@@ -97,8 +99,11 @@ if (JSON.stringify(adapter.dependencies ?? {}).includes("workspace:")) {
 }
 const adapterEntryUrl = await import.meta.resolve("@scheme-tokens/material3");
 const adapterBundle = readFileSync(new URL(adapterEntryUrl), "utf8");
-if (!adapterBundle.includes("@material+material-color-utilities")) {
-  throw new Error("adapter did not bundle the Material engine for runtime compatibility");
+if (
+  !adapterBundle.includes("src/vendor/material-color-utilities") ||
+  !adapterBundle.includes("sourceColorHcts")
+) {
+  throw new Error("adapter did not bundle the vendored Material engine surface");
 }
 `,
 );
@@ -111,10 +116,16 @@ import {
   type Material3ExtendedColorInput,
   type Material3Input,
   type Material3Issue,
+  type Material3Variant,
 } from "@scheme-tokens/material3";
 
 const extendedColor: Material3ExtendedColorInput = { name: "success", color: "#2e7d32" };
-const input: Material3Input = { sourceColor: "#6750a4", extendedColors: [extendedColor] };
+const variant: Material3Variant = "tonal-spot";
+const input: Material3Input = {
+  sourceColors: "#6750a4",
+  variant,
+  extendedColors: [extendedColor],
+};
 const source: TokenSource<Material3Issue> = material3(input);
 const built = buildScheme(source);
 if (built.ok) built.value.defaultMode.toUpperCase();

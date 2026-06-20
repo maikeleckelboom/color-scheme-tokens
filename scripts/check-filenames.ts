@@ -13,6 +13,13 @@ const conventionalNames = new Set([
   "tsconfig.json",
 ]);
 const kebabCaseFileName = /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)*$/;
+const vendoredMaterialPath = join(
+  "packages",
+  "material3",
+  "src",
+  "vendor",
+  "material-color-utilities",
+);
 const failures: string[] = [];
 
 for (const root of checkedRoots) {
@@ -24,6 +31,10 @@ if (failures.length > 0) {
 }
 
 function checkDirectory(directory: string): void {
+  if (directory === vendoredMaterialPath) {
+    return;
+  }
+
   for (const entry of readdirSync(directory)) {
     const path = join(directory, entry);
     if (statSync(path).isDirectory()) {

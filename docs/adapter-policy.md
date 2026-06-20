@@ -210,7 +210,7 @@ be considered only as explicit opt-in and is not 0.1.0 scope.
   dependency.
 - Core must not import adapter packages.
 
-Material 3 dependencies belong to `@scheme-tokens/material3`. Texel dependencies belong to future
+Material 3 engine code belongs to `@scheme-tokens/material3`. Texel dependencies belong to future
 `@scheme-tokens/conversion-texel`. DTCG format behavior belongs to future
 `@scheme-tokens/format-dtcg`. shadcn target behavior belongs to future
 `@scheme-tokens/target-shadcn`.
@@ -236,10 +236,14 @@ Every adapter must prove before release:
 
 ## Current Adapters
 
-- `@scheme-tokens/material3` creates a `TokenSource` from a strict hex Material `sourceColor` and emits
-  `light` / `dark` graph tokens under a lower-kebab source id namespace. The adapter public field remains
-  `sourceColor`.
+- `@scheme-tokens/material3` creates a `TokenSource` from Material 3 generation input and emits `light` / `dark` graph
+  tokens under a lower-kebab source id namespace.
+- `sourceColors` is the canonical public source-color input. It accepts one strict `#rrggbb` string or a non-empty array
+  of strict `#rrggbb` strings, and the array form maps to official upstream `sourceColorHcts` behavior.
+- `variant`, `contrastLevel`, `specVersion`, `platform`, `palettes`, `extendedColors`, and `paletteTones` belong in the
+  first `material3()` argument. `id` and `defaultVisibility` belong in the optional second argument.
 - Material extended colors are adapter-owned behavior exposed as `extendedColors`, with entries shaped as
-  `{ name, color, harmonize? }`. Engine-specific option names stay internal.
-- Key-color-driven Material schemes are future advanced scope only and require a clear, official, tested engine path
-  before becoming public API.
+  `{ name, color, harmonize?, description? }`. Engine-specific option names stay internal.
+- The adapter vendors a pinned official Material Color Utilities TypeScript snapshot when the published npm package lags
+  the required official main-branch behavior. Vendored internals remain package-private and must preserve upstream
+  license provenance.

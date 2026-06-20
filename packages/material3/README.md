@@ -1,9 +1,9 @@
 # @scheme-tokens/material3
 
-Material 3 source adapter for `scheme-tokens`.
+Material 3 dynamic scheme adapter for `scheme-tokens`.
 
-Manual token graphs only need the root `scheme-tokens` package. Install this adapter only when a project
-wants Material 3 Dynamic Color output from the official Material color utility engine.
+Manual token graphs only need the root `scheme-tokens` package. Install this adapter when a project wants Material 3
+Dynamic Color output backed by the official Material Color Utilities implementation.
 
 ```bash
 pnpm add scheme-tokens @scheme-tokens/material3
@@ -26,10 +26,14 @@ const application = defineTokenLayer<"light" | "dark">({
 });
 
 const built = buildScheme(
-  material3({
-    sourceColor: "#6750a4",
-    defaultVisibility: "internal",
-  }),
+  material3(
+    {
+      sourceColors: "#6750a4",
+    },
+    {
+      defaultVisibility: "internal",
+    },
+  ),
   { layers: [application] },
 );
 
@@ -42,6 +46,7 @@ if (!exported.ok) {
   throw new Error(JSON.stringify(exported.issues, null, 2));
 }
 
+console.log(exported.value.css);
 console.log(exported.value.blocks[0]?.declarations["--primary"]);
 ```
 
@@ -54,35 +59,115 @@ material3.on-primary
 material3.primary-container
 ```
 
-`sourceColor` is the required Material source color used to generate the scheme. This adapter keeps the field name
-`sourceColor` and does not accept `color`, `seed`, or `source` aliases.
-`sourceColor` currently accepts strict opaque hex strings in `#rrggbb` form. Other CSS color syntaxes are rejected
-instead of being parsed approximately.
+## Material Input
+
+`material3(input, options?)` separates Material generation input from scheme-token integration policy.
+
+The first argument owns Material generation:
+
+```ts
+material3({
+  sourceColors: "#6750a4",
+});
+```
+
+`sourceColors` is required. It accepts a strict opaque `#rrggbb` string for the common one-brand-color case, or a
+non-empty readonly array for official multi-source generation paths:
+
+```ts
+material3({
+  sourceColors: ["#6750a4", "#00a88f"],
+  variant: "cmf",
+  specVersion: "2026",
+});
+```
+
+The first color is the primary source color. Additional colors are passed to upstream `sourceColorHcts`; they are not
+silently reduced to the first color.
+
+The optional second argument owns integration policy:
+
+```ts
+material3(
+  {
+    sourceColors: "#6750a4",
+  },
+  {
+    id: "brand-material",
+    defaultVisibility: "internal",
+  },
+);
+```
+
+`id` and `defaultVisibility` are rejected in the first argument.
+
+## Dynamic Controls
+
+The adapter supports the official engine controls available in the vendored Material Color Utilities snapshot:
+
+- `variant`: `monochrome`, `neutral`, `tonal-spot`, `vibrant`, `expressive`, `fidelity`, `content`, `rainbow`,
+  `fruit-salad`, `cmf`;
+- `contrastLevel`: finite number from `-1` through `1`, default `0`;
+- `specVersion`: `2021`, `2025`, `2026`, default `2021`;
+- `platform`: `phone`, `watch`, default `phone`.
+
+The default variant is `tonal-spot`. CMF is official 2026 behavior, so `variant: "cmf"` requires
+`specVersion: "2026"`. The upstream CMF constructor accepts one or more source colors; a second color influences the
+multi-source CMF output but is not required by the current official implementation.
+
+```ts
+material3({
+  sourceColors: ["#6750a4", "#00a88f"],
+  variant: "cmf",
+  contrastLevel: 0.5,
+  specVersion: "2026",
+  platform: "phone",
+});
+```
+
+## Palette Overrides
+
+`palettes` overrides generated tonal palettes without changing Material role token keys:
+
+```ts
+material3({
+  sourceColors: "#6750a4",
+  palettes: {
+    primary: "#6750a4",
+    secondary: "#006a60",
+    tertiary: "#7d5260",
+    neutral: "#605d62",
+    neutralVariant: "#605d66",
+    error: "#ba1a1a",
+  },
+});
+```
+
+Palette override colors use the same strict `#rrggbb` validation and are converted through official Material tonal
+palette utilities. Top-level `primary`, `secondary`, `tertiary`, `neutral`, `neutralVariant`, and `error` fields are not
+source-color fallbacks.
 
 ## Extended Colors
 
-Material extended colors are exposed through this adapter as `extendedColors`, using stable adapter vocabulary rather than
-the engine's own option names.
+Material extended colors are exposed through canonical scheme-tokens vocabulary:
 
 ```ts
-import { buildScheme } from "scheme-tokens";
-import { material3 } from "@scheme-tokens/material3";
-
-const built = buildScheme(
-  material3({
-    sourceColor: "#6750a4",
-    extendedColors: [{ name: "success", color: "#2e7d32" }],
-  }),
-);
-
-if (!built.ok) {
-  throw new Error(JSON.stringify(built.issues, null, 2));
-}
+material3({
+  sourceColors: "#6750a4",
+  extendedColors: [
+    {
+      name: "success",
+      color: "#2e7d32",
+      harmonize: true,
+      description: "Positive state color",
+    },
+  ],
+});
 ```
 
-Each entry is shaped as `{ name, color, harmonize? }`. `name` is a lower-kebab token segment, `color` uses the same
-strict `#rrggbb` input as `sourceColor`, and `harmonize` maps to Material custom color harmonization behavior. When
-omitted, `harmonize` defaults to `true`.
+Each entry is shaped as `{ name, color, harmonize?, description? }`. `name` is a lower-kebab token segment, `color` uses
+strict `#rrggbb`, and `harmonize` maps to Material custom color harmonization behavior. When omitted, `harmonize`
+defaults to `true`. `description` is preserved as token metadata on the main extended color token.
 
 Extended color tokens are emitted as adapter-owned keys:
 
@@ -93,34 +178,75 @@ material3.extended.success.color-container
 material3.extended.success.on-color-container
 ```
 
-Engine-specific option names stay internal adapter vocabulary. The adapter does not accept `customColors` or `blend`.
-Advanced key-color-driven scheme input remains future scope; this adapter does not implement or reserve a loose
-`keyColors` API.
+Extended color roles use the official custom color group behavior: harmonization and tonal-palette roles are based on the
+extended color entry and primary source color. They are not claimed to respond to every dynamic scheme control when the
+upstream custom color algorithm does not define that behavior.
 
-## Composition
+## Palette Tone Tokens
 
-Use `exportCssVars()` when you want a stylesheet string and structured blocks from the same export operation.
+`paletteTones` is opt-in to avoid bloating the base graph.
 
 ```ts
-import { buildScheme, defineTokenLayer, exportCssVars } from "scheme-tokens";
+material3({
+  sourceColors: "#6750a4",
+  paletteTones: [0, 40, 90, 100],
+});
+```
+
+`paletteTones: true` emits the material-schemes tone list:
+
+```text
+0, 5, 10, 15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 90, 95, 98, 99, 100
+```
+
+Palette tone token keys are lower-kebab and core-schema compatible:
+
+```text
+material3.palette.primary.tone-40
+material3.palette.secondary.tone-90
+material3.palette.tertiary.tone-40
+material3.palette.neutral.tone-98
+material3.palette.neutral-variant.tone-90
+material3.palette.error.tone-40
+material3.extended.success.palette.tone-40
+```
+
+## Full Example
+
+```ts
+import { buildScheme, exportCssVars } from "scheme-tokens";
 import { material3 } from "@scheme-tokens/material3";
 
-const application = defineTokenLayer<"light" | "dark">({
-  id: "application",
-  tokens: {
-    background: "material3.surface",
-    foreground: "material3.on-surface",
-    primary: "material3.primary",
-    "primary-foreground": "material3.on-primary",
-  },
-});
-
 const built = buildScheme(
-  material3({
-    sourceColor: "#6750a4",
-    defaultVisibility: "internal",
-  }),
-  { layers: [application] },
+  material3(
+    {
+      sourceColors: ["#6750a4", "#00a88f"],
+      variant: "cmf",
+      contrastLevel: 0.5,
+      specVersion: "2026",
+      platform: "phone",
+      palettes: {
+        primary: "#6750a4",
+        secondary: "#006a60",
+        tertiary: "#7d5260",
+        neutral: "#605d62",
+        neutralVariant: "#605d66",
+        error: "#ba1a1a",
+      },
+      extendedColors: [
+        {
+          name: "success",
+          color: "#2e7d32",
+          harmonize: true,
+          description: "Positive state color",
+        },
+      ],
+      paletteTones: [0, 40, 90, 100],
+    },
+    {
+      defaultVisibility: "internal",
+    },
+  ),
 );
 
 if (!built.ok) {
@@ -128,21 +254,24 @@ if (!built.ok) {
 }
 
 const css = exportCssVars(built.value);
-if (!css.ok) {
-  throw new Error(JSON.stringify(css.issues, null, 2));
-}
-
-console.log(css.value.css);
 ```
 
-Use `defaultVisibility: "internal"` when the Material roles should feed public application tokens without being exported
-as public tokens themselves. The Material 3 base resolves before layers, and later application layers can override
-Material tokens or earlier layers by token key. This is token overlay behavior, not CSS cascade specificity or CSS
-`@layer`.
+## Compatibility
+
+The package is pre-release and intentionally does not keep compatibility spellings. Removed or older option names are
+rejected instead of being treated as aliases.
+
+Light and dark are graph modes in `scheme-tokens`, and layers are the extension point for project-owned modifications.
+
+## Engine Provenance
+
+The published npm package `@material/material-color-utilities@0.4.0` does not expose the latest official main-branch
+surface required here, including `sourceColorHcts`, `SpecVersion` `2026`, `Variant.CMF`, and `SchemeCmf`. This adapter
+therefore vendors a minimal official TypeScript snapshot from
+`material-foundation/material-color-utilities@6fd88eb3e95ba1d457842e2a2bf847d06b3a018a`.
+
+The vendored files live under `src/vendor/material-color-utilities`, keep their Apache-2.0 license headers, and are not
+exported from `@scheme-tokens/material3`. See `NOTICE.md` for attribution details.
 
 Material 3 support lives in this adapter package. The root package does not import, export, document as required, or
 depend on the Material engine for manual token graphs.
-
-The adapter package owns `@material/material-color-utilities@0.4.0` and bundles the required runtime code in its published
-artifact because the upstream package's extensionless internal ESM imports do not run directly in supported Node.js
-consumer projects. The published package includes `NOTICE.md` with the Apache-2.0 attribution for that bundled code.
