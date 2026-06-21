@@ -249,6 +249,9 @@ function assertTailwindRecipe(readmeText: string): void {
 
 function listFiles(directory: string): readonly string[] {
   return readdirSync(directory).flatMap((entry) => {
+    if (entry === "node_modules") {
+      return [];
+    }
     const path = join(directory, entry);
     return statSync(path).isDirectory() ? listFiles(path) : [path];
   });

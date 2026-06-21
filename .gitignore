@@ -21,6 +21,7 @@ dist/
 build/
 **/build/
 docs-site/.vitepress/cache/
+docs-site/.vitepress/dist/
 
 # Environment files
 .env

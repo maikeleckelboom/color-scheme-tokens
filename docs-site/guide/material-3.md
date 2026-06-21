@@ -9,7 +9,7 @@ pnpm add scheme-tokens @scheme-tokens/material3
 
 ## Build a Material Base
 
-```ts
+```ts twoslash
 import { buildScheme, exportCssVars } from "scheme-tokens";
 import { material3 } from "@scheme-tokens/material3";
 
@@ -24,6 +24,7 @@ if (!cssExport.ok) {
 }
 
 const stylesheet = cssExport.value.css;
+//    ^?
 export { stylesheet };
 ```
 

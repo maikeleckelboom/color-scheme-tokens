@@ -1,4 +1,11 @@
+import { transformerTwoslash } from "@shikijs/vitepress-twoslash";
+import { createFileSystemTypesCache } from "@shikijs/vitepress-twoslash/cache-fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitepress";
+
+const configDirectory = dirname(fileURLToPath(import.meta.url));
+const twoslashCacheDirectory = join(configDirectory, "cache", "twoslash");
 
 export default defineConfig({
   title: "scheme-tokens",
@@ -7,6 +14,17 @@ export default defineConfig({
   lang: "en-US",
   cleanUrls: true,
   lastUpdated: false,
+  markdown: {
+    codeTransformers: [
+      transformerTwoslash({
+        explicitTrigger: true,
+        throws: true,
+        typesCache: createFileSystemTypesCache({
+          dir: twoslashCacheDirectory,
+        }),
+      }),
+    ],
+  },
   head: [
     [
       "meta",

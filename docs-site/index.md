@@ -13,7 +13,7 @@ pnpm add scheme-tokens
 
 ## First Path
 
-```ts
+```ts twoslash
 import { compileTokenGraph, defineTokens, exportCssVars } from "scheme-tokens";
 
 const graph = defineTokens({
@@ -34,6 +34,7 @@ if (!cssExport.ok) {
 }
 
 const stylesheet = cssExport.value.css;
+//    ^?
 
 export { stylesheet };
 ```
