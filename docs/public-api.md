@@ -2,7 +2,7 @@
 
 The root package is the core token compiler.
 
-```ts
+```ts twoslash
 import { compileTokenGraph, defineTokens, exportCssVars } from "scheme-tokens";
 
 const graph = defineTokens({
@@ -22,7 +22,13 @@ if (!compiled.ok) {
   throw new Error(JSON.stringify(compiled.issues, null, 2));
 }
 
-const stylesheet = exportCssVars(compiled.scheme);
+const cssExport = exportCssVars(compiled.scheme);
+
+if (!cssExport.ok) {
+  throw new Error(JSON.stringify(cssExport.issues, null, 2));
+}
+
+const stylesheet = cssExport.css;
 ```
 
 ## Runtime Exports
@@ -44,7 +50,16 @@ const stylesheet = exportCssVars(compiled.scheme);
 
 Public success payloads use named fields.
 
-```ts
+```ts twoslash
+import { compileTokenGraph, defineTokens, exportCssVars } from "scheme-tokens";
+
+const graph = defineTokens({
+  background: {
+    base: "#ffffff",
+    dark: "#111111",
+  },
+});
+
 const compiled = compileTokenGraph(graph);
 
 if (compiled.ok) {
@@ -72,24 +87,50 @@ Failures return `{ ok: false, issues }` with deterministic, JSON-safe issue obje
 
 `CompiledScheme.tokens` is a record of token keys to mode maps.
 
-```ts
-compiled.scheme.tokens.background.base;
-compiled.scheme.tokens.background.dark;
+```ts twoslash
+import { compileTokenGraph, defineTokens } from "scheme-tokens";
+
+const compiled = compileTokenGraph(
+  defineTokens({
+    background: {
+      base: "#ffffff",
+      dark: "#111111",
+    },
+  }),
+);
+
+if (compiled.ok) {
+  compiled.scheme.tokens.background.base;
+  compiled.scheme.tokens.background.dark;
+}
 ```
 
 Advanced data is stored separately:
 
-```ts
-compiled.scheme.metadataByToken.background.visibility;
-compiled.scheme.metadataByToken.background.origin;
-compiled.scheme.metadataByToken.background.dependenciesByMode.dark;
+```ts twoslash
+import { compileTokenGraph, defineTokens } from "scheme-tokens";
+
+const compiled = compileTokenGraph(
+  defineTokens({
+    background: {
+      base: "#ffffff",
+      dark: "#111111",
+    },
+  }),
+);
+
+if (compiled.ok) {
+  compiled.scheme.metadataByToken.background.visibility;
+  compiled.scheme.metadataByToken.background.origin;
+  compiled.scheme.metadataByToken.background.dependenciesByMode.dark;
+}
 ```
 
 ## Authored Data
 
 Authoring helpers accept CSS-ready strings and explicit references.
 
-```ts
+```ts twoslash
 import { defineTokens, tokenRef } from "scheme-tokens";
 
 const graph = defineTokens({

@@ -34,7 +34,7 @@ const theme = readFileSync(themePath, "utf8");
 assertContains(theme, "@shikijs/vitepress-twoslash/client", themePath);
 assertContains(theme, "@shikijs/vitepress-twoslash/style.css", themePath);
 
-assertPublicTwoslashFence();
+assertPackageImportExamplesUseTwoslash();
 
 rmSync(cachePath, { force: true, recursive: true });
 rmSync(distPath, { force: true, recursive: true });
@@ -87,16 +87,34 @@ function assertNotContains(text: string, denied: string, file: string): void {
   }
 }
 
-function assertPublicTwoslashFence(): void {
+function assertPackageImportExamplesUseTwoslash(): void {
   const publicFiles = listMarkdownFiles(docsSiteRoot).filter(
     (file) => !file.replaceAll("\\", "/").includes("/.vitepress/"),
   );
-  const hasTwoslashFence = publicFiles.some((file) =>
-    /^```(?:ts|typescript)\s+twoslash(?:\s|$)/m.test(readFileSync(file, "utf8")),
-  );
-  if (!hasTwoslashFence) {
-    throw new Error("At least one public docs-site Markdown file must use a twoslash fence");
+  let twoslashExampleCount = 0;
+
+  for (const file of publicFiles) {
+    const text = readFileSync(file, "utf8");
+    for (const match of text.matchAll(/^```([^\r\n]*)\r?\n([\s\S]*?)^```/gm)) {
+      const info = normalizeFenceInfo(match[1] ?? "");
+      const code = match[2] ?? "";
+      if (!code.includes('from "scheme-tokens"') && !code.includes("from 'scheme-tokens'")) {
+        continue;
+      }
+      if (info !== "ts twoslash") {
+        throw new Error(`Package import examples must use "ts twoslash" fences in ${file}`);
+      }
+      twoslashExampleCount += 1;
+    }
   }
+
+  if (twoslashExampleCount === 0) {
+    throw new Error("Docs site must contain at least one twoslash package import example");
+  }
+}
+
+function normalizeFenceInfo(info: string): string {
+  return info.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
 function listMarkdownFiles(directory: string): readonly string[] {

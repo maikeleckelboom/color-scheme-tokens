@@ -30,7 +30,7 @@ External generators can feed the first step by producing plain authored token da
 
 Graph input supports CSS-ready strings and explicit references. Bare strings are never inferred as references.
 
-```ts
+```ts twoslash
 import { defineTokens, tokenRef } from "scheme-tokens";
 
 const graph = defineTokens({
@@ -45,14 +45,34 @@ Strict persisted artifacts keep references structured as `{ ref: "token.key" }`.
 
 Compiled tokens are plain mode maps:
 
-```ts
-compiled.scheme.tokens.background.base;
+```ts twoslash
+import { compileTokenGraph, defineTokens } from "scheme-tokens";
+
+const compiled = compileTokenGraph(
+  defineTokens({
+    background: "#ffffff",
+  }),
+);
+
+if (compiled.ok) {
+  compiled.scheme.tokens.background.base;
+}
 ```
 
 Metadata that would collide with mode names lives under `metadataByToken`:
 
-```ts
-compiled.scheme.metadataByToken.background.dependenciesByMode.base;
+```ts twoslash
+import { compileTokenGraph, defineTokens } from "scheme-tokens";
+
+const compiled = compileTokenGraph(
+  defineTokens({
+    background: "#ffffff",
+  }),
+);
+
+if (compiled.ok) {
+  compiled.scheme.metadataByToken.background.dependenciesByMode.base;
+}
 ```
 
 This keeps the default read path small while preserving deterministic diagnostics, dependencies, origins, and metadata for advanced workflows.

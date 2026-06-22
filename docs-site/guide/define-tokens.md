@@ -2,7 +2,7 @@
 
 Use `defineTokens()` for the ordinary direct-token path.
 
-```ts
+```ts twoslash
 import { defineTokens } from "scheme-tokens";
 
 const graph = defineTokens({
@@ -19,7 +19,7 @@ Strings are CSS-ready token values. They are not inferred as references based on
 
 Use explicit graph input when tokens need metadata or aliases:
 
-```ts
+```ts twoslash
 import { defineTokenGraph } from "scheme-tokens";
 
 const graph = defineTokenGraph({
@@ -39,7 +39,7 @@ export { graph };
 
 Use modes when a token has more than one authored value:
 
-```ts
+```ts twoslash
 import { defineTokens } from "scheme-tokens";
 
 const graph = defineTokens(

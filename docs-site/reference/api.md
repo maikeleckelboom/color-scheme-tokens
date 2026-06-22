@@ -17,9 +17,32 @@
 | `serializeCompiledScheme` | Deterministically serialize compiled output. |
 | `exportCssVars`           | Export CSS custom properties.                |
 
+```ts twoslash
+import { compileTokenGraph, defineTokens, exportCssVars } from "scheme-tokens";
+
+const graph = defineTokens({
+  background: "#ffffff",
+});
+
+const compiled = compileTokenGraph(graph);
+
+if (compiled.ok) {
+  const cssExport = exportCssVars(compiled.scheme);
+  if (cssExport.ok) {
+    cssExport.css;
+  }
+}
+```
+
 ## Result Shapes
 
-```text
+```ts twoslash
+import { compileTokenGraph, defineTokens, parseTokenGraph } from "scheme-tokens";
+
+const graph = defineTokens({
+  background: "#ffffff",
+});
+
 const compiled = compileTokenGraph(graph);
 
 if (compiled.ok) {
@@ -35,7 +58,15 @@ if (parsed.ok) {
 
 `exportCssVars()` returns direct fields on success:
 
-```text
+```ts twoslash
+import { compileTokenGraph, defineTokens, exportCssVars } from "scheme-tokens";
+
+const compiled = compileTokenGraph(
+  defineTokens({
+    background: "#ffffff",
+  }),
+);
+
 const cssExport = compiled.ok ? exportCssVars(compiled.scheme) : undefined;
 
 if (cssExport?.ok) {

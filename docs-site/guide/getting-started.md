@@ -8,7 +8,7 @@ pnpm add scheme-tokens
 
 Define authored tokens, compile a scheme, then export CSS variables.
 
-```ts
+```ts twoslash
 import { compileTokenGraph, defineTokens, exportCssVars } from "scheme-tokens";
 
 export function createStylesheet(): string {

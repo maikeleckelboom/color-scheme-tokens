@@ -2,7 +2,7 @@
 
 Literal token keys and modes flow through the authoring helpers.
 
-```ts
+```ts twoslash
 import { compileTokenGraph, defineTokens, serializeCompiledScheme } from "scheme-tokens";
 
 const graph = defineTokens({

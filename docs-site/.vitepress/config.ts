@@ -1,4 +1,8 @@
-import { defaultHoverInfoProcessor, transformerTwoslash } from "@shikijs/vitepress-twoslash";
+import {
+  defaultHoverInfoProcessor,
+  rendererFloatingVue,
+  transformerTwoslash,
+} from "@shikijs/vitepress-twoslash";
 import { createFileSystemTypesCache } from "@shikijs/vitepress-twoslash/cache-fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -17,7 +21,7 @@ export default defineConfig({
     codeTransformers: [
       transformerTwoslash({
         explicitTrigger: true,
-        processHoverInfo: formatTwoslashHoverInfo,
+        renderer: createDocsTwoslashRenderer(),
         throws: true,
         typesCache: createFileSystemTypesCache({
           dir: twoslashCacheDirectory,
@@ -101,6 +105,14 @@ export default defineConfig({
     },
   },
 });
+
+type DocsTwoslashRenderer = ReturnType<typeof rendererFloatingVue>;
+
+function createDocsTwoslashRenderer(): DocsTwoslashRenderer {
+  return rendererFloatingVue({
+    processHoverInfo: formatTwoslashHoverInfo,
+  });
+}
 
 function formatTwoslashHoverInfo(info: string): string {
   let content = defaultHoverInfoProcessor(info);

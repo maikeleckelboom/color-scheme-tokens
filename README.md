@@ -12,7 +12,7 @@ pnpm add scheme-tokens
 
 ## First Path
 
-```ts
+```ts twoslash
 import { compileTokenGraph, defineTokens, exportCssVars } from "scheme-tokens";
 
 const graph = defineTokens({
@@ -32,8 +32,6 @@ if (!compiled.ok) {
   throw new Error(JSON.stringify(compiled.issues, null, 2));
 }
 
-const background = compiled.scheme.tokens.background.base;
-
 const cssExport = exportCssVars(compiled.scheme);
 
 if (!cssExport.ok) {
@@ -43,24 +41,11 @@ if (!cssExport.ok) {
 const stylesheet = cssExport.css;
 ```
 
-Compiled tokens are plain mode maps:
-
-```text
-const baseBackground = compiled.scheme.tokens.background.base;
-const darkBackground = compiled.scheme.tokens.background.dark;
-```
-
-Advanced compiled metadata lives outside the token value map:
-
-```text
-const dependencies = compiled.scheme.metadataByToken.background.dependenciesByMode.dark;
-```
-
 ## References
 
 Bare strings are literal CSS-ready token values. References are explicit.
 
-```ts
+```ts twoslash
 import { compileTokenGraph, defineTokens, tokenRef } from "scheme-tokens";
 
 const graph = defineTokens({
@@ -81,7 +66,7 @@ const compiled = compileTokenGraph(graph, { selection: "all" });
 
 The authoring helpers accept ergonomic input and return strict graph artifacts. Persisted graph and layer data stays explicit:
 
-```ts
+```ts twoslash
 import { parseTokenGraph } from "scheme-tokens";
 
 const parsed = parseTokenGraph({
@@ -110,7 +95,7 @@ Published schemas:
 
 External generators can produce ordinary authored tokens or strict token graphs, then hand that data to `scheme-tokens`.
 
-```ts
+```ts twoslash
 import { compileTokenGraph, defineTokens } from "scheme-tokens";
 
 declare function generatePalette(seed: string): {

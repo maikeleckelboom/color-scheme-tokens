@@ -2,7 +2,7 @@
 
 `exportCssVars()` accepts a compiled scheme and returns direct CSS export fields.
 
-```ts
+```ts twoslash
 import { compileTokenGraph, defineTokens, exportCssVars } from "scheme-tokens";
 
 const compiled = compileTokenGraph(
@@ -31,7 +31,19 @@ const variableByToken = cssExport.variableByToken;
 
 Use a prefix when the emitted custom properties need a namespace.
 
-```text
+```ts twoslash
+import { compileTokenGraph, defineTokens, exportCssVars } from "scheme-tokens";
+
+const compiled = compileTokenGraph(
+  defineTokens({
+    background: "#ffffff",
+  }),
+);
+
+if (!compiled.ok) {
+  throw new Error(JSON.stringify(compiled.issues, null, 2));
+}
+
 const prefixed = exportCssVars(compiled.scheme, {
   prefix: "theme",
 });

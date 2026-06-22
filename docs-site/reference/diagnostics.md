@@ -2,7 +2,13 @@
 
 Recoverable failures return deterministic issue arrays.
 
-```text
+```ts twoslash
+import { compileTokenGraph, defineTokens } from "scheme-tokens";
+
+const graph = defineTokens({
+  background: "#ffffff",
+});
+
 const compiled = compileTokenGraph(graph);
 
 if (!compiled.ok) {

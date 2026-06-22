@@ -25,9 +25,17 @@ const authoredDocsSiteFiles = listFiles(join(repoRoot, "docs-site")).filter(
   (file) => trackedWorkspaceFiles.has(file) && !isGeneratedDocsSiteFile(file),
 );
 const docsSiteFiles = authoredDocsSiteFiles.filter((file) => file.endsWith(".md"));
+const publicMarkdownFiles = [
+  { label: "README.md", text: readme },
+  ...listFiles(join(repoRoot, "docs"))
+    .filter((file) => trackedWorkspaceFiles.has(file) && file.endsWith(".md"))
+    .map((file) => ({ label: file, text: readFileSync(file, "utf8") })),
+  ...docsSiteFiles.map((file) => ({ label: file, text: readFileSync(file, "utf8") })),
+];
 assertNoRemovedPublicNames();
 assertNoPublicColorParserSurface();
 assertNoCompiledValueWrappers();
+assertPackageImportExamplesUseTwoslash(publicMarkdownFiles);
 
 const blocks = extractTypeScriptExamples([
   { label: "README.md", text: readme },
@@ -148,6 +156,21 @@ function extractTypeScriptExamples(files: readonly MarkdownFile[]): readonly Typ
 
 function normalizeFenceInfo(info: string): string {
   return info.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function assertPackageImportExamplesUseTwoslash(files: readonly MarkdownFile[]): void {
+  for (const file of files) {
+    for (const match of file.text.matchAll(/^```([^\r\n]*)\r?\n([\s\S]*?)^```/gm)) {
+      const info = normalizeFenceInfo(match[1] ?? "");
+      const code = match[2] ?? "";
+      if (!code.includes('from "scheme-tokens"') && !code.includes("from 'scheme-tokens'")) {
+        continue;
+      }
+      if (info !== "ts twoslash") {
+        throw new Error(`Package import examples must use "ts twoslash" fences in ${file.label}`);
+      }
+    }
+  }
 }
 
 function assertNoRemovedPublicNames(): void {

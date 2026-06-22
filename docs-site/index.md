@@ -33,8 +33,6 @@ if (!compiled.ok) {
   throw new Error(JSON.stringify(compiled.issues, null, 2));
 }
 
-const background = compiled.scheme.tokens.background.base;
-
 const cssExport = exportCssVars(compiled.scheme);
 
 if (!cssExport.ok) {
